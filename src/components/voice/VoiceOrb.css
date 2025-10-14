@@ -1,0 +1,44 @@
+.voice-orb-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  user-select: none;
+}
+
+.voice-orb-canvas {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.voice-orb-canvas:hover {
+  transform: scale(1.05);
+}
+
+.voice-orb-canvas:active {
+  transform: scale(0.98);
+}
+
+.voice-orb-status {
+  font-size: 0.875rem;
+  text-align: center;
+  min-height: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+/* Accessibility - Add focus styles */
+.voice-orb-container:focus-visible .voice-orb-canvas {
+  outline: 2px solid #3b82f6;
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+
+/* Animation for status text */
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.voice-orb-status span {
+  animation: fadeInOut 2s ease-in-out infinite;
+}

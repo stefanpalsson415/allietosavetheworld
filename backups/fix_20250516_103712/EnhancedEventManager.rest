@@ -1,0 +1,1523 @@
+import { useFamily } from '../../contexts/FamilyContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../services/firebase';
+import CalendarService from '../../services/CalendarService';
+import UserAvatar from '../common/UserAvatar';
+import { synchronizeFamilyMemberImages } from '../../utils/profileUtils';
+import SmartReminderSuggestions from './SmartReminderSuggestions';
+import { useEvents } from '../../contexts/EventContext';
+import MapboxLocationInput from '../common/MapboxLocationInput';
+import GoogleStyleDateTimePicker from './GoogleStyleDateTimePicker';
+import DocumentSelector from './DocumentSelector';
+import ProviderSelector from './ProviderSelector';
+import RelatedEventsPanel from './RelatedEventsPanel';
+
+/**
+ * Enhanced Event Manager - Completely rebuilt to fix JSX syntax errors
+ */
+const EnhancedEventManager = ({ 
+  initialEvent = null, 
+  initialChildId = null,
+  onSave = null, 
+  onCancel = null,
+  onDelete = null,
+  eventType = 'general',
+  selectedDate = null,
+  isCompact = false,
+  mode = 'create',
+  conflictingEvents = [],
+  showAiMetadata = false,
+  currentWeek = null
+}) => {
+  const { familyMembers, familyId } = useFamily();
+  const { currentUser } = useAuth();
+  const { addEvent, updateEvent } = useEvents();
+  
+  // Create default event with proper structure
+  const createDefaultEvent = () => {
+    const date = selectedDate ? new Date(selectedDate) : new Date();
+    // Round to nearest half hour
+    date.setMinutes(Math.round(date.getMinutes() / 30) * 30, 0, 0);
+    
+    const endDate = new Date(date);
+    endDate.setHours(endDate.getHours() + 1);
+    
+    // Get all family member IDs for default attendees
+    const allFamilyMemberIds = familyMembers.map(member => member.id);
+    
+    // Get parent and child IDs
+    const parents = familyMembers.filter(m => m.role === 'parent');
+    const children = familyMembers.filter(m => m.role === 'child');
+    const parentIds = parents.map(p => p.id);
+    
+    // Check if this is likely a family meeting event from context
+    const isFamilyMeeting = 
+      // If URL suggests family meeting context
+      (typeof window !== 'undefined' && window.location.href.includes('family-meeting')) ||
+      // If eventType was explicitly set to 'meeting'
+      eventType === 'meeting';
+    
+    // Use meeting type if this appears to be a family meeting
+    const effectiveEventType = isFamilyMeeting ? 'meeting' : (eventType || 'general');
+    
+    // Determine default attendees based on event type
+    let defaultAttendees = [];
+    let defaultChildId = initialChildId || (children.length > 0 ? children[0].id : '');
+    let defaultParentId = parentIds.length > 0 ? parentIds[0] : '';
+    let defaultChildName = '';
+    let defaultProvider = null;
+    let defaultDocuments = [];
+    let defaultBabysitter = null;
+
+    // Find the child name if we have a default child ID
+    if (defaultChildId) {
+      const child = children.find(c => c.id === defaultChildId);
+      if (child) {
+        defaultChildName = child.name || '';
+      }
+    }
+    
+    // For general events, include all family members
+    if (effectiveEventType === 'general' || effectiveEventType === 'meeting') {
+      defaultAttendees = [...allFamilyMemberIds];
+    } 
+    // For date-night events, include only parents
+    else if (effectiveEventType === 'date-night') {
+      defaultAttendees = [...parentIds];
+      defaultParentId = 'both';
+      // For date nights, we would also potentially want a babysitter
+      defaultBabysitter = null; // This would be set later when selecting a provider
+    }
+    // For child-focused events, set the child and parent
+    else if (effectiveEventType === 'activity') {
+      if (defaultChildId) {
+        defaultAttendees = [defaultChildId, defaultParentId];
+      }
+    }
+    // For birthday events, include all family members but set the child as the focus
+    else if (effectiveEventType === 'birthday') {
+      defaultAttendees = [...allFamilyMemberIds];
+      // For birthdays, we might want specific location, decorations, etc.
+    }
+    // For appointments, set child and one parent
+    else if (effectiveEventType === 'appointment') {
+      if (defaultChildId) {
+        defaultAttendees = [defaultChildId, defaultParentId];
+      }
+      // For appointments, we might want a medical provider
+      defaultProvider = null; // This would be set later when selecting a provider
+    }
+    
+    // For family meetings, ALWAYS ensure all family members are included
+    if (isFamilyMeeting) {
+      defaultAttendees = [...allFamilyMemberIds];
+    }
+    
+    return {
+      title: '',
+      description: '',
+      location: '',
+      dateTime: date.toISOString(),
+      endDateTime: endDate.toISOString(),
+      childId: defaultChildId,
+      childName: defaultChildName,
+      attendingParentId: defaultParentId,
+      eventType: effectiveEventType, // Use the effective event type
+      category: effectiveEventType,
+      isRecurring: false,
+      attendees: defaultAttendees,
+      siblingAttendees: [], // Separate tracking for siblings
+      provider: defaultProvider, // For medical appointments, activities, etc.
+      babysitter: defaultBabysitter, // For date nights
+      documents: defaultDocuments, // Attached documents
+      recurrence: {
+        frequency: 'never',
+        days: [],
+        endDate: ''
+      },
+      // Add flag to identify family meeting events
+      isFamilyMeeting: isFamilyMeeting
+    };
+  };
+  
+  // Simple event initialization
+  const [event, setEvent] = useState(initialEvent || createDefaultEvent());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [selectedReminders, setSelectedReminders] = useState([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showProviderSelector, setShowProviderSelector] = useState(false);
+  const [showDocumentSelector, setShowDocumentSelector] = useState(false);
+  const [showRelatedEvents, setShowRelatedEvents] = useState(false);
+
+  // Synchronize family member profile images to ensure consistency
+  useEffect(() => {
+    if (familyMembers.length > 0 && event) {
+      // Make profile images consistent across all instances
+      const { events: updatedEvents } = synchronizeFamilyMemberImages(
+        familyMembers,
+        event.attendees ? [{ ...event }] : []
+      );
+
+      // Update the event with synchronized attendee images if needed
+      if (updatedEvents && updatedEvents.length > 0 && event.attendees) {
+        setEvent(prev => ({
+          ...prev,
+          attendees: updatedEvents[0].attendees
+        }));
+      }
+    }
+  }, [familyMembers, event.attendees]);
+  
+  // Debug log whenever event changes
+  useEffect(() => {
+    console.log("🔄 Event data changed:", {
+      title: event.title,
+      dateTime: event.dateTime,
+      dateObj: event.dateObj ? event.dateObj.toString() : null,
+      date: event.date
+    });
+  }, [event]);
+  
+  const children = familyMembers.filter(m => m.role === 'child');
+  const parents = familyMembers.filter(m => m.role === 'parent');
+  const isUpdatingRef = useRef(false);
+  const previousDateRef = useRef(null);
+  const prevLocationRef = useRef(null);
+  
+  // Ensure there's always a default event type
+  useEffect(() => {
+    if (!event.eventType && !event.category) {
+      // Check if this is a family meeting event from the URL or props
+      const isFamilyMeeting = initialEvent?.title?.includes('Family Meeting') || 
+                             window.location.href.includes('family-meeting');
+      
+      setEvent(prev => ({ 
+        ...prev, 
+        eventType: isFamilyMeeting ? 'meeting' : 'general',
+        category: isFamilyMeeting ? 'meeting' : 'general',
+        // For family meetings, include all family members by default
+        attendees: isFamilyMeeting ? familyMembers.map(m => m.id) : prev.attendees
+      }));
+    }
+  }, [event.eventType, event.category, initialEvent?.title, familyMembers]);
+  
+  // Track if event has been modified
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Monitor changes to the event state to detect unsaved changes
+  useEffect(() => {
+    if (initialEvent && JSON.stringify(initialEvent) !== JSON.stringify(event)) {
+      setHasUnsavedChanges(true);
+    } else {
+      setHasUnsavedChanges(false);
+    }
+  }, [event, initialEvent]);
+
+  // Add a custom beforeunload event handler to replace the browser dialog
+  // This still shows a browser dialog for page navigation, but we can intercept
+  // close button clicks within our app
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        // This text isn't displayed in modern browsers,
+        // but is required to trigger the confirmation dialog
+        const message = "You have unsaved changes. Are you sure you want to discard them?";
+        e.returnValue = message;
+        return message;
+      }
+    };
+
+    // Add the event listener only if we have unsaved changes
+    if (hasUnsavedChanges) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    // Clean up the event listener
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
+  // Create refs for dialog and its buttons for focus management
+  const dialogRef = useRef(null);
+  const discardButtonRef = useRef(null);
+  const keepEditingButtonRef = useRef(null);
+
+  // Track if the unsaved changes dialog is shown
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+
+  // Handle escape key to close the form with our custom dialog
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === 'Escape') {
+        // If dialog is shown, close it instead of triggering cancel
+        if (showUnsavedChangesDialog) {
+          handleKeepEditing();
+        } else {
+          handleCancel();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleEscKey);
+    return () => {
+      window.removeEventListener('keydown', handleEscKey);
+    };
+  }, [hasUnsavedChanges, showUnsavedChangesDialog]);
+
+  // Focus management for dialog
+  useEffect(() => {
+    if (showUnsavedChangesDialog && discardButtonRef.current) {
+      // Focus the primary action button when dialog opens
+      setTimeout(() => discardButtonRef.current.focus(), 50);
+    }
+  }, [showUnsavedChangesDialog]);
+
+  // Tab trap inside dialog when it's open
+  useEffect(() => {
+    if (!showUnsavedChangesDialog) return;
+
+    const handleTabKey = (e) => {
+      if (!dialogRef.current || e.key !== 'Tab') return;
+
+      const focusableElements = dialogRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      // If shift+tab on first element, move to last element
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement.focus();
+      }
+      // If tab on last element, move to first element
+      else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleTabKey);
+    return () => {
+      window.removeEventListener('keydown', handleTabKey);
+    };
+  }, [showUnsavedChangesDialog]);
+
+  // Handle cancellation with unsaved changes prompt
+  const handleCancel = () => {
+    // If there are unsaved changes, show our custom confirmation dialog
+    if (hasUnsavedChanges) {
+      setShowUnsavedChangesDialog(true);
+      return; // Wait for dialog response
+    }
+
+    // No unsaved changes, proceed with cancel
+    if (onCancel) onCancel();
+  };
+
+  // Handle confirm discard from our custom dialog with animation
+  const handleConfirmDiscard = () => {
+    // Start the exit animation
+    setIsDialogClosing(true);
+
+    // Wait for animation to complete before closing and executing cancel
+    setTimeout(() => {
+      setShowUnsavedChangesDialog(false);
+      setIsDialogClosing(false);
+      if (onCancel) onCancel();
+    }, 200); // Match animation duration
+  };
+
+  // Track animation state for smooth dialog exit
+  const [isDialogClosing, setIsDialogClosing] = useState(false);
+
+  // Handle cancel from our custom dialog with animation
+  const handleKeepEditing = () => {
+    // Start the exit animation
+    setIsDialogClosing(true);
+
+    // Wait for animation to complete before fully closing
+    setTimeout(() => {
+      setShowUnsavedChangesDialog(false);
+      setIsDialogClosing(false);
+    }, 200); // Match animation duration
+  };
+
+  // Handle click outside the dialog to cancel
+  const handleDialogBackdropClick = (e) => {
+    // Only close if clicking directly on the backdrop, not the dialog itself
+    if (e.target === e.currentTarget) {
+      handleKeepEditing();
+    }
+  };
+  
+  // Handle date change
+  const handleDateChange = (e) => {
+    const newDate = new Date(e.target.value);
+    if (isNaN(newDate.getTime())) {
+      return;
+    }
+    
+    const date = new Date(event.dateTime || new Date());
+    date.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+    
+    let endDate = event.endDateTime ? new Date(event.endDateTime) : new Date(date);
+    endDate.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+    
+    setEvent(prev => ({ 
+      ...prev, 
+      dateTime: date.toISOString(),
+      endDateTime: endDate.toISOString(),
+      date: date.toISOString(),
+      
+      dateObj: date,
+      dateEndObj: endDate,
+      
+      start: {
+        ...(prev.start || {}),
+        dateTime: date.toISOString(),
+        date: date.toISOString().split('T')[0],
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      },
+      end: {
+        ...(prev.end || {}),
+        dateTime: endDate.toISOString(),
+        date: endDate.toISOString().split('T')[0],
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      }
+    }));
+  };
+  
+  // Handle time change with 15-minute intervals
+  const handleTimeChange = (e) => {
+    const date = new Date(event.dateTime || new Date());
+    const [hours, minutes] = e.target.value.split(':');
+    
+    // Round minutes to nearest 15 minute interval
+    const roundedMinutes = Math.round(parseInt(minutes) / 15) * 15;
+    date.setHours(hours, roundedMinutes);
+    
+    const endDate = new Date(date);
+    endDate.setMinutes(date.getMinutes() + (event.duration || 30));
+    
+    setEvent(prev => ({
+      ...prev, 
+      dateTime: date.toISOString(),
+      endDateTime: endDate.toISOString(),
+      
+      dateObj: date,
+      dateEndObj: endDate,
+      
+      start: {
+        ...(prev.start || {}),
+        dateTime: date.toISOString(),
+        time: date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      },
+      end: {
+        ...(prev.end || {}),
+        dateTime: endDate.toISOString(),
+        time: endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      }
+    }));
+  };
+  
+  // Handle save with improved date/time handling
+  const handleSave = async () => {
+    // Check event loop guard to prevent infinite loops
+    if (checkCalendarEventGuard('saveEvent', { source: 'EnhancedEventManager' })) {
+      console.log("⚠️ Calendar event guard blocked event save");
+      setError("Operation blocked to prevent infinite loop. Please refresh the page.");
+      return;
+    }
+    try {
+      // Get date and time components from the event
+      let dateObj = null;
+      let timeHours = 0, timeMinutes = 0;
+      let endDateObj = null;
+
+      console.log("📅 Event data for save:", {
+        title: event.title,
+        dateTime: event.dateTime,
+        endDateTime: event.endDateTime
+      });
+
+      // ENHANCED DATE EXTRACTION: More reliable date detection with better logging
+      // Extract date and time from various possible formats with explicit priority
+      if (event.dateObj instanceof Date && !isNaN(event.dateObj.getTime())) {
+        console.log("📅 Using dateObj (highest priority source)");
+        dateObj = new Date(event.dateObj);
+        timeHours = dateObj.getHours();
+        timeMinutes = dateObj.getMinutes();
+      } else if (event.start?.dateTime) {
+        console.log("📅 Using start.dateTime");
+        dateObj = new Date(event.start.dateTime);
+        timeHours = dateObj.getHours();
+        timeMinutes = dateObj.getMinutes();
+      } else if (event.dateTime) {
+        console.log("📅 Using dateTime");
+        dateObj = new Date(event.dateTime);
+        timeHours = dateObj.getHours();
+        timeMinutes = dateObj.getMinutes();
+      } else if (event.date) {
+        console.log("📅 Using date string");
+        dateObj = new Date(event.date);
+        timeHours = dateObj.getHours();
+        timeMinutes = dateObj.getMinutes();
+      } else {
+        // Default to current date/time as last resort
+        console.log("📅 No valid date found - using current date/time as fallback");
+        dateObj = new Date();
+        timeHours = dateObj.getHours();
+        timeMinutes = dateObj.getMinutes();
+      }
+
+      // FIX: Make absolutely sure we have a valid date object
+      if (isNaN(dateObj.getTime())) {
+        console.error("📅 CRITICAL ERROR: Invalid date detected");
+        dateObj = new Date(); // Force a valid date
+        timeHours = dateObj.getHours();
+        timeMinutes = dateObj.getMinutes();
+      }
+
+      // CRITICAL FIX: Ensure time is not defaulting to midnight
+      if (timeHours === 0 && timeMinutes === 0) {
+        // Default to current hour if time is midnight
+        const now = new Date();
+        timeHours = now.getHours();
+        timeMinutes = 0; // Keep minutes at 0 for cleaner times
+
+        // Update the date object with new time
+        dateObj.setHours(timeHours, timeMinutes, 0, 0);
+        console.log(`📅 Defaulting time to current hour instead of midnight: ${timeHours}:${timeMinutes}`);
+      }
+
+      // Calculate end date/time with improved reliable detection
+      if (event.dateEndObj instanceof Date && !isNaN(event.dateEndObj.getTime())) {
+        console.log("📅 Using dateEndObj for end time");
+        endDateObj = new Date(event.dateEndObj);
+      } else if (event.end?.dateTime) {
+        console.log("📅 Using end.dateTime for end time");
+        endDateObj = new Date(event.end.dateTime);
+      } else if (event.endDateTime) {
+        console.log("📅 Using endDateTime for end time");
+        endDateObj = new Date(event.endDateTime);
+      } else {
+        // Default to 1 hour after start
+        console.log("📅 No valid end time found - defaulting to 1 hour after start");
+        endDateObj = new Date(dateObj);
+        endDateObj.setHours(endDateObj.getHours() + 1);
+      }
+
+      // FIX: Make absolutely sure we have a valid end date
+      if (isNaN(endDateObj.getTime())) {
+        console.error("📅 CRITICAL ERROR: Invalid end date detected");
+        endDateObj = new Date(dateObj);
+        endDateObj.setHours(dateObj.getHours() + 1);
+      }
+
+      // Make sure end date has correct time components
+      endDateObj.setHours(
+        endDateObj.getHours(),
+        endDateObj.getMinutes(),
+        0,
+        0
+      );
+
+      // ENHANCED: Force end date to be after start date
+      if (endDateObj <= dateObj) {
+        console.log("📅 End date is before or equal to start date - adding 1 hour");
+        endDateObj = new Date(dateObj);
+        endDateObj.setHours(dateObj.getHours() + 1);
+      }
+
+      // Log the final date/time values
+      console.log(`📅 Final date/time for save: ${dateObj.toISOString()}, time: ${timeHours}:${timeMinutes}`);
+      console.log(`📅 Final end date/time: ${endDateObj.toISOString()}`);
+
+      // CRITICAL FIX: Create a completely fresh object to prevent reference issues
+      // First, create a complete clone of the event object without date objects
+      const baseEventData = JSON.parse(JSON.stringify({
+        ...event,
+        // Remove date objects that can't be stringified
+        dateObj: undefined,
+        dateEndObj: undefined
+      }));
+
+      // Now create the event to save with all fields explicitly set
+      const eventToSave = {
+        // Base properties - start with the clean clone
+        ...baseEventData,
+
+        // Preserve ID fields exactly as they were
+        id: event.id,
+        firestoreId: event.firestoreId,
+        universalId: event.universalId,
+
+        // Core data - ensuring we have all the edited fields
+        title: event.title || '',
+        description: event.description || '',
+        location: event.location || '',
+        childId: event.childId || null,
+        childName: event.childName || null,
+        attendingParentId: event.attendingParentId || null,
+        siblingAttendees: Array.isArray(event.siblingAttendees) ? [...event.siblingAttendees] : [],
+
+        // Provider and documents
+        provider: event.provider ? { ...event.provider } : null,
+        babysitter: event.babysitter ? { ...event.babysitter } : null,
+        documents: Array.isArray(event.documents) ? [...event.documents] : [],
+
+        // NEW IMPROVED FIX: Standardize all date formats consistently with forced type conversion
+        // This ensures all date representations are consistent
+        dateTime: dateObj.toISOString(),
+        date: dateObj.toISOString(),
+
+        // Set end date formats
+        endDateTime: endDateObj.toISOString(),
+
+        // Set start/end in Google Calendar format - explicitly creating new objects
+        start: {
+          dateTime: dateObj.toISOString(),
+          date: dateObj.toISOString().split('T')[0],
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+        end: {
+          dateTime: endDateObj.toISOString(),
+          date: endDateObj.toISOString().split('T')[0],
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+
+        // Event metadata
+        category: event.category || eventType,
+        eventType: event.eventType || eventType,
+
+        // Attendees and relations - ensure we preserve the edited arrays
+        attendees: Array.isArray(event.attendees) ? [...event.attendees] : [],
+
+        // Recurrence data if present
+        recurrence: event.recurrence ? { ...event.recurrence } : null,
+        isRecurring: !!event.isRecurring,
+
+        // Make sure we have the proper date format for Firebase
+        createdAt: event.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+
+        // IMPORTANT: Save explicit time components for better persistence
+        extraDetails: {
+          ...(event.extraDetails || {}),
+          eventHours: timeHours,
+          eventMinutes: timeMinutes,
+          savedDate: dateObj.toISOString(),
+          // Add debugging info
+          lastUpdateSource: 'enhanced-event-manager',
+          lastUpdateTime: new Date().toISOString(),
+          // NEW: Add an explicit marker that we're saving the date
+          dateSaveAttempt: true
+        }
+      };
+
+      // CRITICAL FIX: Add date objects separately (can't be part of JSON stringify/parse)
+      // Create fresh Date objects from ISO strings to avoid reference issues
+      eventToSave.dateObj = new Date(dateObj.toISOString());
+      eventToSave.dateEndObj = new Date(endDateObj.toISOString());
+
+      // ENHANCED: Double-check that date objects are valid
+      if (isNaN(eventToSave.dateObj.getTime()) || isNaN(eventToSave.dateEndObj.getTime())) {
+        console.error("📅 CRITICAL ERROR: Invalid date objects after preparation");
+        // Force replacement with valid dates
+        eventToSave.dateObj = new Date();
+        eventToSave.dateEndObj = new Date(eventToSave.dateObj);
+        eventToSave.dateEndObj.setHours(eventToSave.dateObj.getHours() + 1);
+
+        // Update all date strings too
+        eventToSave.dateTime = eventToSave.dateObj.toISOString();
+        eventToSave.date = eventToSave.dateObj.toISOString();
+        eventToSave.endDateTime = eventToSave.dateEndObj.toISOString();
+        eventToSave.start.dateTime = eventToSave.dateObj.toISOString();
+        eventToSave.end.dateTime = eventToSave.dateEndObj.toISOString();
+      }
+
+      // Log the actual data being saved
+      console.log("📅 SAVING EVENT WITH DATE:", {
+        date: eventToSave.date,
+        dateTime: eventToSave.dateTime,
+        dateObj: eventToSave.dateObj?.toISOString(),
+        year: eventToSave.dateObj?.getFullYear(),
+        month: eventToSave.dateObj?.getMonth(),
+        day: eventToSave.dateObj?.getDate()
+      });
+
+      // Set global flags to prevent duplicate updates
+      if (typeof window !== 'undefined') {
+        window._eventUpdateInProgress = true;
+      }
+
+      if (onSave) {
+        setLoading(true);
+
+        try {
+          // Add extra debug logs to see exactly what's being saved
+          console.log("⚠️ CRITICAL DEBUG - FINAL EVENT TO BE SAVED:", {
+            id: eventToSave.id,
+            firestoreId: eventToSave.firestoreId,
+            title: eventToSave.title,
+            date: eventToSave.date,
+            dateTime: eventToSave.dateTime,
+            mode: mode, // 'create' or 'edit'
+            has_dateObj: !!eventToSave.dateObj
+          });
+
+          // Call the onSave handler - passing mode to prevent wrong notification
+          const saveResult = await onSave(eventToSave, mode);
+
+          // Display success animation
+          setSuccess(true);
+          setShowSuccess(true);
+
+          // Special flag for event type to avoid double notifications
+          if (typeof window !== 'undefined') {
+            window._lastEventAction = mode === 'edit' ? 'updated' : 'added';
+            window._lastEventId = eventToSave.firestoreId || eventToSave.id;
+          }
+
+          // Force event refresh to ensure UI is updated with the new date
+          if (typeof window !== 'undefined') {
+            setTimeout(() => {
+              console.log('Dispatching force-calendar-refresh event');
+              window.dispatchEvent(new CustomEvent('force-calendar-refresh'));
+            }, 500);
+          }
+
+          setTimeout(() => {
+            setShowSuccess(false);
+            if (onCancel) onCancel();
+
+            // Clear update flags
+            if (typeof window !== 'undefined') {
+              window._eventUpdateInProgress = false;
+            }
+          }, 1500);
+        } catch (error) {
+          console.error("Error saving event:", error);
+          setError("Failed to save event: " + (error.message || "Unknown error"));
+
+          // Clear update flag on error
+          if (typeof window !== 'undefined') {
+            window._eventUpdateInProgress = false;
+          }
+        } finally {
+          setLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error preparing event:", error);
+      setError("Failed to save event. Please try again.");
+      setLoading(false);
+
+      // Clear update flag on error
+      if (typeof window !== 'undefined') {
+        window._eventUpdateInProgress = false;
+      }
+    }
+  };
+  
+  // Use effect to hide calendar events when this component is mounted
+  useEffect(() => {
+    // Add a style tag to hide all calendar events while the form is open
+    const styleEl = document.createElement('style');
+    styleEl.id = 'hide-calendar-events-style';
+    styleEl.innerHTML = `
+      .calendar-event {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+
+    // Clean up when component unmounts
+    return () => {
+      const styleToRemove = document.getElementById('hide-calendar-events-style');
+      if (styleToRemove) {
+        document.head.removeChild(styleToRemove);
+      }
+    };
+  }, []);
+
+  return (
+    <>
+      {/* Event form with high z-index */}
+      <div className={`bg-white rounded-lg shadow-md ${isCompact ? 'p-3' : 'p-4'} w-full font-roboto max-h-[90vh] overflow-y-auto relative z-[2000]`} data-testid="event-form">
+      <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10 pb-2">
+        <h3 className="text-lg font-medium flex items-center">
+          <Calendar size={20} className="mr-2" />
+          {mode === 'edit' ? 'Edit Event' : 'Add New Event'}
+        </h3>
+        {onCancel && (
+          <button 
+            onClick={handleCancel}
+            className="text-gray-500 hover:text-gray-700"
+            data-testid="close-event-form"
+          >
+            <X size={20} />
+          </button>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Event Type - Full Width */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-1 text-gray-700">
+            Event Type
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                // Get all family member IDs for general events
+                const allFamilyMemberIds = familyMembers.map(m => m.id);
+                setEvent(prev => ({ 
+                  ...prev, 
+                  category: 'general', 
+                  eventType: 'general',
+                  attendees: allFamilyMemberIds
+                }))
+              }}
+              className={`px-3 py-1 text-sm rounded-full ${
+                (!event.category || event.category === 'general') ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              General
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // If there's a selected child, use them, otherwise select first child
+                const activeChildId = event.childId || children[0]?.id || '';
+                // Default to first parent if available
+                const firstParent = parents.length > 0 ? parents[0].id : '';
+                setEvent(prev => ({ 
+                  ...prev, 
+                  category: 'appointment', 
+                  eventType: 'appointment',
+                  childId: activeChildId,
+                  attendingParentId: firstParent,
+                  attendees: activeChildId ? [activeChildId, firstParent] : [firstParent]
+                }))
+              }}
+              className={`px-3 py-1 text-sm rounded-full ${
+                (event.category === 'appointment' || event.eventType === 'appointment') ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              Appointment
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // If there's a selected child, use them, otherwise select first child
+                const activeChildId = event.childId || children[0]?.id || '';
+                // Default to first parent if available
+                const firstParent = parents.length > 0 ? parents[0].id : '';
+                setEvent(prev => ({ 
+                  ...prev, 
+                  category: 'activity', 
+                  eventType: 'activity',
+                  childId: activeChildId,
+                  attendingParentId: firstParent,
+                  attendees: activeChildId ? [activeChildId, firstParent] : [firstParent]
+                }))
+              }}
+              className={`px-3 py-1 text-sm rounded-full ${
+                event.category === 'activity' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              Activity
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // If there's a selected child, use them, otherwise select first child
+                const activeChildId = event.childId || children[0]?.id || '';
+                // For birthdays all family members should attend
+                const allFamilyMemberIds = familyMembers.map(m => m.id);
+                setEvent(prev => ({ 
+                  ...prev, 
+                  category: 'birthday', 
+                  eventType: 'birthday',
+                  childId: activeChildId,
+                  attendees: allFamilyMemberIds
+                }))
+              }}
+              className={`px-3 py-1 text-sm rounded-full ${
+                event.category === 'birthday' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              Birthday
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // For meetings all family members should attend
+                const allFamilyMemberIds = familyMembers.map(m => m.id);
+                setEvent(prev => ({ 
+                  ...prev, 
+                  category: 'meeting', 
+                  eventType: 'meeting',
+                  attendees: allFamilyMemberIds,
+                  // Set flag to mark this as a family meeting
+                  isFamilyMeeting: true,
+                  // For family meetings, set both parents as attending
+                  attendingParentId: 'both'
+                }))
+              }}
+              className={`px-3 py-1 text-sm rounded-full ${
+                event.category === 'meeting' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              Meeting
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // For date night, only parents should attend by default
+                const parentIds = parents.map(p => p.id);
+                setEvent(prev => ({ 
+                  ...prev, 
+                  category: 'relationship', 
+                  eventType: 'date-night',
+                  attendingParentId: 'both',
+                  attendees: parentIds
+                }))
+              }}
+              className={`px-3 py-1 text-sm rounded-full ${
+                event.eventType === 'date-night' ? 'bg-pink-100 text-pink-800' : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              Date Night
+            </button>
+          </div>
+        </div>
+        
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-700">
+            Title*
+          </label>
+          <input
+            type="text"
+            value={event.title || ''}
+            onChange={(e) => setEvent(prev => ({ ...prev, title: e.target.value }))}
+            className="w-full border rounded-md p-2 text-sm"
+            placeholder="Enter event title"
+            data-testid="event-title-input"
+            required
+          />
+        </div>
+        
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-1 text-gray-700">
+            Date & Time*
+          </label>
+          <GoogleStyleDateTimePicker
+            value={event.dateTime}
+            onChange={(newDateTimeVal, recurrenceData) => {
+              if (newDateTimeVal) {
+                let newDate, endDateTime, dateEndObj;
+                
+                if (Array.isArray(newDateTimeVal)) {
+                  // Handle range selection
+                  newDate = new Date(newDateTimeVal[0]);
+                  endDateTime = newDateTimeVal[1] ? new Date(newDateTimeVal[1]).toISOString() : undefined;
+                  dateEndObj = newDateTimeVal[1] ? new Date(newDateTimeVal[1]) : undefined;
+                } else {
+                  // Handle single date selection
+                  newDate = new Date(newDateTimeVal);
+                  
+                  // Default end time is 1 hour after start
+                  const defaultEnd = new Date(newDate);
+                  defaultEnd.setHours(defaultEnd.getHours() + 1);
+                  endDateTime = event.endDateTime || defaultEnd.toISOString();
+                  dateEndObj = event.dateEndObj || defaultEnd;
+                }
+                
+                // Update event with both date/time and recurrence information
+                setEvent(prev => ({
+                  ...prev,
+                  dateTime: newDate.toISOString(),
+                  dateObj: newDate,
+                  date: newDate.toISOString(),
+                  endDateTime: endDateTime,
+                  dateEndObj: dateEndObj,
+                  // Store recurrence data
+                  isRecurring: recurrenceData && recurrenceData.frequency !== 'never',
+                  recurrence: recurrenceData || {
+                    frequency: 'never',
+                    days: [],
+                    endDate: ''
+                  }
+                }));
+              }
+            }}
+            showRecurrenceOptions={true}
+            showLocationPicker={true}
+            showAttendees={true}
+            familyMembers={familyMembers}
+            initialRecurrence={event.recurrence}
+            initialLocation={event.location || ''}
+            initialAttendees={Array.isArray(event.attendees) ? [...event.attendees] : []}
+            onLocationChange={(location) => {
+              setEvent(prev => ({
+                ...prev,
+                location
+              }));
+            }}
+            onAttendeesChange={(attendees) => {
+              // Simply set the attendees in the event state
+              setEvent(prev => ({
+                ...prev,
+                attendees: attendees || []
+              }));
+            }}
+          />
+        </div>
+        
+        {/* Location is now handled by the GoogleStyleDateTimePicker component */}
+        
+        {/* Child Selection - for activities, appointments, birthdays */}
+        {['activity', 'appointment', 'birthday'].includes(event.eventType) && (
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              For Child
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {children.map(child => (
+                <button
+                  key={child.id}
+                  type="button"
+                  onClick={() => setEvent(prev => ({
+                    ...prev,
+                    childId: child.id,
+                    childName: child.name || child.displayName || '',
+                  }))}
+                  className={`flex items-center px-3 py-1.5 rounded-full text-sm 
+                    ${event.childId === child.id ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' : 'bg-gray-100 text-gray-800'}`}
+                >
+                  <div className="w-6 h-6 rounded-full overflow-hidden mr-1.5">
+                    {child.photoURL ? (
+                      <img 
+                        src={child.photoURL} 
+                        alt={child.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs font-bold`}>
+                        {(child.name || "").charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  {child.name || child.displayName}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Parent Selection - who's taking the child */}
+        {['activity', 'appointment'].includes(event.eventType) && event.childId && (
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Who will attend with {event.childName || children.find(c => c.id === event.childId)?.name || 'the child'}?
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {parents.map(parent => (
+                <button
+                  key={parent.id}
+                  type="button"
+                  onClick={() => setEvent(prev => {
+                    // Update the attendees list and attending parent ID
+                    const newAttendees = prev.attendees.filter(a => a !== parents[0].id && a !== parents[1]?.id);
+                    newAttendees.push(parent.id);
+                    
+                    return {
+                      ...prev,
+                      attendingParentId: parent.id,
+                      attendees: [...new Set([...newAttendees, prev.childId])]
+                    };
+                  })}
+                  className={`flex items-center px-3 py-1.5 rounded-full text-sm 
+                    ${event.attendingParentId === parent.id ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' : 'bg-gray-100 text-gray-800'}`}
+                >
+                  <div className="w-6 h-6 rounded-full overflow-hidden mr-1.5">
+                    {parent.photoURL ? (
+                      <img 
+                        src={parent.photoURL} 
+                        alt={parent.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center bg-green-500 text-white text-xs font-bold`}>
+                        {(parent.name || "").charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  {parent.name || parent.displayName}
+                </button>
+              ))}
+              
+              <button
+                type="button"
+                onClick={() => setEvent(prev => {
+                  // Add both parents to attendees list
+                  const parentIds = parents.map(p => p.id);
+                  return {
+                    ...prev,
+                    attendingParentId: 'both',
+                    attendees: [...new Set([...parentIds, prev.childId])]
+                  };
+                })}
+                className={`flex items-center px-3 py-1.5 rounded-full text-sm 
+                  ${event.attendingParentId === 'both' ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' : 'bg-gray-100 text-gray-800'}`}
+              >
+                <div className="w-6 h-6 rounded-full overflow-hidden mr-1.5 flex items-center justify-center bg-purple-500 text-white text-xs font-bold">
+                  BP
+                </div>
+                Both Parents
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setEvent(prev => ({
+                  ...prev,
+                  attendingParentId: 'tbd',
+                }))}
+                className={`flex items-center px-3 py-1.5 rounded-full text-sm 
+                  ${event.attendingParentId === 'tbd' ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' : 'bg-gray-100 text-gray-800'}`}
+              >
+                <div className="w-6 h-6 rounded-full overflow-hidden mr-1.5 flex items-center justify-center bg-gray-500 text-white text-xs font-bold">
+                  ?
+                </div>
+                Decide Later
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Sibling Selection - include siblings? */}
+        {['activity', 'appointment'].includes(event.eventType) && event.childId && children.length > 1 && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Include Siblings?
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {children.filter(child => child.id !== event.childId).map(sibling => (
+                <button
+                  key={sibling.id}
+                  type="button"
+                  onClick={() => setEvent(prev => {
+                    const isSiblingAttending = prev.attendees.includes(sibling.id);
+                    
+                    // Toggle sibling in attendees
+                    const newAttendees = isSiblingAttending
+                      ? prev.attendees.filter(id => id !== sibling.id)
+                      : [...prev.attendees, sibling.id];
+                      
+                    // Also update siblingAttendees for clearer tracking
+                    const newSiblingAttendees = isSiblingAttending
+                      ? prev.siblingAttendees?.filter(id => id !== sibling.id) || []
+                      : [...(prev.siblingAttendees || []), sibling.id];
+                    
+                    return {
+                      ...prev,
+                      attendees: newAttendees,
+                      siblingAttendees: newSiblingAttendees
+                    };
+                  })}
+                  className={`flex items-center px-3 py-1.5 rounded-full text-sm 
+                    ${event.attendees.includes(sibling.id) ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' : 'bg-gray-100 text-gray-800'}`}
+                >
+                  <div className="w-6 h-6 rounded-full overflow-hidden mr-1.5">
+                    {sibling.photoURL ? (
+                      <img 
+                        src={sibling.photoURL} 
+                        alt={sibling.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs font-bold`}>
+                        {(sibling.name || "").charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  {sibling.name || sibling.displayName}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Provider Selection Button - for appointments */}
+        {['appointment', 'activity'].includes(event.eventType) && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setShowProviderSelector(true)}
+              className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-sm font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
+            >
+              <User size={16} className="mr-1.5" />
+              {event.provider ? 'Change Provider' : 'Add Provider'} 
+              {event.provider && (
+                <span className="ml-2 font-medium">{event.provider.name}</span>
+              )}
+            </button>
+            
+            {/* Provider Display - if selected */}
+            {event.provider && (
+              <div className="mt-2 bg-blue-50 rounded-md p-3">
+                <div className="flex items-start">
+                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
+                    <span className="text-blue-600 font-medium text-lg">
+                      {event.provider.name?.charAt(0)?.toUpperCase() || <User size={16} className="text-blue-500" />}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium">{event.provider.name}</p>
+                    {event.provider.specialty && (
+                      <p className="text-sm text-gray-600">{event.provider.specialty}</p>
+                    )}
+                    {event.provider.phone && (
+                      <p className="text-sm text-gray-600">
+                        <Phone size={14} className="inline mr-1 text-gray-400" />
+                        {event.provider.phone}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEvent(prev => ({ ...prev, provider: null }))}
+                    className="ml-auto p-1 text-gray-400 hover:text-gray-600"
+                    title="Remove Provider"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Babysitter Selection - for date nights */}
+        {event.eventType === 'date-night' && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setShowProviderSelector(true)}
+              className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-sm font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
+            >
+              <User size={16} className="mr-1.5" />
+              {event.babysitter ? 'Change Babysitter' : 'Add Babysitter'} 
+              {event.babysitter && (
+                <span className="ml-2 font-medium">{event.babysitter.name}</span>
+              )}
+            </button>
+            
+            {/* Babysitter Display - if selected */}
+            {event.babysitter && (
+              <div className="mt-2 bg-blue-50 rounded-md p-3">
+                <div className="flex items-start">
+                  <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center mr-3 flex-shrink-0">
+                    <span className="text-purple-600 font-medium text-lg">
+                      {event.babysitter.name?.charAt(0)?.toUpperCase() || <User size={16} className="text-purple-500" />}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium">{event.babysitter.name}</p>
+                    {event.babysitter.specialty && (
+                      <p className="text-sm text-gray-600">{event.babysitter.specialty}</p>
+                    )}
+                    {event.babysitter.phone && (
+                      <p className="text-sm text-gray-600">
+                        <Phone size={14} className="inline mr-1 text-gray-400" />
+                        {event.babysitter.phone}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEvent(prev => ({ ...prev, babysitter: null }))}
+                    className="ml-auto p-1 text-gray-400 hover:text-gray-600"
+                    title="Remove Babysitter"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Document Attachment Button */}
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setShowDocumentSelector(true)}
+            className="inline-flex items-center px-3 py-1.5 border border-green-300 text-sm font-medium rounded text-green-700 bg-green-50 hover:bg-green-100"
+          >
+            <Paperclip size={16} className="mr-1.5" />
+            Attach Documents
+            {event.documents && event.documents.length > 0 && (
+              <span className="ml-2 font-medium">{event.documents.length} attached</span>
+            )}
+          </button>
+          
+          {/* Document List - if any are attached */}
+          {event.documents && event.documents.length > 0 && (
+            <div className="mt-2">
+              <div className="bg-green-50 rounded-md p-2">
+                <p className="text-sm font-medium mb-1.5 text-green-800">Attached Documents:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {event.documents.map((doc, index) => (
+                    <div 
+                      key={doc.id || index}
+                      className="flex items-center bg-white px-2 py-1 rounded text-sm border border-green-200"
+                    >
+                      <FileText size={14} className="text-green-600 mr-1.5" />
+                      <span className="truncate max-w-[200px]">{doc.title}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedDocs = [...event.documents];
+                          updatedDocs.splice(index, 1);
+                          setEvent(prev => ({ ...prev, documents: updatedDocs }));
+                        }}
+                        className="ml-1.5 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Description - Full Width */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-1 text-gray-700">
+            Description
+          </label>
+          <textarea
+            value={event.description || ''}
+            onChange={(e) => setEvent(prev => ({ ...prev, description: e.target.value }))}
+            className="w-full border rounded-md p-2 text-sm"
+            rows="3"
+            placeholder="Add any additional details about this event"
+          ></textarea>
+        </div>
+        
+        {/* Error Display */}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-100 rounded-md flex items-start">
+            <AlertCircle size={18} className="mr-2 text-red-500 mt-0.5 flex-shrink-0" />
+            <span className="text-sm text-red-700">{error}</span>
+          </div>
+        )}
+        
+        {/* Action Buttons - Full Width */}
+        <div className="md:col-span-2 flex justify-between pt-2">
+          <div className="flex space-x-2">
+            {mode === 'edit' && onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(event)}
+                className="px-4 py-2 border border-red-500 text-red-500 rounded hover:bg-red-50 font-roboto flex items-center"
+                data-testid="delete-event-button"
+              >
+                <Trash2 size={16} className="mr-2" />
+                Delete
+              </button>
+            )}
+            
+            {/* Only show related events button for existing events */}
+            {mode === 'edit' && event.id && (
+              <button
+                type="button"
+                onClick={() => setShowRelatedEvents(!showRelatedEvents)}
+                className="px-4 py-2 border border-blue-500 text-blue-500 rounded hover:bg-blue-50 font-roboto flex items-center"
+              >
+                <Link size={16} className="mr-2" />
+                {showRelatedEvents ? 'Hide Related' : 'Related Events'}
+              </button>
+            )}
+          </div>
+          
+          <div className="flex">
+            {onCancel && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 mr-2"
+                data-testid="cancel-button"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={loading || !event.title}
+              className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
+              data-testid={mode === 'edit' ? 'update-event-button' : 'save-event-button'}
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 mr-2 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Calendar size={16} className="mr-2" />
+                  {mode === 'edit' ? 'Update Event' : 'Add to Calendar'}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Success Animation - bottom right corner only */}
+      {showSuccess && (
+        <div className="fixed bottom-4 right-4 z-[3000]">
+          <div className="bg-white rounded-lg p-3 shadow-lg flex items-center space-x-3 animate-fadeIn">
+            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-green-100">
+              <Check size={18} className="text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-medium text-sm">
+                {mode === 'edit' ? 'Event Updated!' : 'Event Added!'}
+              </h3>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Unsaved Changes Dialog */}
+      {showUnsavedChangesDialog && (
+        <div
+          className={`fixed inset-0 z-[3000] flex items-center justify-center backdrop-blur-sm ${
+            isDialogClosing ? 'animate-fadeOut' : 'animate-fadeIn'
+          } ${isDialogClosing ? 'bg-black bg-opacity-0' : 'bg-black bg-opacity-25'}`}
+          onClick={handleDialogBackdropClick}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dialog-title"
+        >
+          <div
+            ref={dialogRef}
+            className={`bg-white rounded-lg shadow-xl p-5 max-w-md w-full mx-4 ${
+              isDialogClosing ? 'animate-scaleOut' : 'animate-scaleIn'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start mb-4">
+              <div className="mr-3 flex-shrink-0 h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertCircle size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 id="dialog-title" className="text-lg font-semibold text-gray-900">Unsaved Changes</h3>
+                <p className="text-gray-600 mt-1">You have unsaved changes. Are you sure you want to discard them?</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                ref={keepEditingButtonRef}
+                onClick={handleKeepEditing}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                Keep Editing
+              </button>
+              <button
+                ref={discardButtonRef}
+                onClick={handleConfirmDiscard}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                Discard Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Document Selector Modal */}
+      {showDocumentSelector && (
+        <DocumentSelector
+          selectedDocuments={event.documents || []}
+          onDocumentsSelected={(selectedDocs) => {
+            setEvent(prev => ({
+              ...prev,
+              documents: selectedDocs
+            }));
+            setShowDocumentSelector(false);
+          }}
+          onClose={() => setShowDocumentSelector(false)}
+          childId={event.childId}
+        />
+      )}
+      
+      {/* Provider Selector Modal */}
+      {showProviderSelector && (
+        <ProviderSelector
+          selectedProvider={event.eventType === 'date-night' ? event.babysitter : event.provider}
+          onProviderSelected={(selectedProvider) => {
+            if (event.eventType === 'date-night') {
+              setEvent(prev => ({
+                ...prev,
+                babysitter: selectedProvider
+              }));
+            } else {
+              setEvent(prev => ({
+                ...prev,
+                provider: selectedProvider
+              }));
+            }
+            setShowProviderSelector(false);
+          }}
+          onClose={() => setShowProviderSelector(false)}
+          type={event.eventType === 'date-night' ? 'childcare' : (event.eventType === 'appointment' ? 'medical' : null)}
+          isBabysitter={event.eventType === 'date-night'}
+        />
+      )}
+      
+      {/* Related Events Panel */}
+      {showRelatedEvents && mode === 'edit' && event.id && (
+        <div className="mt-6 border-t border-gray-200 pt-6">
+          <RelatedEventsPanel 
+            event={event}
+            onSelectEvent={(eventId) => {
+              // In a real implementation, you would navigate to or display the selected event
+              console.log(`Selected related event: ${eventId}`);
+              
+              // For now, just alert the user
+              alert(`This would navigate to event: ${eventId}`);
+            }}
+            onClose={() => setShowRelatedEvents(false)}
+          />
+        </div>
+      )}
+    </div>
+    </>
+  );
+};
+
+export default EnhancedEventManager;

@@ -1,0 +1,279 @@
+// src/services/ClaudeService.js - SIMPLIFIED
+// This is a simplified version that makes direct API calls to the Claude API
+
+class ClaudeService {
+  constructor() {
+    // Set proxy URL based on environment
+    this.proxyUrl = 'http://localhost:3001/api/claude';
+    
+    // Set Claude model
+    this.model = 'claude-3-5-sonnet-20240620';
+    
+    // Default settings - disable mock mode to use actual API
+    this.mockMode = false; // Set to false to use actual API
+    this.debugMode = true;
+    
+    console.log(`ClaudeService initialized with proxy URL: ${this.proxyUrl}`);
+  }
+  
+  /**
+   * Generate a response from Claude API
+   * @param {Array} messages - Array of message objects with role and content
+   * @param {Object} context - Context object with system prompt
+   * @param {Object} options - Generation options
+   * @returns {Promise<string>} Claude's response text
+   */
+  async generateResponse(messages, context = {}, options = {}) {
+    console.log("🔄 ClaudeService.generateResponse - Simple direct implementation");
+    
+    try {
+      // Ensure messages are in the correct format
+      if (!Array.isArray(messages)) {
+        console.warn("⚠️ Messages not provided as array, converting...");
+        messages = [{ role: 'user', content: String(messages) }];
+      }
+      
+      // Debug log
+      console.log(`Sending ${messages.length} messages to Claude API`);
+      
+      // Prepare request body
+      const requestBody = {
+        model: this.model,
+        max_tokens: options.max_tokens || 1024,
+        temperature: options.temperature || 0.7,
+        messages: messages
+      };
+      
+      // Add system message if provided
+      if (context && context.system) {
+        requestBody.system = context.system;
+      }
+      
+      // Make the request
+      console.log("📤 Sending request to:", this.proxyUrl);
+      const response = await fetch(this.proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      // Check for errors
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ API request failed with status ${response.status}:`, errorText);
+        throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+      }
+      
+      // Parse the response
+      const result = await response.json();
+      
+      // Extract response text
+      if (result && result.content && result.content.length > 0) {
+        const responseText = result.content[0].text;
+        console.log("✅ Claude API response received:", responseText.substring(0, 50) + "...");
+        return responseText;
+      }
+      
+      // Fallback for empty response
+      console.warn("⚠️ Received empty response from Claude API");
+      return "I'm sorry, I couldn't generate a response at this time.";
+    } catch (error) {
+      console.error("❌ Error in generateResponse:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Test connection to Claude API
+   * @returns {Promise<boolean>} Success status
+   */
+  async testConnection() {
+    try {
+      console.log("🧪 Testing Claude API connection...");
+      
+      // Simple test request
+      const response = await fetch(`${this.proxyUrl}/test`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        console.log("✅ Claude API connection test passed!");
+        return true;
+      } else {
+        console.warn(`❌ Claude API connection test failed with status: ${response.status}`);
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Claude API connectivity test failed:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Get a simple completion from Claude
+   * @param {string} prompt - The prompt to send to Claude
+   * @param {Object} options - Options like temperature, max_tokens, etc.
+   * @returns {Promise<string>} - Claude's response as a string
+   */
+  async getCompletion(prompt, options = {}) {
+    console.log("🔄 ClaudeService.getCompletion with prompt:", prompt.substring(0, 100) + "...");
+    
+    try {
+      // Set default options
+      const defaultOptions = {
+        model: this.model,
+        temperature: 0.7,
+        max_tokens: 2000
+      };
+      
+      // Merge with provided options
+      const mergedOptions = { ...defaultOptions, ...options };
+      
+      // Create API request payload
+      const payload = {
+        model: mergedOptions.model,
+        temperature: mergedOptions.temperature,
+        max_tokens: mergedOptions.max_tokens,
+        messages: [
+          { role: "user", content: prompt }
+        ]
+      };
+      
+      // Add response format if specified
+      if (mergedOptions.responseFormat) {
+        payload.response_format = mergedOptions.responseFormat;
+      }
+      
+      // Use mock response if in mock mode
+      if (this.mockMode) {
+        console.log("🔸 Using mock mode for Claude completion");
+        return `{
+          "title": "Morning Task Delegation",
+          "description": "A quick morning routine to distribute household responsibilities more evenly among family members",
+          "cue": "During breakfast preparation",
+          "routine": "Identify 2-3 household tasks and explicitly assign them to family members",
+          "reward": "Mental relief from reduced responsibility load and clearer expectations",
+          "identityStatement": "I am someone who creates family balance through clear communication"
+        }`;
+      }
+      
+      // Make API request
+      const response = await fetch(this.proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Claude API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Extract Claude's response content
+      const responseContent = data.content?.[0]?.text || 
+                              data.choices?.[0]?.message?.content || 
+                              "No content in response";
+      
+      console.log("✅ Claude completion successful:", responseContent.substring(0, 100) + "...");
+      return responseContent;
+    } catch (error) {
+      console.error("❌ Error getting Claude completion:", error);
+      // Return fallback content in case of error
+      return `{
+        "title": "Meal Planning Check-in",
+        "description": "Review upcoming meal plans and grocery needs to reduce decision fatigue",
+        "cue": "Before breakfast",
+        "routine": "Check meal plan and shopping list",
+        "reward": "Feel prepared and reduce decision fatigue",
+        "identityStatement": "I am someone who helps manage family nutrition"
+      }`;
+    }
+  }
+  
+  /**
+   * Extract entity with AI from user message
+   * @param {string} message - User message
+   * @param {string} entityType - Type of entity to extract (provider, event, etc)
+   * @param {Object} options - Additional options
+   * @returns {Promise<Object>} Extracted entity details
+   */
+  async extractEntityWithAI(message, entityType, options = {}) {
+    console.log(`🔍 Extracting ${entityType} entity from message using Claude...`);
+
+    try {
+      // Base system prompt for entity extraction
+      let systemPrompt = `You are an AI assistant that extracts ${entityType} information from user messages.
+      Extract structured data about the ${entityType} mentioned in the user's message.
+      If the user doesn't mention a ${entityType}, return null.
+      Return ONLY a JSON object without any explanation or markdown.`;
+
+      // Add custom entity-specific instructions
+      if (entityType === 'provider') {
+        systemPrompt += `
+        The provider object should include these fields where mentioned:
+        - name: The provider's full name
+        - type: The provider type (medical, education, childcare, etc)
+        - specialty: Their specialty or role
+        - phone: Phone number if mentioned
+        - email: Email if mentioned
+        - address: Address if mentioned
+        - childName: Name of the child this provider is for (if applicable)
+        - notes: Any additional details mentioned
+
+        Always set type to "childcare" for babysitters and nannies.
+        If the provider is a teacher, set type to "education".
+        If the provider is a doctor or healthcare professional, set type to "medical".`;
+      }
+
+      // Add any additional system instructions
+      if (options.additionalSystemPrompt) {
+        systemPrompt += `\n\n${options.additionalSystemPrompt}`;
+      }
+
+      // Get response from Claude
+      const response = await this.generateResponse(
+        [{ role: 'user', content: message }],
+        { system: systemPrompt },
+        { temperature: 0.1, max_tokens: 2000 }
+      );
+
+      // Parse JSON from response
+      try {
+        // Extract JSON from the response
+        const jsonMatch = response.match(/({[\s\S]*})/);
+
+        if (jsonMatch) {
+          const entityData = JSON.parse(jsonMatch[0]);
+
+          if (entityData && Object.keys(entityData).length > 0) {
+            console.log(`✅ Successfully extracted ${entityType} data:`, entityData);
+            return entityData;
+          } else {
+            console.log(`⚠️ Extracted empty ${entityType} data`);
+            return null;
+          }
+        } else {
+          console.warn(`⚠️ No JSON data found in Claude's response for ${entityType}`);
+          return null;
+        }
+      } catch (parseError) {
+        console.error(`❌ Error parsing ${entityType} data from Claude response:`, parseError);
+        console.log("Raw response:", response);
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ Error extracting ${entityType} with AI:`, error);
+      return null;
+    }
+  }
+}
+
+export default new ClaudeService();

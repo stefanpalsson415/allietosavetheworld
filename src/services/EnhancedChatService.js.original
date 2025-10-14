@@ -1,0 +1,625 @@
+// src/services/EnhancedChatService.js
+import { db, auth } from './firebase';
+import ClaudeService from './ClaudeService';
+import ClaudeDirectService from './ClaudeDirectService'; // Import our new Claude-first service
+import EnhancedNLU from './EnhancedNLU';
+import CalendarService from './CalendarService';
+import { knowledgeBase } from '../data/AllieKnowledgeBase';
+import ProviderService from './ProviderService';
+import ConsolidatedNLU from './ConsolidatedNLU';
+import ProviderChatService from './ProviderChatService';
+import MedicalChatService from './MedicalChatService';
+import TaskChatService from './TaskChatService';
+import RelationshipChatService from './RelationshipChatService';
+import IntentClassifier from './IntentClassifier';
+import ConversationContext from './ConversationContext';
+import FeedbackLearningSystem from './FeedbackLearningSystem';
+import ChatPersistenceService from './ChatPersistenceService';
+import IntentActionService from './IntentActionService';
+
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  getDocs, 
+  addDoc, 
+  getDoc,
+  setDoc,
+  updateDoc,
+  doc, 
+  limit, 
+  serverTimestamp,
+  arrayUnion,
+  increment,
+  Timestamp
+} from 'firebase/firestore';
+
+class EnhancedChatService {
+  constructor() {
+    this.nlu = new EnhancedNLU();
+    this.conversationContext = {};
+    this.sessionIntents = {};
+    this.feedbackLog = {};
+    this.recentResponses = [];
+    
+    // Initialize authContext for Firebase operations
+    this.authContext = {
+      userId: null,
+      familyId: null,
+      timestamp: Date.now()
+    };
+    
+    // Add a reference to current user from auth
+    if (auth.currentUser) {
+      this.currentUser = auth.currentUser;
+      this.authContext.userId = auth.currentUser.uid;
+      console.log("👤 EnhancedChatService initialized with user:", auth.currentUser.uid);
+      
+      // Try to get familyId from localStorage
+      if (typeof window !== 'undefined') {
+        const storedFamilyId = localStorage.getItem('selectedFamilyId') || localStorage.getItem('currentFamilyId');
+        if (storedFamilyId) {
+          this.authContext.familyId = storedFamilyId;
+          console.log("👪 Initialized with familyId from localStorage:", storedFamilyId);
+        }
+      }
+    }
+    
+    // Initialize ClaudeDirectService
+    this.claudeDirectService = ClaudeDirectService;
+    console.log("🧠 ClaudeDirectService initialized as primary understanding layer");
+    
+    // Listen for auth state changes
+    auth.onAuthStateChanged(user => {
+      this.currentUser = user;
+      if (user) {
+        this.authContext.userId = user.uid;
+        this.authContext.timestamp = Date.now();
+      } else {
+        this.authContext.userId = null;
+      }
+      console.log("👤 EnhancedChatService updated auth state:", user?.uid);
+    });
+  }
+  
+  /**
+   * Set authentication context for Firebase operations
+   * @param {object} authContext - Auth context with userId and familyId
+   */
+  setAuthContext(authContext) {
+    if (!authContext) return;
+    
+    console.log("🔐 Setting auth context in EnhancedChatService:", {
+      userId: authContext.userId,
+      familyId: authContext.familyId,
+      hasValues: !!authContext.userId || !!authContext.familyId
+    });
+    
+    this.authContext = {
+      ...this.authContext,
+      ...authContext,
+      lastUpdated: Date.now()
+    };
+    
+    // Save the userId for direct Firebase operations
+    if (authContext.userId) {
+      console.log("🔐 Updated userId in EnhancedChatService:", authContext.userId);
+    }
+    
+    if (authContext.familyId) {
+      console.log("🔐 Updated familyId in EnhancedChatService:", authContext.familyId);
+    }
+  }
+  
+  /**
+   * Get AI response for a user message using the Claude-first approach
+   * @param {string} message - User message
+   * @param {string} familyId - Family ID
+   * @param {Array} context - Previous messages for context
+   * @returns {Promise<string>} AI response
+   */
+  async getAIResponse(message, familyId, context = []) {
+    console.log("✨ EnhancedChatService.getAIResponse - Using Claude-first approach");
+    console.log("🔍 Processing: ", message.substring(0, 100) + (message.length > 100 ? "..." : ""));
+    
+    try {
+      if (!familyId) {
+        console.warn("⚠️ No familyId provided to getAIResponse - Using fallbacks");
+        familyId = this.authContext?.familyId || 
+                 (typeof window !== 'undefined' && localStorage.getItem('selectedFamilyId')) || 
+                 (typeof window !== 'undefined' && localStorage.getItem('currentFamilyId'));
+                 
+        if (!familyId) {
+          console.error("❌ Could not determine familyId from any source");
+          return "I'm having trouble accessing your family information. Please try again or reload the page.";
+        }
+      }
+      
+      // Get family context for personalization
+      const familyContext = await this.getFamilyContext(familyId);
+      
+      // Check for repeat messages - prevent duplicate responses
+      if (context && context.length >= 2) {
+        const lastUserMessage = context.slice().reverse().find(msg => msg.sender !== 'allie')?.text;
+        const currentUserMessage = message.trim().toLowerCase();
+        
+        // Check if this is a repeat of the last user message
+        if (lastUserMessage && 
+            lastUserMessage.trim().toLowerCase() === currentUserMessage &&
+            context.filter(msg => msg.sender === 'allie').length > 0) {
+          
+          console.log("🔄 Detected repeated user message, will modify response approach");
+          // Don't use the exact same handler logic as before - add variation
+          const variationFlag = true;
+        }
+        
+        // Check for duplicate Allie responses - prevent repeating the same message
+        const allieResponses = context.filter(msg => msg.sender === 'allie').map(msg => msg.text);
+        
+        if (allieResponses.length >= 2) {
+          const lastTwoResponses = allieResponses.slice(-2);
+          if (lastTwoResponses[0] === lastTwoResponses[1]) {
+            console.log("⚠️ Detected duplicate Allie responses, adding anti-repetition flag");
+            // We'll address this in the system prompt
+          }
+        }
+      }
+      
+      // STEP 1: Process message with Claude-first approach
+      const claudeProcessingResult = await this.claudeDirectService.processMessage(
+        message, 
+        familyId, 
+        context
+      );
+      
+      console.log("✅ Claude-first processing result:", claudeProcessingResult);
+      
+      // STEP 2: If an intent was successfully identified with high confidence, 
+      // route to the appropriate handler
+      if (claudeProcessingResult.intent && 
+          claudeProcessingResult.confidence > 0.7 && 
+          claudeProcessingResult.action) {
+        
+        // Try to handle the intent with IntentActionService
+        const result = await IntentActionService.processUserRequest(
+          message,
+          familyId,
+          this.authContext?.userId,
+          claudeProcessingResult
+        );
+        
+        if (result && result.success) {
+          console.log("✅ IntentActionService successfully handled the intent");
+          return result.message;
+        }
+        
+        // If IntentActionService couldn't handle it, try specialized handlers
+        const handlerResult = await this.routeToSpecializedHandler(
+          message, 
+          familyContext, 
+          claudeProcessingResult
+        );
+        
+        if (handlerResult) {
+          console.log("✅ Specialized handler processed the intent");
+          return handlerResult;
+        }
+      }
+      
+      // STEP 3: If no intent was identified or handlers couldn't process it,
+      // fall back to Claude for a general response
+      console.log("🔄 No specialized handler matched, falling back to Claude for general response");
+      
+      // Create comprehensive context for Claude
+      const systemContext = this.createSystemContext(familyContext, context);
+      
+      // Process conversations for better context
+      const formattedMessages = this.formatMessagesForClaude(message, context);
+      
+      // Generate Claude response
+      const response = await ClaudeService.generateResponse(
+        formattedMessages,
+        systemContext,
+        { temperature: 0.7 }
+      );
+      
+      // Ensure the response isn't a duplicate of previous responses
+      let finalResponse = response;
+      if (context && context.length > 0) {
+        const lastAllieResponse = context.filter(msg => msg.sender === 'allie').pop()?.text;
+        
+        if (lastAllieResponse && this.areResponsesSimilar(lastAllieResponse, response)) {
+          console.log("⚠️ Detected similar response to previous - requesting variation");
+          
+          // Request a different response by adding variation instructions
+          const variationContext = {
+            ...systemContext,
+            system: systemContext.system + "\n\nIMPORTANT: Your previous response was too similar to an earlier one. Please provide a completely DIFFERENT response with new information or a fresh perspective."
+          };
+          
+          // Generate an alternative response
+          try {
+            const alternativeResponse = await ClaudeService.generateResponse(
+              formattedMessages,
+              variationContext,
+              { temperature: 0.8 } // Slightly higher temperature for more variation
+            );
+            
+            if (alternativeResponse && 
+                alternativeResponse.length > 0 && 
+                !this.areResponsesSimilar(lastAllieResponse, alternativeResponse)) {
+              finalResponse = alternativeResponse;
+              console.log("✅ Generated alternative non-repetitive response");
+            }
+          } catch (variationError) {
+            console.error("❌ Error generating variation:", variationError);
+            // Fall back to original response if variation fails
+          }
+        }
+      }
+      
+      console.log("🤖 Generated general Claude response");
+      return finalResponse;
+    } catch (error) {
+      console.error("❌ Error in getAIResponse:", error);
+      
+      // Try direct call to Claude API as a last resort fallback
+      try {
+        console.log("🔄 Attempting direct Claude API call as final fallback...");
+        
+        // Get recent messages for minimal context
+        const recentMessages = context.slice(-3).map(msg => ({
+          role: msg.sender === 'allie' ? 'assistant' : 'user',
+          content: msg.text
+        }));
+        
+        // Add current message
+        recentMessages.push({ role: 'user', content: message });
+        
+        // Simple direct attempt to Claude API with minimal context
+        const directResponse = await ClaudeService.generateResponse(
+          recentMessages,
+          { 
+            system: "You are Allie, a helpful family assistant. Answer the user's question directly and concisely. Never repeat yourself. Provide specific, relevant information."
+          },
+          { temperature: 0.7 }
+        );
+        
+        if (directResponse && typeof directResponse === 'string' && directResponse.length > 0) {
+          console.log("✅ Direct Claude API fallback succeeded");
+          return directResponse;
+        }
+      } catch (directError) {
+        console.error("❌ Direct Claude API fallback also failed:", directError);
+      }
+      
+      return "I'm sorry, I encountered an error processing your request. Please try again. (Error: " + error.message + ")";
+    }
+  }
+  
+  /**
+   * Format messages for Claude API in the proper conversation format
+   * @param {string} currentMessage - Current user message
+   * @param {Array} context - Previous messages context
+   * @returns {Array} Formatted messages for Claude API
+   */
+  formatMessagesForClaude(currentMessage, context = []) {
+    // Format previous messages in context
+    const formattedMessages = context.map(msg => ({
+      role: msg.sender === 'allie' ? 'assistant' : 'user',
+      content: msg.text
+    }));
+    
+    // Add current message
+    formattedMessages.push({
+      role: 'user',
+      content: currentMessage
+    });
+    
+    // Limit to last 10 messages for efficiency
+    return formattedMessages.slice(-10);
+  }
+  
+  /**
+   * Check if two responses are too similar
+   * @param {string} response1 - First response
+   * @param {string} response2 - Second response
+   * @returns {boolean} True if responses are too similar
+   */
+  areResponsesSimilar(response1, response2) {
+    if (!response1 || !response2) return false;
+    
+    // Direct equality check
+    if (response1 === response2) return true;
+    
+    // Basic similarity - normalize and compare
+    const normalize = text => text.toLowerCase().trim().replace(/\s+/g, ' ');
+    const norm1 = normalize(response1);
+    const norm2 = normalize(response2);
+    
+    // If identical after normalization
+    if (norm1 === norm2) return true;
+    
+    // If one contains a significant portion of the other
+    const shorter = norm1.length < norm2.length ? norm1 : norm2;
+    const longer = norm1.length < norm2.length ? norm2 : norm1;
+    
+    // Check if shorter is a substantial substring of longer
+    if (shorter.length > 20 && longer.includes(shorter)) return true;
+    
+    // Compare word-level similarity for substantial responses
+    if (shorter.length > 50) {
+      const words1 = new Set(norm1.split(' '));
+      const words2 = new Set(norm2.split(' '));
+      
+      // Count words in common
+      const commonWords = [...words1].filter(word => words2.has(word)).length;
+      const totalUniqueWords = new Set([...words1, ...words2]).size;
+      
+      // If more than 80% words in common, consider similar
+      if (commonWords / totalUniqueWords > 0.8) return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Route to specialized handlers based on intent
+   * @param {string} message - User message
+   * @param {object} familyContext - Family context
+   * @param {object} claudeResult - Claude processing result
+   * @returns {Promise<string|null>} Handler response or null
+   */
+  async routeToSpecializedHandler(message, familyContext, claudeResult) {
+    const intent = claudeResult.intent;
+    const entities = claudeResult.entities;
+    const userId = this.authContext?.userId;
+    const familyId = familyContext.familyId;
+    
+    // Use a map of intent-to-handler functions
+    const intentHandlers = {
+      'ADD_PROVIDER': () => this.handleProviderRequest(message, familyContext, entities),
+      'ADD_EVENT': () => this.handleCalendarRequest(message, familyContext, userId),
+      'SCHEDULE_DATE_NIGHT': () => this.handleRelationshipRequest(message, familyContext, userId),
+      'ADD_TASK': () => this.handleTaskRequest(message, familyContext, entities),
+      'TRACK_GROWTH': () => this.handleChildTrackingRequest(message, familyContext),
+      'QUERY_CALENDAR': () => this.lookupCalendarEvent(message, familyId, userId),
+      'QUERY_PROVIDERS': () => this.lookupProvider(message, familyId)
+    };
+    
+    // Call the appropriate handler if available
+    if (intentHandlers[intent]) {
+      try {
+        const result = await intentHandlers[intent]();
+        return result;
+      } catch (error) {
+        console.error(`Error in ${intent} handler:`, error);
+        return null;
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Create system context for Claude
+   * @param {object} familyContext - Family context
+   * @param {Array} messageContext - Previous messages
+   * @returns {object} System context
+   */
+  createSystemContext(familyContext, messageContext = []) {
+    // Process message context to create a conversation history
+    const formattedConversation = messageContext.map(msg => {
+      const role = msg.sender === 'allie' ? 'assistant' : 'user';
+      const name = msg.userName || (role === 'assistant' ? 'Allie' : 'User');
+      return `${name} (${role}): ${msg.text}`;
+    }).join('\n\n');
+    
+    // Create a comprehensive system context for Claude
+    const systemContext = {
+      system: `You are Allie, a thoughtful and insightful family assistant AI that helps families with balance, coordination, and organization. Your personality is warm, empathetic, and practical.
+
+FAMILY CONTEXT:
+Family Name: ${familyContext.familyName || 'Your family'}
+Adults: ${familyContext.adults || 2}
+Children: ${familyContext.children?.length || 0}
+Current Week: ${familyContext.currentWeek || 1}
+
+KEY FAMILY MEMBERS:
+${familyContext.familyMembers?.map(m => `- ${m.name} (${m.role})`).join('\n') || 'Your family members'}
+
+RELATIONSHIP CONTEXT:
+${familyContext.relationshipData ? `
+- Top strategy: ${familyContext.relationshipData.topStrategy || 'Improving communication'}
+- Implementation level: ${Math.round(familyContext.relationshipData.avgImplementation || 0)}%
+` : 'No relationship data available yet'}
+
+CONVERSATION HISTORY:
+${formattedConversation}
+
+CRITICAL INSTRUCTIONS:
+1. NEVER repeat the same response twice in a conversation
+2. Maintain conversation memory - refer to what was discussed earlier
+3. When asked about family balance, provide specific insights based on the family context
+4. When booking events, confirm once with specific details and don't repeat yourself
+5. Provide direct answers to questions rather than repeating your capabilities
+6. If you don't have specific information requested, acknowledge this limitation
+7. Ground your responses in the specific family context provided above
+8. Be concise (1-3 paragraphs) unless detailed information is requested
+9. Always reply to the most recent message, not to earlier parts of the conversation
+
+Your primary goal is to be helpful while avoiding repetitive or generic responses.
+`,
+      userId: this.authContext?.userId,
+      familyId: familyContext.familyId,
+      messageContext: messageContext.slice(-8) // Last 8 messages for better context
+    };
+    
+    return systemContext;
+  }
+
+  // [All original handler methods remain unchanged]
+
+  /**
+   * Get family context for better personalization
+   * @param {string} familyId - Family ID 
+   * @returns {Promise<Object>} Family context data
+   */
+  async getFamilyContext(familyId) {
+    try {
+      if (!familyId) {
+        console.error("No familyId provided to getFamilyContext");
+        return {
+          familyId: null,
+          familyName: "Your family",
+          adults: 2,
+          children: [],
+          familyMembers: [],
+          currentWeek: 1
+        };
+      }
+      
+      console.log("Getting family context for:", familyId);
+      
+      // Get family data from Firestore
+      const { doc, getDoc, collection, query, where, getDocs, orderBy, limit } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      
+      // Get family document
+      const familyDoc = await getDoc(doc(db, "families", familyId));
+      if (!familyDoc.exists()) {
+        console.error("Family document not found:", familyId);
+        return {
+          familyId,
+          familyName: "Your family",
+          adults: 2,
+          children: [],
+          familyMembers: [],
+          currentWeek: 1
+        };
+      }
+      
+      const familyData = familyDoc.data();
+      
+      // Get family members
+      const membersQuery = query(
+        collection(db, "users"),
+        where("familyId", "==", familyId)
+      );
+      
+      const membersSnapshot = await getDocs(membersQuery);
+      const familyMembers = membersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        role: doc.data().role || 'member'
+      }));
+      
+      // Count adults and children
+      const adults = familyMembers.filter(m => m.role === 'parent' || m.role === 'adult').length;
+      const children = familyMembers.filter(m => m.role === 'child');
+      
+      // Get relationship data (if exists)
+      let relationshipData = null;
+      try {
+        const relationshipQuery = query(
+          collection(db, "relationships"),
+          where("familyId", "==", familyId),
+          orderBy("createdAt", "desc"),
+          limit(1)
+        );
+        
+        const relationshipSnapshot = await getDocs(relationshipQuery);
+        if (!relationshipSnapshot.empty) {
+          relationshipData = relationshipSnapshot.docs[0].data();
+        }
+      } catch (relError) {
+        console.error("Error getting relationship data:", relError);
+      }
+      
+      // Get current week from cycles collection (if exists)
+      let currentWeek = familyData.currentWeek || 1;
+      let completedWeeks = familyData.completedWeeks || 0;
+      try {
+        const cyclesQuery = query(
+          collection(db, "cycles"),
+          where("familyId", "==", familyId),
+          orderBy("weekNumber", "desc"),
+          limit(1)
+        );
+        
+        const cyclesSnapshot = await getDocs(cyclesQuery);
+        if (!cyclesSnapshot.empty) {
+          const latestCycle = cyclesSnapshot.docs[0].data();
+          currentWeek = latestCycle.weekNumber;
+          completedWeeks = latestCycle.weekNumber - 1;
+        }
+      } catch (cycleError) {
+        console.error("Error getting current week:", cycleError);
+      }
+      
+      // Get task distribution data
+      let taskDistribution = [];
+      try {
+        const tasksQuery = query(
+          collection(db, "kanbanTasks"),
+          where("familyId", "==", familyId)
+        );
+        
+        const tasksSnapshot = await getDocs(tasksQuery);
+        if (!tasksSnapshot.empty) {
+          const tasks = tasksSnapshot.docs.map(doc => doc.data());
+          
+          // Calculate distribution by assignee
+          const assigneeCounts = {};
+          tasks.forEach(task => {
+            if (task.assignedTo) {
+              assigneeCounts[task.assignedTo] = (assigneeCounts[task.assignedTo] || 0) + 1;
+            }
+          });
+          
+          // Convert to percentages
+          const totalTasks = Object.values(assigneeCounts).reduce((sum, count) => sum + count, 0);
+          
+          if (totalTasks > 0) {
+            taskDistribution = Object.entries(assigneeCounts).map(([userId, count]) => {
+              const member = familyMembers.find(m => m.id === userId);
+              return {
+                userId,
+                name: member?.name || 'Unknown',
+                count,
+                percentage: Math.round((count / totalTasks) * 100)
+              };
+            });
+          }
+        }
+      } catch (taskError) {
+        console.error("Error getting task distribution:", taskError);
+      }
+      
+      return {
+        familyId,
+        familyName: familyData.name || "Your family",
+        adults,
+        children,
+        familyMembers,
+        currentWeek,
+        completedWeeks,
+        relationshipData,
+        taskDistribution
+      };
+    } catch (error) {
+      console.error("Error in getFamilyContext:", error);
+      return {
+        familyId,
+        familyName: "Your family",
+        adults: 2,
+        children: [],
+        familyMembers: [],
+        currentWeek: 1
+      };
+    }
+  }
+}
+
+export default new EnhancedChatService();

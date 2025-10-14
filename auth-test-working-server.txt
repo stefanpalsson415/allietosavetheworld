@@ -1,0 +1,12 @@
+Starting global test setup...
+Test environment: development
+Test URL: http://localhost:3000
+Global setup complete. Tests ready to run.
+
+Running 1 test using 1 worker
+
+✅ Authentication state saved!
+⚠️ May not be fully logged in, current URL: http://localhost:3000/
+  ✓  1 [chromium] › tests/auth-setup.spec.js:7:3 › Authentication Setup › Login and save authentication state (2.7s)
+
+  1 passed (3.5s)

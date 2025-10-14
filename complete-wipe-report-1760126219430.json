@@ -1,0 +1,50 @@
+{
+  "timestamp": "2025-10-10T19:56:59.430Z",
+  "stats": {
+    "authUsers": {
+      "total": 1,
+      "deleted": 1
+    },
+    "collections": {
+      "total": 45,
+      "deleted": 31
+    },
+    "documents": {
+      "total": 2691,
+      "deleted": 2691
+    }
+  },
+  "collectionsDeleted": [
+    "blogPosts",
+    "bucksBalances",
+    "bucksTransactions",
+    "calendarSyncState",
+    "chatMessages",
+    "choreInstances",
+    "choreSchedules",
+    "choreTemplates",
+    "emailInbox",
+    "emailToFamily",
+    "email_registry",
+    "events",
+    "families",
+    "familyContacts",
+    "familyELOHistory",
+    "familyELORatings",
+    "familyProfiles",
+    "habits",
+    "habits2",
+    "habitCache",
+    "habitInstances",
+    "interviews",
+    "interviewInsights",
+    "interviewSessions",
+    "kanbanTasks",
+    "knowledgeGraphs",
+    "memberPreferences",
+    "memberLifestyle",
+    "memberPatterns",
+    "memberInsights",
+    "notifications"
+  ]
+}

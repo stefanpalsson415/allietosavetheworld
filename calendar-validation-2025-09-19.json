@@ -1,0 +1,262 @@
+{
+  "passed": 51,
+  "failed": 0,
+  "warnings": 0,
+  "tests": [
+    {
+      "name": "Google Authentication Service",
+      "status": "passed",
+      "message": "14.01 KB"
+    },
+    {
+      "name": "Enhanced Calendar Sync Service",
+      "status": "passed",
+      "message": "23.87 KB"
+    },
+    {
+      "name": "Improved Calendar View Component",
+      "status": "passed",
+      "message": "33.68 KB"
+    },
+    {
+      "name": "Calendar React Hook",
+      "status": "passed",
+      "message": "19.81 KB"
+    },
+    {
+      "name": "Calendar System Documentation",
+      "status": "passed",
+      "message": "12.67 KB"
+    },
+    {
+      "name": "GoogleAuthService: Token refresh mechanism",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "GoogleAuthService: Token encryption",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "GoogleAuthService: Retry logic",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "GoogleAuthService: Auth state callbacks",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "GoogleAuthService: Token validation",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarSyncService: Bidirectional sync",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarSyncService: Incremental sync",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarSyncService: Conflict detection",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarSyncService: Offline queue",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarSyncService: Webhook support",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarSyncService: Batch operations",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarView: Multiple view modes",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarView: Google Calendar connection",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarView: Event filtering",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarView: Search functionality",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarView: Settings panel",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "CalendarView: Sync status display",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "useImprovedCalendar: Event CRUD operations",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "useImprovedCalendar: Calendar navigation",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "useImprovedCalendar: Natural language support",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "useImprovedCalendar: Event caching",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "useImprovedCalendar: Auto sync",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "useImprovedCalendar: Conflict resolution",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "firebase",
+      "status": "passed",
+      "message": "v^10.14.1"
+    },
+    {
+      "name": "date-fns",
+      "status": "passed",
+      "message": "v^4.1.0"
+    },
+    {
+      "name": "framer-motion",
+      "status": "passed",
+      "message": "v^12.12.2"
+    },
+    {
+      "name": "lucide-react",
+      "status": "passed",
+      "message": "v^0.330.0"
+    },
+    {
+      "name": "react",
+      "status": "passed",
+      "message": "v^18.2.0"
+    },
+    {
+      "name": "react-dom",
+      "status": "passed",
+      "message": "v^18.2.0"
+    },
+    {
+      "name": "Environment file",
+      "status": "passed",
+      "message": "Found"
+    },
+    {
+      "name": "Environment: REACT_APP_GOOGLE_CLIENT_ID",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "Environment: REACT_APP_GOOGLE_API_KEY",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "Environment: REACT_APP_FIREBASE_API_KEY",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "Environment: REACT_APP_FIREBASE_AUTH_DOMAIN",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "Environment: REACT_APP_FIREBASE_PROJECT_ID",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "Firebase initialization",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "Firestore rules: events",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "Firestore rules: userTokens",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "Firestore rules: calendarSyncState",
+      "status": "passed",
+      "message": ""
+    },
+    {
+      "name": "File size: GoogleAuthService.js",
+      "status": "passed",
+      "message": "14.0 KB"
+    },
+    {
+      "name": "File size: EnhancedCalendarSyncService.js",
+      "status": "passed",
+      "message": "23.9 KB"
+    },
+    {
+      "name": "File size: ImprovedCalendarView.jsx",
+      "status": "passed",
+      "message": "33.7 KB"
+    },
+    {
+      "name": "File size: useImprovedCalendar.js",
+      "status": "passed",
+      "message": "19.8 KB"
+    },
+    {
+      "name": "Token validation speed",
+      "status": "passed",
+      "message": "0ms"
+    },
+    {
+      "name": "Event filtering (1000 items)",
+      "status": "passed",
+      "message": "0ms"
+    },
+    {
+      "name": "Date calculations",
+      "status": "passed",
+      "message": "1ms"
+    }
+  ]
+}

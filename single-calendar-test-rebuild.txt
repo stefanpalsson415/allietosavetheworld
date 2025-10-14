@@ -1,0 +1,271 @@
+Starting global test setup...
+Test environment: development
+Test URL: http://localhost:3000
+Global setup complete. Tests ready to run.
+
+Running 5 tests using 1 worker
+
+Landed on initial page
+Found Log In button on landing page, clicking it
+Attempting login...
+Clicked login button with selector: button[type="submit"]
+No navigation after login, continuing anyway
+Login sequence completed
+Navigating to dashboard with calendar tab
+⚠️  Could not detect calendar with standard selectors, proceeding anyway
+Could not click cell with standard selectors, trying create button
+✅ Used create button with selector: button:has-text("Create")
+Event form not found with data-testid, trying EventDrawer-specific selectors
+Error in create event test: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('h2:has-text("Event Details")') to be visible[22m
+
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:133:18
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:129:7 {
+  name: [32m'TimeoutError'[39m,
+  [32mSymbol(step)[39m: {
+    stepId: [32m'pw:api@48'[39m,
+    location: {
+      file: [32m'/Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js'[39m,
+      line: [33m133[39m,
+      column: [33m18[39m
+    },
+    category: [32m'pw:api'[39m,
+    title: [32m'page.waitForSelector(h2:has-text("Event Details"))'[39m,
+    apiName: [32m'page.waitForSelector'[39m,
+    params: { selector: [32m'h2:has-text("Event Details")'[39m, timeout: [33m5000[39m },
+    boxedStack: [90mundefined[39m,
+    steps: [],
+    attachmentIndices: [],
+    info: TestStepInfoImpl {
+      annotations: [],
+      _testInfo: [36m[TestInfoImpl][39m,
+      _stepId: [32m'pw:api@48'[39m
+    },
+    complete: [36m[Function: complete][39m,
+    endWallTime: [33m1760090735917[39m,
+    error: {
+      message: [32m'TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.\n'[39m +
+        [32m'Call log:\n'[39m +
+        [32m`\x1B[2m  - waiting for locator('h2:has-text("Event Details")') to be visible\x1B[22m\n`[39m,
+      stack: [32m'TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.\n'[39m +
+        [32m'Call log:\n'[39m +
+        [32m`\x1B[2m  - waiting for locator('h2:has-text("Event Details")') to be visible\x1B[22m\n`[39m +
+        [32m'\n'[39m +
+        [32m'    at /Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js:133:18\n'[39m +
+        [32m'    at /Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js:129:7'[39m,
+      cause: [90mundefined[39m
+    }
+  }
+}
+  ✘  1 [chromium] › tests/calendar-crud-refactored.spec.js:117:7 › Calendar Event CRUD Flows › 1.1 Create event - Click empty slot, fill Title, set Date and Save (43.0s)
+Landed on initial page
+Found Log In button on landing page, clicking it
+Attempting login...
+Clicked login button with selector: button[type="submit"]
+No navigation after login, continuing anyway
+Login sequence completed
+Navigating to dashboard with calendar tab
+⚠️  Could not detect calendar with standard selectors, proceeding anyway
+Could not click cell with standard selectors, trying create button
+✅ Used create button with selector: button:has-text("Create")
+Event form not found with data-testid, trying EventDrawer-specific selectors
+Error in create event test: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('h2:has-text("Event Details")') to be visible[22m
+
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:133:18
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:129:7 {
+  name: [32m'TimeoutError'[39m,
+  [32mSymbol(step)[39m: {
+    stepId: [32m'pw:api@48'[39m,
+    location: {
+      file: [32m'/Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js'[39m,
+      line: [33m133[39m,
+      column: [33m18[39m
+    },
+    category: [32m'pw:api'[39m,
+    title: [32m'page.waitForSelector(h2:has-text("Event Details"))'[39m,
+    apiName: [32m'page.waitForSelector'[39m,
+    params: { selector: [32m'h2:has-text("Event Details")'[39m, timeout: [33m5000[39m },
+    boxedStack: [90mundefined[39m,
+    steps: [],
+    attachmentIndices: [],
+    info: TestStepInfoImpl {
+      annotations: [],
+      _testInfo: [36m[TestInfoImpl][39m,
+      _stepId: [32m'pw:api@48'[39m
+    },
+    complete: [36m[Function: complete][39m,
+    endWallTime: [33m1760090779241[39m,
+    error: {
+      message: [32m'TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.\n'[39m +
+        [32m'Call log:\n'[39m +
+        [32m`\x1B[2m  - waiting for locator('h2:has-text("Event Details")') to be visible\x1B[22m\n`[39m,
+      stack: [32m'TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.\n'[39m +
+        [32m'Call log:\n'[39m +
+        [32m`\x1B[2m  - waiting for locator('h2:has-text("Event Details")') to be visible\x1B[22m\n`[39m +
+        [32m'\n'[39m +
+        [32m'    at /Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js:133:18\n'[39m +
+        [32m'    at /Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js:129:7'[39m,
+      cause: [90mundefined[39m
+    }
+  }
+}
+  ✘  2 [chromium] › tests/calendar-crud-refactored.spec.js:117:7 › Calendar Event CRUD Flows › 1.1 Create event - Click empty slot, fill Title, set Date and Save (retry #1) (42.0s)
+Landed on initial page
+Found Log In button on landing page, clicking it
+Attempting login...
+Clicked login button with selector: button[type="submit"]
+No navigation after login, continuing anyway
+Login sequence completed
+Navigating to dashboard with calendar tab
+⚠️  Could not detect calendar with standard selectors, proceeding anyway
+Creating test event: test-781065: Original Meeting
+Could not click cell with standard selectors, trying create button
+✅ Used create button with selector: button:has-text("Create")
+⚠️  EventDrawer not appearing with standard selectors, taking screenshot and continuing
+❌ Could not find title input field
+Error filling event details: Error: Could not find title input field
+    at fillEventDetails [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/helpers/calendar-test-helpers.js:648:15[90m)[39m
+    at createTestEvent [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/helpers/calendar-test-helpers.js:1043:5[90m)[39m
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:179:7
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:304:9
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:277:11
+    at TimeoutManager.withRunnable [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:275:7[90m)[39m
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:302:7
+    at WorkerMain._runTest [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:277:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:193:11[90m)[39m
+    at process.<anonymous> [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:70:22[90m)[39m
+Error creating test event "test-781065: Original Meeting": Error: Could not find title input field
+    at fillEventDetails [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/helpers/calendar-test-helpers.js:648:15[90m)[39m
+    at createTestEvent [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/helpers/calendar-test-helpers.js:1043:5[90m)[39m
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:179:7
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:304:9
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:277:11
+    at TimeoutManager.withRunnable [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:275:7[90m)[39m
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:302:7
+    at WorkerMain._runTest [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:277:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:193:11[90m)[39m
+    at process.<anonymous> [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:70:22[90m)[39m
+Attempting to continue despite error
+Event not visible after creation, retrying creation
+Creating test event: test-781065: Original Meeting
+Could not click cell with standard selectors, trying create button
+❌ Error clicking calendar cell: Error: Could not find any way to add an event - neither calendar cells nor create button found
+    at clickCalendarCell [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/helpers/calendar-test-helpers.js:600:15[90m)[39m
+    at createTestEvent [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/helpers/calendar-test-helpers.js:1023:7[90m)[39m
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:185:11
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:182:7
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:304:9
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:277:11
+    at TimeoutManager.withRunnable [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:275:7[90m)[39m
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:302:7
+    at WorkerMain._runTest [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:277:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:193:11[90m)[39m
+    at process.<anonymous> [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:70:22[90m)[39m
+Error creating test event "test-781065: Original Meeting": Error: Could not find any way to add an event - neither calendar cells nor create button found
+    at clickCalendarCell [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/helpers/calendar-test-helpers.js:600:15[90m)[39m
+    at createTestEvent [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/helpers/calendar-test-helpers.js:1023:7[90m)[39m
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:185:11
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:182:7
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:304:9
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:277:11
+    at TimeoutManager.withRunnable [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:275:7[90m)[39m
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:302:7
+    at WorkerMain._runTest [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:277:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:193:11[90m)[39m
+    at process.<anonymous> [90m(/Users/stefanpalsson/parentload copy/parentload-clean/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:70:22[90m)[39m
+Attempting to continue despite error
+Error in edit event test: ExpectError: [31mTimed out 10000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+Locator: locator('text="test-781065: Original Meeting"')
+Expected: visible
+Received: <element(s) not found>
+Call log:
+[2m  - expect.toBeVisible with timeout 10000ms[22m
+[2m  - waiting for locator('text="test-781065: Original Meeting"')[22m
+
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:186:65
+    at [90m/Users/stefanpalsson/parentload copy/parentload-clean/[39mtests/calendar-crud-refactored.spec.js:182:7 {
+  matcherResult: {
+    message: [32m'\x1B[31mTimed out 10000ms waiting for \x1B[39m\x1B[2mexpect(\x1B[22m\x1B[31mlocator\x1B[39m\x1B[2m).\x1B[22mtoBeVisible\x1B[2m()\x1B[22m\n'[39m +
+      [32m'\n'[39m +
+      [32m`Locator: locator('text="test-781065: Original Meeting"')\n`[39m +
+      [32m'Expected: visible\n'[39m +
+      [32m'Received: <element(s) not found>\n'[39m +
+      [32m'Call log:\n'[39m +
+      [32m'\x1B[2m  - expect.toBeVisible with timeout 10000ms\x1B[22m\n'[39m +
+      [32m`\x1B[2m  - waiting for locator('text="test-781065: Original Meeting"')\x1B[22m\n`[39m,
+    pass: [33mfalse[39m,
+    actual: [32m'<element(s) not found>'[39m,
+    name: [32m'toBeVisible'[39m,
+    expected: [32m'visible'[39m,
+    log: [
+      [32m'  - expect.toBeVisible with timeout 10000ms'[39m,
+      [32m`  - waiting for locator('text="test-781065: Original Meeting"')`[39m
+    ],
+    timeout: [33m10000[39m
+  },
+  [32mSymbol(step)[39m: {
+    stepId: [32m'expect@90'[39m,
+    category: [32m'expect'[39m,
+    title: [32m'expect.toBeVisible'[39m,
+    params: { expected: [36m[Object][39m },
+    infectParentStepsWithError: [90mundefined[39m,
+    boxedStack: [90mundefined[39m,
+    location: {
+      file: [32m'/Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js'[39m,
+      line: [33m186[39m,
+      column: [33m65[39m
+    },
+    steps: [],
+    attachmentIndices: [],
+    info: TestStepInfoImpl {
+      annotations: [],
+      _testInfo: [36m[TestInfoImpl][39m,
+      _stepId: [32m'expect@90'[39m
+    },
+    complete: [36m[Function: complete][39m,
+    endWallTime: [33m1760090839067[39m,
+    error: {
+      message: [32m'Error: \x1B[31mTimed out 10000ms waiting for \x1B[39m\x1B[2mexpect(\x1B[22m\x1B[31mlocator\x1B[39m\x1B[2m).\x1B[22mtoBeVisible\x1B[2m()\x1B[22m\n'[39m +
+        [32m'\n'[39m +
+        [32m`Locator: locator('text="test-781065: Original Meeting"')\n`[39m +
+        [32m'Expected: visible\n'[39m +
+        [32m'Received: <element(s) not found>\n'[39m +
+        [32m'Call log:\n'[39m +
+        [32m'\x1B[2m  - expect.toBeVisible with timeout 10000ms\x1B[22m\n'[39m +
+        [32m`\x1B[2m  - waiting for locator('text="test-781065: Original Meeting"')\x1B[22m\n`[39m,
+      stack: [32m'Error: \x1B[31mTimed out 10000ms waiting for \x1B[39m\x1B[2mexpect(\x1B[22m\x1B[31mlocator\x1B[39m\x1B[2m).\x1B[22mtoBeVisible\x1B[2m()\x1B[22m\n'[39m +
+        [32m'\n'[39m +
+        [32m`Locator: locator('text="test-781065: Original Meeting"')\n`[39m +
+        [32m'Expected: visible\n'[39m +
+        [32m'Received: <element(s) not found>\n'[39m +
+        [32m'Call log:\n'[39m +
+        [32m'\x1B[2m  - expect.toBeVisible with timeout 10000ms\x1B[22m\n'[39m +
+        [32m`\x1B[2m  - waiting for locator('text="test-781065: Original Meeting"')\x1B[22m\n`[39m +
+        [32m'\n'[39m +
+        [32m'    at /Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js:186:65\n'[39m +
+        [32m'    at /Users/stefanpalsson/parentload copy/parentload-clean/tests/calendar-crud-refactored.spec.js:182:7'[39m,
+      cause: [90mundefined[39m
+    }
+  }
+}
+  ✘  3 [chromium] › tests/calendar-crud-refactored.spec.js:172:7 › Calendar Event CRUD Flows › 1.2 Edit title & time - Open event, change title and time, Save (58.5s)
+Landed on initial page
+Found Log In button on landing page, clicking it
+Attempting login...
+Clicked login button with selector: button[type="submit"]
+No navigation after login, continuing anyway
+Login sequence completed
+Navigating to dashboard with calendar tab
+⚠️  Could not detect calendar with standard selectors, proceeding anyway
+Creating test event: test-840794: Original Meeting
+Could not click cell with standard selectors, trying create button
+✅ Used create button with selector: button:has-text("Create")
+⚠️  EventDrawer not appearing with standard selectors, taking screenshot and continuing

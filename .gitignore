@@ -1,0 +1,50 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# CRITICAL: Environment variables - NEVER commit these!
+.env
+.env.*
+server/.env
+server/.env.*
+
+# dependencies
+/node_modules
+server/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
+.vscode/.env
+functions/firebase-debug.log
+firebase-debug.log
+*.log
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Firebase
+serviceAccountKey.json
+firebase-admin-key.json
+server/service-account.json
+
+# Secret-containing scripts (use env vars instead)
+update-claude-api.sh
+update-claude-keys.sh
+server/test-api-keys.js
+server/claude-proxy.js
+
+# Documentation with hardcoded secrets (contains example keys/tokens)
+server/SENDGRID_INBOUND_SETUP.md
+TWILIO_SMS_SETUP.md
+URGENT_SECURITY_ACTION.md
+public/check-twilio-webhook.js
+
+# IDE
+**/.claude/settings.local.json

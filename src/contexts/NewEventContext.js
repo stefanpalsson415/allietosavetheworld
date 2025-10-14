@@ -1,0 +1,1212 @@
+// src/contexts/NewEventContext.js
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+import { 
+  checkCalendarEventGuard, 
+  processEmptyCalendarResult, 
+  clearEmptyResultCounter 
+} from '../event-loop-guard-enhanced';
+
+
+
+
+
+
+
+import { useAuth } from './AuthContext';
+import { useFamily } from './FamilyContext';
+import EventStore from '../services/EventStore';
+
+// Create the event context
+const NewEventContext = createContext();
+
+/**
+ * Custom hook to use the event context
+ * @returns {Object} Event context value
+ */
+export function useEvents() {
+  return useContext(NewEventContext);
+}
+
+/**
+ * Provider component for event data and operations
+ * @param {Object} props Component props
+ * @param {React.ReactNode} props.children Child components
+ * @returns {JSX.Element} Event context provider
+ */
+export function NewEventProvider({ children }) {
+  // Get auth and family context
+  const { currentUser } = useAuth();
+  const { familyId, familyMembers } = useFamily();
+  
+  // Core state
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  
+  // Local cache management to prevent unnecessary rerenders
+  const [eventCache, setEventCache] = useState(new Map());
+  
+  // Flag to prevent parallel refresh operations
+  const refreshInProgressRef = React.useRef(false);
+  
+  // Circuit breaker for event loading - Make counter a ref instead of state
+  // Using a ref ensures the value persists between renders and isn't reset
+  const consecutiveEmptyResultsRef = React.useRef(0);
+  const [circuitBreakerActive, setCircuitBreakerActive] = useState(false);
+  const circuitBreakerTimeoutRef = React.useRef(null);
+  const circuitBreakerActiveRef = React.useRef(false); // Mirror state in ref for setTimeout callbacks
+  
+  // Track last error time to prevent console spam
+  const lastErrorLogRef = React.useRef(0);
+  
+  // Track initial load to prevent rapid re-renders on mount
+  const initialLoadCompleted = React.useRef(false);
+  const componentMountTime = React.useRef(Date.now());
+  const lastLoadAttemptTime = React.useRef(0);
+  const loadAttemptCount = React.useRef(0);
+  
+  // Add global variable to track across components
+  if (typeof window !== 'undefined') {
+    window._eventEmptyResultCounter = window._eventEmptyResultCounter || 0;
+  }
+
+  /**
+   * Load all events for the current user with circuit breaker pattern
+   */
+  const loadEvents = useCallback(async () => {
+    // Rate limit: Don't load more than once per second
+    const now = Date.now();
+    const timeSinceLastLoad = now - lastLoadAttemptTime.current;
+    
+    if (timeSinceLastLoad < 1000) {
+      loadAttemptCount.current++;
+      console.log(`⚠️ Rate limiting loadEvents - attempt ${loadAttemptCount.current} within ${timeSinceLastLoad}ms`);
+      
+      // If we're getting too many rapid attempts, it's a render loop
+      if (loadAttemptCount.current > 3) {
+        console.error("🛑 Detected render loop in loadEvents - stopping");
+        setLoading(false);
+        return;
+      }
+      
+      return;
+    }
+    
+    // Reset counter if enough time has passed
+    if (timeSinceLastLoad > 2000) {
+      loadAttemptCount.current = 0;
+    }
+    
+    lastLoadAttemptTime.current = now;
+    
+    // Enhanced check for loop prevention
+    if (checkCalendarEventGuard('loadEvents', { source: 'NewEventContext' })) {
+      console.log("⚠️ Calendar event guard blocked loadEvents call");
+      return;
+    }
+    if (!currentUser || !familyId) {
+      setLoading(false);
+      return;
+    }
+    
+    // Skip loading events on survey pages
+    const currentPath = window.location.pathname;
+    const isSurveyPage = currentPath.includes('/survey') || currentPath.includes('/weekly-checkin');
+    if (isSurveyPage) {
+      console.log('📋 Skipping event load on survey page');
+      setLoading(false);
+      return;
+    }
+    
+    // Early return if circuit breaker is active
+    if (circuitBreakerActive) {
+      const now = Date.now();
+      const MIN_ERROR_LOG_INTERVAL = 10000; // Log only every 10 seconds
+      
+      if (now - lastErrorLogRef.current > MIN_ERROR_LOG_INTERVAL) {
+        console.log("⚠️ Circuit breaker active: Skipping event load to prevent infinite loop");
+        console.log(`🔍 DEBUG: Circuit breaker details - counter: ${consecutiveEmptyResultsRef.current}, global: ${window._eventEmptyResultCounter}, last refresh: ${new Date(lastRefresh).toISOString()}`);
+        lastErrorLogRef.current = now;
+      }
+      return;
+    } else {
+      // Force activate circuit breaker if global counter is too high or forced flag is set
+      if (typeof window !== 'undefined' && (window._eventEmptyResultCounter >= 15 || window._forceEventCircuitBreaker === true)) {
+        console.warn(`🚨 CIRCUIT BREAKER THRESHOLD REACHED: Global counter: ${window._eventEmptyResultCounter}, forced: ${window._forceEventCircuitBreaker}`);
+        
+        // Check if we're in grace period to prevent render loops
+        const calendarState = window._calendarLoopGuardState;
+        if (calendarState && calendarState.gracePeriodActive) {
+          console.log("🟢 Circuit breaker activation delayed - grace period active");
+          // Reset force flag if it was set
+          if (window._forceEventCircuitBreaker) {
+            window._forceEventCircuitBreaker = false;
+          }
+          return;
+        }
+        
+        // Defer state update to prevent render loop
+        setTimeout(() => {
+          // Double-check we're not already active to prevent multiple activations
+          if (!circuitBreakerActiveRef.current) {
+            circuitBreakerActiveRef.current = true;
+            setCircuitBreakerActive(true);
+            
+            // Force visual indicator
+            try {
+              if (typeof document !== 'undefined' && !document.getElementById('circuit-breaker-notice')) {
+                const notice = document.createElement('div');
+                notice.id = 'circuit-breaker-notice';
+                notice.style.position = 'fixed';
+                notice.style.top = '10px';
+                notice.style.left = '50%';
+                notice.style.transform = 'translateX(-50%)';
+                notice.style.backgroundColor = '#ff5252';
+                notice.style.color = 'white';
+                notice.style.padding = '10px 15px';
+                notice.style.borderRadius = '4px';
+                notice.style.zIndex = '9999';
+                notice.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                notice.innerHTML = 'Calendar refresh loop detected - temporary pause activated';
+                document.body.appendChild(notice);
+              }
+            } catch (e) {
+              console.error("Error creating notice:", e);
+            }
+          }
+        }, 0);
+        
+        // Reset force flag
+        if (window._forceEventCircuitBreaker) {
+          window._forceEventCircuitBreaker = false;
+        }
+        
+        return;
+      }
+      
+      console.log("🔍 DEBUG: Circuit breaker is NOT active, proceeding with event load");
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log("Loading events for user:", currentUser.uid, "familyId:", familyId);
+      const eventsData = await EventStore.getEventsForUser(currentUser.uid, null, null, familyId);
+      
+      // Circuit breaker pattern - detect repeated empty results - ENHANCED VERSION
+      if (eventsData.length === 0) {
+        // Use enhanced guard to track empty results
+        processEmptyCalendarResult();
+        // Immediately increment the counter using ref for persistence
+        consecutiveEmptyResultsRef.current += 1;
+        
+        // Also update global counter for debugging
+        if (typeof window !== 'undefined') {
+          window._eventEmptyResultCounter += 1;
+        }
+        
+        console.log(`🔍 DEBUG: Empty result count: ${consecutiveEmptyResultsRef.current}, global count: ${window._eventEmptyResultCounter}, circuit breaker: ${circuitBreakerActive}`);
+        
+        // After 8 consecutive empty results, activate circuit breaker (increased from 2 to avoid false positives)
+        if (consecutiveEmptyResultsRef.current >= 8 && !circuitBreakerActive) {
+          console.warn(`🛑 CIRCUIT BREAKER THRESHOLD REACHED: ${consecutiveEmptyResultsRef.current} consecutive empty results`);
+          
+          // Check if we're in grace period to prevent render loops
+          const calendarState = typeof window !== 'undefined' && window._calendarLoopGuardState;
+          if (calendarState && calendarState.gracePeriodActive) {
+            console.log("🟢 Circuit breaker activation delayed (empty results) - grace period active");
+            // Don't activate during grace period
+          } else {
+            // Defer state update to prevent render loop
+            setTimeout(() => {
+              // Double-check we're not already active
+              if (!circuitBreakerActiveRef.current) {
+                circuitBreakerActiveRef.current = true;
+                setCircuitBreakerActive(true);
+                
+                // Add visible notification to UI
+                try {
+                  if (typeof document !== 'undefined' && !document.getElementById('circuit-breaker-notice')) {
+                    const notice = document.createElement('div');
+                    notice.id = 'circuit-breaker-notice';
+                    notice.style.position = 'fixed';
+                    notice.style.top = '10px';
+                    notice.style.left = '50%';
+                    notice.style.transform = 'translateX(-50%)';
+                    notice.style.backgroundColor = '#ff5252';
+                    notice.style.color = 'white';
+                    notice.style.padding = '10px 15px';
+                    notice.style.borderRadius = '4px';
+                    notice.style.zIndex = '9999';
+                    notice.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                    notice.innerHTML = 'Calendar refresh loop detected - temporary pause activated';
+                    document.body.appendChild(notice);
+                  }
+                } catch (e) {
+                  console.error("Error creating notice:", e);
+                }
+              }
+            }, 0);
+          }
+          
+          // Reset circuit breaker after 1 minute
+          if (circuitBreakerTimeoutRef.current) {
+            clearTimeout(circuitBreakerTimeoutRef.current);
+          }
+          
+          circuitBreakerTimeoutRef.current = setTimeout(() => {
+            console.log("Circuit breaker reset");
+            circuitBreakerActiveRef.current = false;
+            setCircuitBreakerActive(false);
+            consecutiveEmptyResultsRef.current = 0; // Reset ref counter
+            
+            // Reset global counter too
+            if (typeof window !== 'undefined') {
+              window._eventEmptyResultCounter = 0;
+            }
+            
+            // Remove notice if it exists
+            try {
+              const notice = document.getElementById('circuit-breaker-notice');
+              if (notice && notice.parentNode) {
+                notice.parentNode.removeChild(notice);
+              }
+            } catch (e) {
+              console.error("Error removing notice:", e);
+            }
+          }, 60000); // 1 minute timeout
+          
+          // Immediately return from function to prevent further processing
+          console.log("🔍 DEBUG: Circuit breaker stopping further processing");
+          setEvents([]);
+          setLoading(false);
+          return;
+        }
+      } else {
+        // Reset consecutive empty count when we get results
+        console.log(`🔍 DEBUG: Got ${eventsData.length} events, resetting empty counter`);
+        clearEmptyResultCounter();
+        consecutiveEmptyResultsRef.current = 0;
+        
+        // Reset global counter too
+        if (typeof window !== 'undefined') {
+          window._eventEmptyResultCounter = 0;
+        }
+      }
+      
+      // Process and standardize events
+      const processedEvents = eventsData.map(event => {
+        // Ensure we have proper date objects for each event
+        try {
+          let dateObj;
+          if (event.dateObj instanceof Date) {
+            dateObj = event.dateObj;
+          } else if (event.dateTime) {
+            dateObj = new Date(event.dateTime);
+          } else if (event.start?.dateTime) {
+            dateObj = new Date(event.start.dateTime);
+          } else if (event.date) {
+            dateObj = new Date(event.date);
+          } else {
+            dateObj = new Date();
+          }
+          
+          // Ensure attendees are in consistent format
+          const attendees = Array.isArray(event.attendees)
+            ? event.attendees.map(attendee => {
+                if (typeof attendee === 'string') {
+                  // Convert simple attendee IDs to objects
+                  // familyMembers might be an object - convert to array first
+                  const members = typeof familyMembers === 'object' && !Array.isArray(familyMembers)
+                    ? Object.values(familyMembers)
+                    : familyMembers;
+                  const familyMember = (Array.isArray(members) ? members : []).find(m => m.id === attendee);
+                  return {
+                    id: attendee,
+                    name: familyMember?.name || 'Unknown',
+                    role: familyMember?.role || 'general',
+                  };
+                }
+                return attendee;
+              })
+            : [];
+          
+          return {
+            ...event,
+            dateObj,
+            attendees,
+          };
+        } catch (e) {
+          console.error("Error processing event:", e);
+          return event;
+        }
+      });
+      
+      console.log(`Loaded ${processedEvents.length} events`);
+      setEvents(processedEvents);
+      
+      // Update the event cache
+      const newCache = new Map();
+      processedEvents.forEach(event => {
+        if (event.id) {
+          newCache.set(event.id, event);
+        }
+        if (event.firestoreId && event.firestoreId !== event.id) {
+          newCache.set(event.firestoreId, event);
+        }
+        if (event.universalId && event.universalId !== event.id && event.universalId !== event.firestoreId) {
+          newCache.set(event.universalId, event);
+        }
+      });
+      setEventCache(newCache);
+      
+    } catch (err) {
+      // Increment consecutive error count for circuit breaker pattern
+      consecutiveEmptyResultsRef.current += 1;
+      
+      // Activate circuit breaker after multiple consecutive errors
+      if (consecutiveEmptyResultsRef.current >= 3 && !circuitBreakerActiveRef.current) {
+        console.warn(`Circuit breaker activated after ${consecutiveEmptyResultsRef.current} consecutive errors`);
+        
+        // Defer state update to prevent render loop
+        setTimeout(() => {
+          if (!circuitBreakerActiveRef.current) {
+            circuitBreakerActiveRef.current = true;
+            setCircuitBreakerActive(true);
+          }
+        }, 0);
+        
+        // Reset circuit breaker after 1 minute
+        if (circuitBreakerTimeoutRef.current) {
+          clearTimeout(circuitBreakerTimeoutRef.current);
+        }
+        
+        circuitBreakerTimeoutRef.current = setTimeout(() => {
+          console.log("Circuit breaker reset");
+          circuitBreakerActiveRef.current = false;
+          setCircuitBreakerActive(false);
+          consecutiveEmptyResultsRef.current = 0;
+        }, 60000); // 1 minute timeout
+      }
+      
+      // Log error with rate limiting
+      const now = Date.now();
+      const MIN_ERROR_LOG_INTERVAL = 5000; // Log only every 5 seconds
+      
+      if (now - lastErrorLogRef.current > MIN_ERROR_LOG_INTERVAL) {
+        console.error("Error loading events:", err);
+        lastErrorLogRef.current = now;
+      }
+      
+      setError(err.message || "Failed to load events");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser, familyId, circuitBreakerActive]);
+
+  /**
+   * Refresh all events from the database with enhanced throttling and circuit breaking
+   * @returns {Promise<Array>} Refreshed events
+   */
+  const refreshEvents = useCallback(async () => {
+    // Enhanced check for refresh loop prevention
+    if (checkCalendarEventGuard('refreshEvents', { source: 'NewEventContext' })) {
+      console.log("⚠️ Calendar event guard blocked refreshEvents call");
+      return events;
+    }
+    console.log("🔄 DEBUG: refreshEvents called - analyzing refresh conditions");
+    
+    if (!currentUser) {
+      console.log("Refresh skipped - no authenticated user");
+      return events;
+    }
+    
+    // Skip refresh if circuit breaker is active
+    if (circuitBreakerActive) {
+      const now = Date.now();
+      if (now - lastErrorLogRef.current > 10000) { // Log once every 10 seconds
+        console.log("⚠️ Refresh skipped - circuit breaker active to prevent loop");
+        console.log(`🔍 DEBUG: circuitBreakerActive=${circuitBreakerActive}, consecutiveEmptyResults=${consecutiveEmptyResultsRef.current}`);
+        lastErrorLogRef.current = now;
+      }
+      return events;
+    }
+    
+    // Enhanced throttling to prevent excessive refreshes
+    const now = Date.now();
+    const MIN_REFRESH_INTERVAL = 5000; // 5 seconds between refreshes
+    const ABSOLUTE_MIN_INTERVAL = 2000; // Absolute minimum of 2 seconds even in critical situations
+    
+    // DEBUG: Log where this refresh was called from
+    console.log(`🔍 DEBUG: Refresh events called from: ${new Error().stack.split('\n')[2].trim()}`);
+    
+    // If a refresh is already in progress, return current events
+    if (refreshInProgressRef.current) {
+      console.log("⚠️ Refresh skipped - refresh already in progress");
+      return events;
+    }
+    
+    // If we refreshed very recently, skip this refresh
+    if (now - lastRefresh < MIN_REFRESH_INTERVAL) {
+      // Only log occasionally to reduce console spam
+      if (!window._refreshThrottleCounter) window._refreshThrottleCounter = 0;
+      if (window._refreshThrottleCounter % 10 === 0) {
+        console.log(`⚠️ Event refresh throttled (${(now - lastRefresh)/1000}s < ${MIN_REFRESH_INTERVAL/1000}s), using cache`);
+      }
+      window._refreshThrottleCounter++;
+      return events;
+    }
+    
+    // Reset throttle counter
+    window._refreshThrottleCounter = 0;
+    
+    // Set the in-progress flag before making the request
+    refreshInProgressRef.current = true;
+    
+    // Check if absolutely too soon (emergency circuit breaker)
+    if (now - lastRefresh < ABSOLUTE_MIN_INTERVAL) {
+      console.warn(`Emergency throttle: Refresh attempted too soon (${(now - lastRefresh)}ms)`);
+      
+      // Track these events for potential circuit breaker activation
+      consecutiveEmptyResultsRef.current += 1;
+      if (consecutiveEmptyResultsRef.current >= 5 && !circuitBreakerActiveRef.current) {
+        console.warn(`Circuit breaker threshold reached after ${consecutiveEmptyResultsRef.current} consecutive rapid refresh attempts`);
+        
+        // Defer state update to prevent render loop
+        setTimeout(() => {
+          if (!circuitBreakerActiveRef.current) {
+            circuitBreakerActiveRef.current = true;
+            setCircuitBreakerActive(true);
+          }
+        }, 0);
+        
+        // Reset circuit breaker after 1 minute
+        if (circuitBreakerTimeoutRef.current) {
+          clearTimeout(circuitBreakerTimeoutRef.current);
+        }
+        
+        circuitBreakerTimeoutRef.current = setTimeout(() => {
+          console.log("Circuit breaker reset");
+          circuitBreakerActiveRef.current = false;
+          setCircuitBreakerActive(false);
+          consecutiveEmptyResultsRef.current = 0;
+        }, 60000); // 1 minute timeout
+      }
+      
+      // Reset in-progress flag with delay
+      setTimeout(() => {
+        refreshInProgressRef.current = false;
+      }, 500);
+      
+      return events;
+    }
+    
+    console.log("Refreshing events from database");
+    
+    try {
+      await loadEvents();
+      setLastRefresh(Date.now());
+      
+      // Reset consecutive error counter on successful refresh
+      consecutiveEmptyResultsRef.current = 0;
+      
+      // Dispatch DOM event for components listening for refresh
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('calendar-events-refreshed', {
+          detail: { 
+            timestamp: Date.now(),
+            source: 'new-event-context',
+            count: events.length
+          }
+        }));
+      }
+      
+      return events;
+    } catch (err) {
+      // Track error frequency for potential circuit breaker activation
+      consecutiveEmptyResultsRef.current += 1;
+      if (consecutiveEmptyResultsRef.current >= 3 && !circuitBreakerActiveRef.current) {
+        console.warn(`Circuit breaker threshold reached after ${consecutiveEmptyResultsRef.current} consecutive refresh errors`);
+        
+        // Defer state update to prevent render loop
+        setTimeout(() => {
+          if (!circuitBreakerActiveRef.current) {
+            circuitBreakerActiveRef.current = true;
+            setCircuitBreakerActive(true);
+          }
+        }, 0);
+        
+        // Reset circuit breaker after 1 minute
+        if (circuitBreakerTimeoutRef.current) {
+          clearTimeout(circuitBreakerTimeoutRef.current);
+        }
+        
+        circuitBreakerTimeoutRef.current = setTimeout(() => {
+          console.log("Circuit breaker reset");
+          circuitBreakerActiveRef.current = false;
+          setCircuitBreakerActive(false);
+          consecutiveEmptyResultsRef.current = 0;
+        }, 60000); // 1 minute timeout
+      }
+      
+      // Rate limit error logging
+      const errorNow = Date.now();
+      if (errorNow - lastErrorLogRef.current > 5000) {
+        console.error("Error refreshing events:", err);
+        lastErrorLogRef.current = errorNow;
+      }
+      
+      throw err;
+    } finally {
+      // Add a small delay to prevent rapid consecutive refreshes
+      setTimeout(() => {
+        refreshInProgressRef.current = false;
+      }, 500); // Increased to 500ms for more protection
+    }
+  }, [currentUser, events, loadEvents, lastRefresh, circuitBreakerActive]);
+
+  /**
+   * Add a new event to the calendar
+   * @param {Object} eventData Event data to add
+   * @returns {Promise<Object>} Result object with success flag
+   */
+  const addEvent = useCallback(async (eventData) => {
+    if (!currentUser) {
+      return { success: false, error: "User not authenticated" };
+    }
+    
+    try {
+      console.log("Adding event:", eventData.title);
+      
+      // Ensure attendees are in the correct format
+      const standardizedEvent = {
+        ...eventData,
+        userId: currentUser.uid,
+        familyId: familyId,
+      };
+      
+      // Add event to database
+      const result = await EventStore.addEvent(standardizedEvent, currentUser.uid, familyId);
+      
+      if (result.success) {
+        // Refresh the events list to include the new event
+        refreshEvents();
+        
+        // Force calendar refresh via DOM event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('force-calendar-refresh'));
+        }
+      }
+      
+      return result;
+    } catch (err) {
+      console.error("Error adding event:", err);
+      return { success: false, error: err.message || "Failed to add event" };
+    }
+  }, [currentUser, familyId, refreshEvents]);
+
+  /**
+   * Update an existing event
+   * @param {string} eventId ID of the event to update
+   * @param {Object} updateData Updated event data
+   * @param {string} mode Optional mode parameter ('edit' to prevent 'added' notification)
+   * @returns {Promise<Object>} Result object with success flag
+   */
+  const updateEvent = useCallback(async (eventId, updateData, mode) => {
+    if (!currentUser) {
+      return { success: false, error: "User not authenticated" };
+    }
+    
+    try {
+      console.log(`Updating event ${eventId}:`, updateData.title, `mode: ${mode || 'default'}`);
+      
+      // Set global flag to indicate this is an edit operation (prevents double notifications)
+      if (typeof window !== 'undefined' && mode === 'edit') {
+        window._lastEventAction = 'updated';
+        window._lastEventId = eventId;
+      }
+      
+      // Ensure we have an existing event
+      const existingEvent = eventCache.get(eventId);
+      if (!existingEvent && !updateData.firestoreId) {
+        console.error(`Event ${eventId} not found in cache`);
+      }
+      
+      // Update event in database
+      const result = await EventStore.updateEvent(eventId, updateData, currentUser.uid);
+      
+      if (result.success) {
+        // CRITICAL FIX: Add debug logs to see the result of the update
+        console.log(`📅 Update result for event ${eventId}:`, {
+          success: result.success,
+          date: result.date, // Include date from the update
+          id: result.eventId,
+          universalId: result.universalId
+        });
+        
+        // Refresh events to get the updated event
+        refreshEvents();
+        
+        // Force calendar refresh via DOM event with specific detail for this update
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('force-calendar-refresh', {
+            detail: { 
+              source: 'event-update',
+              eventId: eventId,
+              mode: mode || 'default',
+              date: updateData.dateTime || updateData.date,
+              timestamp: Date.now()
+            }
+          }));
+          
+          // CRITICAL FIX: Dispatch a special event specifically for date changes
+          if (updateData.dateTime || updateData.date) {
+            window.dispatchEvent(new CustomEvent('force-date-change-refresh', {
+              detail: { 
+                eventId: eventId,
+                newDate: updateData.dateTime || updateData.date,
+                title: updateData.title,
+                mode: mode || 'default'
+              }
+            }));
+          }
+        }
+      }
+      
+      return result;
+    } catch (err) {
+      console.error("Error updating event:", err);
+      return { success: false, error: err.message || "Failed to update event" };
+    }
+  }, [currentUser, eventCache, refreshEvents]);
+
+  /**
+   * Delete an event from the calendar
+   * @param {string} eventId ID of the event to delete
+   * @returns {Promise<Object>} Result object with success flag
+   */
+  const deleteEvent = useCallback(async (eventId) => {
+    if (!currentUser) {
+      return { success: false, error: "User not authenticated" };
+    }
+    
+    try {
+      console.log(`Deleting event ${eventId}`);
+      
+      // Delete event from database
+      const result = await EventStore.deleteEvent(eventId, currentUser.uid);
+      
+      if (result.success) {
+        // Remove from local state
+        setEvents(prev => prev.filter(event => 
+          event.id !== eventId && 
+          event.firestoreId !== eventId &&
+          event.universalId !== eventId
+        ));
+        
+        // Force calendar refresh via DOM event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('force-calendar-refresh'));
+        }
+      }
+      
+      return result;
+    } catch (err) {
+      console.error("Error deleting event:", err);
+      return { success: false, error: err.message || "Failed to delete event" };
+    }
+  }, [currentUser]);
+
+  /**
+   * Get events filtered by various criteria
+   * @param {Object} filters Filter options
+   * @param {string} [filters.childId] Filter by child ID
+   * @param {string} [filters.category] Filter by category
+   * @param {string} [filters.eventType] Filter by event type
+   * @param {Date} [filters.startDate] Filter by start date
+   * @param {Date} [filters.endDate] Filter by end date
+   * @param {Function} [filters.customFilter] Custom filter function
+   * @returns {Array} Filtered events
+   */
+  const getFilteredEvents = useCallback((filters = {}) => {
+    const {
+      childId,
+      category,
+      eventType,
+      startDate,
+      endDate,
+      customFilter,
+      memberIds,
+    } = filters;
+    
+    return events.filter(event => {
+      // Date range filter
+      if (startDate && event.dateObj < startDate) {
+        return false;
+      }
+      if (endDate && event.dateObj > endDate) {
+        return false;
+      }
+      
+      // Category or event type filter
+      if (category && event.category !== category && event.eventType !== category) {
+        return false;
+      }
+      if (eventType && event.eventType !== eventType) {
+        return false;
+      }
+      
+      // Child filter
+      if (childId && event.childId !== childId && 
+          !event.attendees?.some(a => a.id === childId)) {
+        return false;
+      }
+      
+      // Member IDs filter (for any family member)
+      if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
+        // Check if any of the required members are attendees
+        const hasAnyMember = memberIds.some(memberId => 
+          event.attendees?.some(a => a.id === memberId)
+        );
+        if (!hasAnyMember) {
+          return false;
+        }
+      }
+      
+      // Custom filter function
+      if (customFilter && typeof customFilter === 'function') {
+        return customFilter(event);
+      }
+      
+      return true;
+    });
+  }, [events]);
+
+  /**
+   * Get events for a specific date
+   * @param {Date} date The date to get events for
+   * @returns {Array} Events on the specified date
+   */
+  const getEventsForDate = useCallback((date) => {
+    if (!date) return [];
+    
+    // Create a date string for comparison - using just the date part
+    const dateString = date.toISOString().split('T')[0];
+    console.log("Looking for events on date:", dateString);
+    
+    return events.filter(event => {
+      if (!event || !event.dateObj) return false;
+      
+      // Handle potential date parsing issues
+      let eventDate;
+      try {
+        if (event.dateObj instanceof Date) {
+          eventDate = event.dateObj;
+        } else if (typeof event.dateObj === 'string') {
+          eventDate = new Date(event.dateObj);
+        } else {
+          // Try other date fields if available
+          if (event.dateTime) {
+            eventDate = new Date(event.dateTime);
+          } else if (event.start?.dateTime) {
+            eventDate = new Date(event.start.dateTime);
+          } else {
+            console.warn("Event has invalid date:", event);
+            return false;
+          }
+        }
+        
+        // Compare just the date part (YYYY-MM-DD)
+        const eventDateString = eventDate.toISOString().split('T')[0];
+        const match = eventDateString === dateString;
+        
+        if (match) {
+          console.log("Found matching event:", event.title, "on", eventDateString);
+        }
+        
+        return match;
+      } catch (e) {
+        console.error("Error parsing event date:", e, event);
+        return false;
+      }
+    });
+  }, [events]);
+
+  // Load events when the user or family changes with improved circuit breaking
+  useEffect(() => {
+    // Add debugging to understand why this is firing so often
+    const effectId = Math.random().toString(36).substr(2, 9);
+    console.log(`🔄 NewEventContext effect run ${effectId} - user: ${currentUser?.uid}, family: ${familyId}, circuitBreaker: ${circuitBreakerActive}`);
+
+    if (!currentUser || !familyId) {
+      console.log(`🔄 Effect ${effectId} skipped - missing user or family`);
+      setLoading(false); // Clear loading state when user/family not available
+      return;
+    }
+    
+    // Prevent running if we just ran
+    const now = Date.now();
+    const timeSinceLastEffect = now - lastLoadAttemptTime.current;
+    if (timeSinceLastEffect < 2000 && initialLoadCompleted.current) {
+      console.log(`🔄 Effect ${effectId} skipped - too soon (${timeSinceLastEffect}ms)`);
+      return;
+    }
+      // Clean up any existing circuit breaker timeout
+      if (circuitBreakerTimeoutRef.current) {
+        clearTimeout(circuitBreakerTimeoutRef.current);
+      }
+      
+      // Reset circuit breaker state on user/family change
+      circuitBreakerActiveRef.current = false;
+      setCircuitBreakerActive(false);
+      consecutiveEmptyResultsRef.current = 0;
+      
+      // Add a delay for initial load to prevent rapid re-renders
+      const loadDelay = initialLoadCompleted.current ? 0 : 1000; // 1 second delay for first load
+      
+      // Initialize event counter for this session
+      let eventLoadAttempts = 0;
+      const MAX_EVENT_LOAD_ATTEMPTS = 3;
+      
+      // Function to load events with safety measures
+      const safeLoadEvents = async () => {
+        eventLoadAttempts++;
+        
+        try {
+          await loadEvents();
+          
+          // If we consistently get 0 events after multiple attempts, stop trying
+          if (events.length === 0 && eventLoadAttempts >= MAX_EVENT_LOAD_ATTEMPTS) {
+            console.warn(`🛑 SAFETY CIRCUIT BREAKER: Reached max attempts (${MAX_EVENT_LOAD_ATTEMPTS}) with 0 events`);
+            // Defer state update to prevent render loop
+            setTimeout(() => {
+              if (!circuitBreakerActiveRef.current) {
+                circuitBreakerActiveRef.current = true;
+                setCircuitBreakerActive(true);
+              }
+            }, 0);
+            
+            // Create a visual notification that events couldn't be loaded
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('events-load-failed', {
+                detail: { 
+                  reason: 'empty-results',
+                  attempts: eventLoadAttempts
+                }
+              }));
+            }
+          }
+        } catch (error) {
+          console.error("Error in safe load events:", error);
+        }
+      };
+      
+      // Load events only if circuit breaker is not active AND we're not on a survey page
+      const currentPath = window.location.pathname;
+      const isSurveyPage = currentPath.includes('/survey') || currentPath.includes('/weekly-checkin');
+      
+      if (!circuitBreakerActive && !isSurveyPage) {
+        // Add delay on initial load to prevent rapid re-renders
+        if (loadDelay > 0) {
+          setTimeout(() => {
+            safeLoadEvents();
+            initialLoadCompleted.current = true;
+          }, loadDelay);
+        } else {
+          safeLoadEvents();
+        }
+      } else if (isSurveyPage) {
+        console.log('📋 Skipping event load on survey page');
+        setLoading(false);
+      }
+      
+      // Track subscription notifications with circuit breaker protection
+      let subscriptionNotificationCount = 0;
+      let lastSubscriptionTime = Date.now();
+      const MAX_SUBSCRIPTION_RATE = 10; // Max 10 notifications per 5 seconds
+      const SUBSCRIPTION_WINDOW = 5000; // 5 second window for rate limiting
+      
+      // Subscribe to event changes via EventStore with anti-loop protection
+      const unsubscribe = EventStore.subscribe((action, updatedEvent) => {
+        // Skip processing if circuit breaker is active
+        if (circuitBreakerActive) return;
+        
+        // Implement rate limiting for subscriptions to prevent loops
+        const now = Date.now();
+        if (now - lastSubscriptionTime < SUBSCRIPTION_WINDOW) {
+          subscriptionNotificationCount++;
+          
+          // If we're getting too many notifications too quickly, activate circuit breaker
+          if (subscriptionNotificationCount > MAX_SUBSCRIPTION_RATE) {
+            console.warn(`Circuit breaker threshold reached: Received ${subscriptionNotificationCount} subscription notifications in ${SUBSCRIPTION_WINDOW/1000}s`);
+            
+            // Defer state update to prevent render loop
+            setTimeout(() => {
+              if (!circuitBreakerActiveRef.current) {
+                circuitBreakerActiveRef.current = true;
+                setCircuitBreakerActive(true);
+              }
+            }, 0);
+            
+            // Reset circuit breaker after 1 minute
+            if (circuitBreakerTimeoutRef.current) {
+              clearTimeout(circuitBreakerTimeoutRef.current);
+            }
+            
+            circuitBreakerTimeoutRef.current = setTimeout(() => {
+              console.log("Circuit breaker reset");
+              circuitBreakerActiveRef.current = false;
+              setCircuitBreakerActive(false);
+              consecutiveEmptyResultsRef.current = 0;
+              subscriptionNotificationCount = 0;
+            }, 60000); // 1 minute timeout
+            
+            return;
+          }
+        } else {
+          // Reset counter when window passes
+          subscriptionNotificationCount = 1;
+          lastSubscriptionTime = now;
+        }
+        
+        // Process subscription based on action type
+        if (action === 'add') {
+          console.log("Adding event to context:", updatedEvent.title);
+          // Add a stable ID before adding to context if none exists
+          const eventToAdd = {
+            ...updatedEvent,
+            _stableId: updatedEvent._stableId || `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          };
+          setEvents(prev => {
+            // Skip if event already exists to prevent duplicates
+            if (prev.some(e => 
+              e.id === updatedEvent.id || 
+              e.firestoreId === updatedEvent.firestoreId || 
+              e.universalId === updatedEvent.universalId
+            )) {
+              return prev;
+            }
+            return [...prev, eventToAdd];
+          });
+        } else if (action === 'update') {
+          console.log("Updating event in context:", updatedEvent.title);
+          setEvents(prev => prev.map(event => 
+            (event.id === updatedEvent.id || 
+             event.firestoreId === updatedEvent.firestoreId || 
+             event.universalId === updatedEvent.universalId) 
+              ? {...updatedEvent, _stableId: event._stableId || `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`} : event
+          ));
+        } else if (action === 'delete') {
+          console.log("Deleting event from context:", updatedEvent.id);
+          setEvents(prev => prev.filter(event => 
+            event.id !== updatedEvent.id && 
+            event.firestoreId !== updatedEvent.firestoreId &&
+            event.universalId !== updatedEvent.universalId
+          ));
+        }
+      });
+      
+      // Enhanced force-calendar-refresh event handler with rate limiting and circuit breaking
+      let lastRefreshEventTime = 0;
+      const MIN_EVENT_INTERVAL = 2000; // 2 seconds between refresh events
+      let refreshEventCounter = 0;
+      let refreshEventTotal = 0;
+      const REFRESH_CIRCUIT_BREAK_THRESHOLD = 30; // Activate circuit breaker after 30 refresh events in 30 seconds
+      const REFRESH_CIRCUIT_WINDOW = 30000; // 30 second window for circuit breaking
+      let refreshWindowStart = Date.now();
+      
+      const handleForceRefresh = (event) => {
+        console.log(`🔍 DEBUG: Received force-calendar-refresh event, source: ${event?.detail?.source || 'unknown'}`);
+        
+        // Skip processing if circuit breaker is active
+        if (circuitBreakerActive) {
+          console.log("⚠️ Circuit breaker is active - blocking calendar refresh event");
+          event.stopImmediatePropagation();
+          return;
+        }
+        
+        const now = Date.now();
+        
+        // Check for refresh event storm (circuit breaker pattern)
+        if (now - refreshWindowStart < REFRESH_CIRCUIT_WINDOW) {
+          refreshEventTotal++;
+          console.log(`🔍 DEBUG: Calendar refresh event count: ${refreshEventTotal} in ${(now - refreshWindowStart)/1000}s window`);
+          
+          // If we're getting too many refresh events in the window, activate circuit breaker
+          if (refreshEventTotal > REFRESH_CIRCUIT_BREAK_THRESHOLD) {
+            console.warn(`⚠️ Circuit breaker threshold reached: Received ${refreshEventTotal} refresh events in ${REFRESH_CIRCUIT_WINDOW/1000}s`);
+            
+            // Defer state update to prevent render loop
+            setTimeout(() => {
+              if (!circuitBreakerActiveRef.current) {
+                circuitBreakerActiveRef.current = true;
+                setCircuitBreakerActive(true);
+              }
+            }, 0);
+            
+            // Provide visual indicator in UI
+            if (typeof window !== 'undefined' && !document.getElementById('calendar-circuit-breaker')) {
+              try {
+                const div = document.createElement('div');
+                div.id = 'calendar-circuit-breaker';
+                div.style.position = 'fixed';
+                div.style.bottom = '10px';
+                div.style.left = '10px';
+                div.style.backgroundColor = '#ff5252';
+                div.style.color = 'white';
+                div.style.padding = '10px';
+                div.style.borderRadius = '4px';
+                div.style.zIndex = '9999';
+                div.textContent = 'Calendar refresh loop detected - pausing updates';
+                document.body.appendChild(div);
+                
+                // Remove after circuit breaker reset
+                setTimeout(() => {
+                  const element = document.getElementById('calendar-circuit-breaker');
+                  if (element) element.remove();
+                }, 60000);
+              } catch (e) {
+                console.error("Error creating notification", e);
+              }
+            }
+            
+            // Reset circuit breaker after 1 minute
+            if (circuitBreakerTimeoutRef.current) {
+              clearTimeout(circuitBreakerTimeoutRef.current);
+            }
+            
+            circuitBreakerTimeoutRef.current = setTimeout(() => {
+              console.log("🔄 Circuit breaker reset");
+              circuitBreakerActiveRef.current = false;
+              setCircuitBreakerActive(false);
+              consecutiveEmptyResultsRef.current = 0;
+              refreshEventTotal = 0;
+              refreshWindowStart = Date.now();
+            }, 60000); // 1 minute timeout
+            
+            event.stopImmediatePropagation();
+            return;
+          }
+        } else {
+          // Reset counters when window passes
+          refreshEventTotal = 1;
+          refreshWindowStart = now;
+          console.log("🔍 DEBUG: Starting new calendar refresh window");
+        }
+        
+        // Get source early to avoid temporal dead zone error
+        const source = event?.detail?.source || 'unknown';
+        
+        // Rate limit refresh events - but allow chat-event-created through
+        const isFromChat = source === 'chat-event-created';
+        if (!isFromChat && now - lastRefreshEventTime < MIN_EVENT_INTERVAL) {
+          refreshEventCounter++;
+          
+          // Block excessive refreshes
+          if (refreshEventCounter > 3) {
+            // Only log occasionally to reduce console spam
+            if (refreshEventCounter % 10 === 0) {
+              console.warn(`Blocked excessive calendar refresh event #${refreshEventCounter}`);
+            }
+            
+            // Prevent event from propagating
+            event.stopImmediatePropagation();
+            return;
+          }
+        } else {
+          // Reset counter when enough time has passed
+          refreshEventCounter = 0;
+          lastRefreshEventTime = now;
+        }
+        
+        // Prevent self-triggered refreshes for better loop protection
+        if (source === 'new-event-context') {
+          // Skip self-triggered events
+          return;
+        }
+        
+        // Call refresh events with the throttling and circuit breaking we added above
+        refreshEvents();
+      };
+      
+      if (typeof window !== 'undefined') {
+        window.addEventListener('force-calendar-refresh', handleForceRefresh, true); // Using capture phase
+      }
+      
+      return () => {
+        unsubscribe();
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('force-calendar-refresh', handleForceRefresh, true);
+        }
+        
+        // Clean up any circuit breaker timeout
+        if (circuitBreakerTimeoutRef.current) {
+          clearTimeout(circuitBreakerTimeoutRef.current);
+        }
+      };
+  }, [currentUser, familyId, circuitBreakerActive]);
+
+  // Manual reset function for circuit breaker
+  const resetEventLoading = useCallback(() => {
+    console.log('🔄 Manually resetting event loading...');
+    
+    // Reset circuit breaker state
+    circuitBreakerActiveRef.current = false;
+    setCircuitBreakerActive(false);
+    consecutiveEmptyResultsRef.current = 0;
+    
+    // Reset global counters
+    if (typeof window !== 'undefined') {
+      window._eventEmptyResultCounter = 0;
+      window._forceEventCircuitBreaker = false;
+    }
+    
+    // Clear any existing timeouts
+    if (circuitBreakerTimeoutRef.current) {
+      clearTimeout(circuitBreakerTimeoutRef.current);
+    }
+    
+    // Remove any notices
+    try {
+      const notice = document.getElementById('circuit-breaker-notice');
+      if (notice && notice.parentNode) {
+        notice.parentNode.removeChild(notice);
+      }
+    } catch (e) {
+      // Ignore DOM errors
+    }
+    
+    // Force refresh after reset
+    setTimeout(() => {
+      refreshEvents();
+    }, 100);
+    
+    return true;
+  }, [refreshEvents]);
+
+  // Context value
+  const value = {
+    events,
+    loading,
+    error,
+    addEvent,
+    updateEvent,
+    deleteEvent,
+    refreshEvents,
+    getFilteredEvents,
+    getEventsForDate,
+    lastRefresh,
+    resetEventLoading,
+  };
+
+  return (
+    <NewEventContext.Provider value={value}>
+      {children}
+    </NewEventContext.Provider>
+  );
+}
+
+export default NewEventContext;

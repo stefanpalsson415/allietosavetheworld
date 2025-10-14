@@ -1,0 +1,118 @@
+// src/services/ClaudeService.js - SIMPLIFIED
+// This is a simplified version that makes direct API calls to the Claude API
+
+class ClaudeService {
+  constructor() {
+    // Set proxy URL based on environment
+    this.proxyUrl = 'http://localhost:3001/api/claude';
+    
+    // Set Claude model
+    this.model = 'claude-3-5-sonnet-20241022';
+    
+    // Default settings
+    this.mockMode = false;
+    this.debugMode = true;
+    
+    console.log(`ClaudeService initialized with proxy URL: ${this.proxyUrl}`);
+  }
+  
+  /**
+   * Generate a response from Claude API
+   * @param {Array} messages - Array of message objects with role and content
+   * @param {Object} context - Context object with system prompt
+   * @param {Object} options - Generation options
+   * @returns {Promise<string>} Claude's response text
+   */
+  async generateResponse(messages, context = {}, options = {}) {
+    console.log("🔄 ClaudeService.generateResponse - Simple direct implementation");
+    
+    try {
+      // Ensure messages are in the correct format
+      if (!Array.isArray(messages)) {
+        console.warn("⚠️ Messages not provided as array, converting...");
+        messages = [{ role: 'user', content: String(messages) }];
+      }
+      
+      // Debug log
+      console.log(`Sending ${messages.length} messages to Claude API`);
+      
+      // Prepare request body
+      const requestBody = {
+        model: this.model,
+        max_tokens: options.max_tokens || 1024,
+        temperature: options.temperature || 0.7,
+        messages: messages
+      };
+      
+      // Add system message if provided
+      if (context && context.system) {
+        requestBody.system = context.system;
+      }
+      
+      // Make the request
+      console.log("📤 Sending request to:", this.proxyUrl);
+      const response = await fetch(this.proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      // Check for errors
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ API request failed with status ${response.status}:`, errorText);
+        throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+      }
+      
+      // Parse the response
+      const result = await response.json();
+      
+      // Extract response text
+      if (result && result.content && result.content.length > 0) {
+        const responseText = result.content[0].text;
+        console.log("✅ Claude API response received:", responseText.substring(0, 50) + "...");
+        return responseText;
+      }
+      
+      // Fallback for empty response
+      console.warn("⚠️ Received empty response from Claude API");
+      return "I'm sorry, I couldn't generate a response at this time.";
+    } catch (error) {
+      console.error("❌ Error in generateResponse:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Test connection to Claude API
+   * @returns {Promise<boolean>} Success status
+   */
+  async testConnection() {
+    try {
+      console.log("🧪 Testing Claude API connection...");
+      
+      // Simple test request
+      const response = await fetch(`${this.proxyUrl}/test`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        console.log("✅ Claude API connection test passed!");
+        return true;
+      } else {
+        console.warn(`❌ Claude API connection test failed with status: ${response.status}`);
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Claude API connectivity test failed:", error);
+      return false;
+    }
+  }
+}
+
+export default new ClaudeService();

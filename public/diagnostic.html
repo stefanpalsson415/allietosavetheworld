@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Allie App Diagnostics</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    header {
+      background-color: #0084ff;
+      color: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    h2 {
+      font-size: 20px;
+      margin-top: 30px;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .flex {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .flex-item {
+      flex: 1;
+      min-width: 300px;
+    }
+    button {
+      background-color: #0084ff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0066cc;
+    }
+    button.danger {
+      background-color: #ff3d00;
+    }
+    button.danger:hover {
+      background-color: #dd2c00;
+    }
+    button.success {
+      background-color: #00c853;
+    }
+    button.success:hover {
+      background-color: #00a844;
+    }
+    button.warning {
+      background-color: #ffab00;
+    }
+    button.warning:hover {
+      background-color: #ff9100;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow: auto;
+      font-family: monospace;
+      font-size: 13px;
+      max-height: 300px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .status-circle {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .status-circle.green {
+      background-color: #00c853;
+    }
+    .status-circle.red {
+      background-color: #ff3d00;
+    }
+    .status-circle.yellow {
+      background-color: #ffab00;
+    }
+    .status-circle.gray {
+      background-color: #9e9e9e;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active {
+      border-bottom: 2px solid #0084ff;
+      font-weight: 500;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .firebase-status, .loading-status, .event-status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-block;
+      margin-left: 10px;
+    }
+    .status-ok {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+    }
+    .status-warning {
+      background-color: #fff8e1;
+      color: #ff8f00;
+    }
+    .status-error {
+      background-color: #ffebee;
+      color: #c62828;
+    }
+    .status-unknown {
+      background-color: #f5f5f5;
+      color: #616161;
+    }
+    #diagnostic-output {
+      height: 400px;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f5f5f5;
+      font-weight: 500;
+    }
+    tr:hover {
+      background-color: #f8f9fa;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Allie App Diagnostics</h1>
+      <p>This tool helps diagnose and fix issues with the Allie application.</p>
+    </header>
+
+    <div class="card">
+      <h2>System Status <span id="last-updated"></span></h2>
+      <div class="flex">
+        <div class="flex-item">
+          <div class="status-item">
+            <div class="status-circle" id="firebase-circle"></div>
+            <span>Firebase SDK</span>
+            <span class="firebase-status" id="firebase-status">Unknown</span>
+          </div>
+          <div class="status-item">
+            <div class="status-circle" id="auth-circle"></div>
+            <span>Authentication</span>
+            <span class="firebase-status" id="auth-status">Unknown</span>
+          </div>
+          <div class="status-item">
+            <div class="status-circle" id="firestore-circle"></div>
+            <span>Firestore Database</span>
+            <span class="firebase-status" id="firestore-status">Unknown</span>
+          </div>
+        </div>
+        <div class="flex-item">
+          <div class="status-item">
+            <div class="status-circle" id="event-circle"></div>
+            <span>Event System</span>
+            <span class="event-status" id="event-status">Unknown</span>
+          </div>
+          <div class="status-item">
+            <div class="status-circle" id="provider-circle"></div>
+            <span>Provider Creation</span>
+            <span class="event-status" id="provider-status">Unknown</span>
+          </div>
+          <div class="status-item">
+            <div class="status-circle" id="spinner-circle"></div>
+            <span>UI Spinners</span>
+            <span class="loading-status" id="spinner-status">Unknown</span>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="refresh-status">Refresh Status</button>
+        <button id="run-all-diagnostics">Run All Diagnostics</button>
+        <button class="warning" id="fix-all-issues">Apply All Fixes</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="system">System Diagnostics</div>
+      <div class="tab" data-tab="firebase">Firebase</div>
+      <div class="tab" data-tab="event">Event System</div>
+      <div class="tab" data-tab="providers">Providers</div>
+      <div class="tab" data-tab="fixes">Emergency Fixes</div>
+    </div>
+
+    <div class="tab-content active" id="system-tab">
+      <div class="card">
+        <h2>Diagnostic Console</h2>
+        <div class="actions">
+          <button id="system-diagnostic">Run System Diagnostics</button>
+          <button id="clear-console">Clear Console</button>
+        </div>
+        <pre id="diagnostic-output">Diagnostic output will appear here...</pre>
+      </div>
+
+      <div class="card">
+        <h2>System Environment</h2>
+        <table id="environment-table">
+          <tr>
+            <th>Property</th>
+            <th>Value</th>
+          </tr>
+          <tr>
+            <td>URL</td>
+            <td id="env-url"></td>
+          </tr>
+          <tr>
+            <td>User Agent</td>
+            <td id="env-ua"></td>
+          </tr>
+          <tr>
+            <td>Screen Size</td>
+            <td id="env-screen"></td>
+          </tr>
+          <tr>
+            <td>Window Size</td>
+            <td id="env-window"></td>
+          </tr>
+          <tr>
+            <td>Timezone</td>
+            <td id="env-timezone"></td>
+          </tr>
+          <tr>
+            <td>Firebase SDK</td>
+            <td id="env-firebase"></td>
+          </tr>
+          <tr>
+            <td>React Version</td>
+            <td id="env-react"></td>
+          </tr>
+          <tr>
+            <td>Local Storage</td>
+            <td id="env-ls"></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-content" id="firebase-tab">
+      <div class="card">
+        <h2>Firebase Status</h2>
+        <div class="actions">
+          <button id="test-firebase">Test Firebase</button>
+          <button id="test-auth">Test Authentication</button>
+          <button id="test-firestore">Test Firestore</button>
+        </div>
+        <pre id="firebase-output">Firebase diagnostic output will appear here...</pre>
+      </div>
+
+      <div class="card">
+        <h2>Firebase Remediation</h2>
+        <p>If Firebase is not working correctly, try these fixes:</p>
+        <div class="actions">
+          <button id="fix-firebase">Fix Firebase SDK</button>
+          <button class="warning" id="clear-firebase-cache">Clear Firebase Cache</button>
+          <button class="danger" id="sign-out">Sign Out</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="event-tab">
+      <div class="card">
+        <h2>Event System Status</h2>
+        <div class="actions">
+          <button id="test-events">Test Event Reading</button>
+          <button id="test-event-write">Test Event Writing</button>
+          <button id="check-loops">Check for Event Loops</button>
+        </div>
+        <pre id="event-output">Event system diagnostic output will appear here...</pre>
+      </div>
+
+      <div class="card">
+        <h2>Event System Remediation</h2>
+        <p>If events are not working correctly or you're experiencing loops, try these fixes:</p>
+        <div class="actions">
+          <button id="fix-event-loops">Break Event Loops</button>
+          <button class="warning" id="clear-event-cache">Clear Event Cache</button>
+          <button class="danger" id="reset-event-system">Reset Event System</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="providers-tab">
+      <div class="card">
+        <h2>Provider System Status</h2>
+        <div class="actions">
+          <button id="test-providers">Test Provider Reading</button>
+          <button id="test-provider-creation">Test Provider Creation</button>
+        </div>
+        <pre id="provider-output">Provider system diagnostic output will appear here...</pre>
+      </div>
+
+      <div class="card">
+        <h2>Provider Test Form</h2>
+        <div style="margin-bottom: 15px;">
+          <label for="provider-name">Provider Name:</label>
+          <input type="text" id="provider-name" value="Dr. Test Provider" style="padding: 8px; margin-right: 10px; width: 200px;">
+          
+          <label for="provider-type">Type:</label>
+          <select id="provider-type" style="padding: 8px; margin-right: 10px;">
+            <option value="medical">Medical</option>
+            <option value="school">School</option>
+            <option value="childcare">Childcare</option>
+            <option value="other">Other</option>
+          </select>
+          
+          <label for="specialty">Specialty:</label>
+          <input type="text" id="specialty" value="Pediatrician" style="padding: 8px; width: 150px;">
+        </div>
+        
+        <div class="actions">
+          <button id="create-test-provider">Create Test Provider</button>
+          <button class="warning" id="sync-providers">Sync Local Providers to Firestore</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="fixes-tab">
+      <div class="card">
+        <h2>Emergency Fixes</h2>
+        <p><strong>Warning:</strong> These are emergency fixes that should only be used if the application is severely broken.</p>
+        
+        <div class="flex">
+          <div class="flex-item">
+            <h3>Application State</h3>
+            <div class="actions" style="flex-direction: column; align-items: flex-start;">
+              <button class="warning" id="clear-local-storage">Clear Local Storage</button>
+              <button class="warning" id="reset-app-state">Reset Application State</button>
+              <button class="danger" id="full-reset">Full Application Reset</button>
+            </div>
+          </div>
+          
+          <div class="flex-item">
+            <h3>Emergency Recovery</h3>
+            <div class="actions" style="flex-direction: column; align-items: flex-start;">
+              <button id="return-to-app">Return to Application</button>
+              <button class="success" id="safe-mode">Start in Safe Mode</button>
+              <button class="warning" id="minimal-mode">Start in Minimal Mode</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <!-- Load diagnostic scripts -->
+  <script src="console-diagnostic.js"></script>
+  <script src="simple-diagnostic.js"></script>
+
+  <script>
+    // Initialize Firebase (use project config)
+    const firebaseConfig = {
+      apiKey: "AIzaSyALjXkZiFZ_Fy143N_dzdaUbyDCtabBr7Y",
+      authDomain: "parentload-ba995.firebaseapp.com",
+      projectId: "parentload-ba995",
+      storageBucket: "parentload-ba995.appspot.com",
+      messagingSenderId: "363935868004",
+      appId: "1:363935868004:web:8802abceeca81cc10deb71"
+    };
+
+    // Initialize Firebase if it's not already
+    let firebaseInitialized = false;
+    try {
+      if (typeof firebase !== 'undefined') {
+        if (firebase.apps.length === 0) {
+          firebase.initializeApp(firebaseConfig);
+          firebaseInitialized = true;
+        } else {
+          firebaseInitialized = true;
+        }
+      }
+    } catch (e) {
+      console.error("Error initializing Firebase:", e);
+    }
+
+    // UI state
+    const state = {
+      diagnosticRunning: false,
+      firebase: {
+        available: false,
+        initialized: false,
+        auth: false,
+        firestore: false
+      },
+      auth: {
+        signedIn: false,
+        userId: null
+      },
+      events: {
+        loopsDetected: false,
+        read: false,
+        write: false
+      },
+      providers: {
+        creationFunction: false,
+        read: false,
+        write: false
+      },
+      dom: {
+        spinners: 0
+      }
+    };
+
+    // UI functions
+    function updateStatus() {
+      const now = new Date();
+      document.getElementById('last-updated').textContent = `(Last updated: ${now.toLocaleTimeString()})`;
+
+      // Update Firebase status
+      const firebaseCircle = document.getElementById('firebase-circle');
+      const firebaseStatus = document.getElementById('firebase-status');
+      
+      if (state.firebase.available && state.firebase.initialized) {
+        firebaseCircle.className = 'status-circle green';
+        firebaseStatus.className = 'firebase-status status-ok';
+        firebaseStatus.textContent = 'Available';
+      } else if (state.firebase.available) {
+        firebaseCircle.className = 'status-circle yellow';
+        firebaseStatus.className = 'firebase-status status-warning';
+        firebaseStatus.textContent = 'Not Initialized';
+      } else {
+        firebaseCircle.className = 'status-circle red';
+        firebaseStatus.className = 'firebase-status status-error';
+        firebaseStatus.textContent = 'Not Available';
+      }
+
+      // Update Auth status
+      const authCircle = document.getElementById('auth-circle');
+      const authStatus = document.getElementById('auth-status');
+      
+      if (state.auth.signedIn) {
+        authCircle.className = 'status-circle green';
+        authStatus.className = 'firebase-status status-ok';
+        authStatus.textContent = 'Signed In';
+      } else {
+        authCircle.className = 'status-circle red';
+        authStatus.className = 'firebase-status status-error';
+        authStatus.textContent = 'Not Signed In';
+      }
+
+      // Update Firestore status
+      const firestoreCircle = document.getElementById('firestore-circle');
+      const firestoreStatus = document.getElementById('firestore-status');
+      
+      if (state.firebase.firestore) {
+        firestoreCircle.className = 'status-circle green';
+        firestoreStatus.className = 'firebase-status status-ok';
+        firestoreStatus.textContent = 'Available';
+      } else {
+        firestoreCircle.className = 'status-circle red';
+        firestoreStatus.className = 'firebase-status status-error';
+        firestoreStatus.textContent = 'Not Available';
+      }
+
+      // Update Event status
+      const eventCircle = document.getElementById('event-circle');
+      const eventStatus = document.getElementById('event-status');
+      
+      if (state.events.loopsDetected) {
+        eventCircle.className = 'status-circle red';
+        eventStatus.className = 'event-status status-error';
+        eventStatus.textContent = 'Loops Detected';
+      } else if (state.events.read && state.events.write) {
+        eventCircle.className = 'status-circle green';
+        eventStatus.className = 'event-status status-ok';
+        eventStatus.textContent = 'Working';
+      } else if (state.events.read || state.events.write) {
+        eventCircle.className = 'status-circle yellow';
+        eventStatus.className = 'event-status status-warning';
+        eventStatus.textContent = 'Partial';
+      } else {
+        eventCircle.className = 'status-circle gray';
+        eventStatus.className = 'event-status status-unknown';
+        eventStatus.textContent = 'Unknown';
+      }
+
+      // Update Provider status
+      const providerCircle = document.getElementById('provider-circle');
+      const providerStatus = document.getElementById('provider-status');
+      
+      if (state.providers.creationFunction && state.providers.write) {
+        providerCircle.className = 'status-circle green';
+        providerStatus.className = 'event-status status-ok';
+        providerStatus.textContent = 'Working';
+      } else if (state.providers.creationFunction || state.providers.read) {
+        providerCircle.className = 'status-circle yellow';
+        providerStatus.className = 'event-status status-warning';
+        providerStatus.textContent = 'Partial';
+      } else {
+        providerCircle.className = 'status-circle red';
+        providerStatus.className = 'event-status status-error';
+        providerStatus.textContent = 'Not Working';
+      }
+
+      // Update Spinner status
+      const spinnerCircle = document.getElementById('spinner-circle');
+      const spinnerStatus = document.getElementById('spinner-status');
+      
+      if (state.dom.spinners > 0) {
+        spinnerCircle.className = 'status-circle yellow';
+        spinnerStatus.className = 'loading-status status-warning';
+        spinnerStatus.textContent = `${state.dom.spinners} Found`;
+      } else {
+        spinnerCircle.className = 'status-circle green';
+        spinnerStatus.className = 'loading-status status-ok';
+        spinnerStatus.textContent = 'None Detected';
+      }
+    }
+
+    // Environment info
+    function populateEnvironmentInfo() {
+      document.getElementById('env-url').textContent = window.location.href;
+      document.getElementById('env-ua').textContent = navigator.userAgent;
+      document.getElementById('env-screen').textContent = `${screen.width}x${screen.height}`;
+      document.getElementById('env-window').textContent = `${window.innerWidth}x${window.innerHeight}`;
+      document.getElementById('env-timezone').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
+      // Firebase
+      document.getElementById('env-firebase').textContent = 
+        typeof firebase !== 'undefined' ? 
+        `Available (${firebase.apps.length} app${firebase.apps.length !== 1 ? 's' : ''})` : 
+        'Not available';
+      
+      // React
+      document.getElementById('env-react').textContent = 
+        (window.React ? `${window.React.version}` : 'Not detected');
+      
+      // Local Storage
+      try {
+        localStorage.setItem('test', 'test');
+        localStorage.removeItem('test');
+        document.getElementById('env-ls').textContent = 'Available';
+      } catch (e) {
+        document.getElementById('env-ls').textContent = 'Not available or blocked';
+      }
+    }
+
+    // Tab functionality
+    function setupTabs() {
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // Deactivate all tabs
+          tabs.forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          
+          // Activate clicked tab
+          tab.classList.add('active');
+          document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+        });
+      });
+    }
+
+    // Firebase diagnostic functions
+    async function testFirebase() {
+      const outputElement = document.getElementById('firebase-output');
+      outputElement.textContent = 'Testing Firebase availability...';
+      
+      try {
+        let result;
+        
+        // Try console diagnostic first
+        if (window.consoleDiagnostic && typeof window.consoleDiagnostic.testFirebase === 'function') {
+          result = await window.consoleDiagnostic.testFirebase();
+        } 
+        // Fall back to simple diagnostic
+        else if (window.simpleDiagnostic && typeof window.simpleDiagnostic.checkFirebase === 'function') {
+          result = await window.simpleDiagnostic.checkFirebase();
+        }
+        // Manual check
+        else {
+          result = {
+            success: typeof firebase !== 'undefined',
+            sdkAvailable: typeof firebase !== 'undefined',
+            appInitialized: typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0
+          };
+        }
+        
+        // Update state
+        state.firebase.available = result.success || result.sdkAvailable;
+        state.firebase.initialized = result.appInitialized;
+        
+        // Update UI
+        updateStatus();
+        
+        // Show results
+        outputElement.textContent = JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent = `Error testing Firebase: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    async function testAuth() {
+      const outputElement = document.getElementById('firebase-output');
+      outputElement.textContent = 'Testing authentication...';
+      
+      try {
+        let result;
+        
+        // Try console diagnostic first
+        if (window.consoleDiagnostic && typeof window.consoleDiagnostic.testAuth === 'function') {
+          result = await window.consoleDiagnostic.testAuth();
+        } 
+        // Fall back to simple diagnostic
+        else if (window.simpleDiagnostic && typeof window.simpleDiagnostic.testAuthState === 'function') {
+          result = await window.simpleDiagnostic.testAuthState();
+        }
+        // Manual check
+        else if (typeof firebase !== 'undefined' && firebase.auth) {
+          const user = firebase.auth().currentUser;
+          result = {
+            success: true,
+            authenticated: !!user,
+            userId: user ? user.uid : null
+          };
+        } else {
+          result = {
+            success: false,
+            error: 'Firebase Auth not available'
+          };
+        }
+        
+        // Update state
+        state.auth.signedIn = result.authenticated;
+        state.auth.userId = result.userId;
+        
+        // Update UI
+        updateStatus();
+        
+        // Show results
+        outputElement.textContent = JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent = `Error testing auth: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    async function testFirestore() {
+      const outputElement = document.getElementById('firebase-output');
+      outputElement.textContent = 'Testing Firestore...';
+      
+      try {
+        let result;
+        
+        // Try console diagnostic first
+        if (window.consoleDiagnostic && typeof window.consoleDiagnostic.testFirestore === 'function') {
+          result = await window.consoleDiagnostic.testFirestore();
+        } 
+        // Manual check
+        else if (typeof firebase !== 'undefined' && firebase.firestore) {
+          state.firebase.firestore = true;
+          
+          // Check if we can read something
+          try {
+            const user = firebase.auth().currentUser;
+            if (user) {
+              const doc = await firebase.firestore().collection('users').doc(user.uid).get();
+              result = {
+                success: true,
+                available: true,
+                documentExists: doc.exists
+              };
+            } else {
+              result = {
+                success: false,
+                available: true,
+                error: 'Not authenticated'
+              };
+            }
+          } catch (error) {
+            result = {
+              success: false,
+              available: true,
+              error: error.message
+            };
+          }
+        } else {
+          state.firebase.firestore = false;
+          result = {
+            success: false,
+            available: false,
+            error: 'Firestore not available'
+          };
+        }
+        
+        // Update UI
+        updateStatus();
+        
+        // Show results
+        outputElement.textContent = JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent = `Error testing Firestore: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    // Event diagnostic functions
+    async function testEvents() {
+      const outputElement = document.getElementById('event-output');
+      outputElement.textContent = 'Testing event reading...';
+      
+      try {
+        let result;
+        
+        // Try console diagnostic first
+        if (window.consoleDiagnostic && typeof window.consoleDiagnostic.testEvents === 'function') {
+          result = await window.consoleDiagnostic.testEvents();
+        } 
+        // Fall back to simple diagnostic
+        else if (window.simpleDiagnostic && typeof window.simpleDiagnostic.testEventRead === 'function') {
+          result = await window.simpleDiagnostic.testEventRead();
+        }
+        // Manual check
+        else if (typeof firebase !== 'undefined' && firebase.firestore) {
+          const user = firebase.auth().currentUser;
+          if (user) {
+            try {
+              const events = await firebase.firestore().collection('events')
+                .where('userId', '==', user.uid)
+                .limit(10)
+                .get();
+              
+              result = {
+                success: true,
+                eventsCount: events.size,
+                hasEventStore: typeof window.EventStore !== 'undefined'
+              };
+            } catch (error) {
+              result = {
+                success: false,
+                error: error.message
+              };
+            }
+          } else {
+            result = {
+              success: false,
+              error: 'Not authenticated'
+            };
+          }
+        } else {
+          result = {
+            success: false,
+            error: 'Firebase or Firestore not available'
+          };
+        }
+        
+        // Update state
+        state.events.read = result.success;
+        
+        // Update UI
+        updateStatus();
+        
+        // Show results
+        outputElement.textContent = JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent = `Error testing events: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    async function testEventWrite() {
+      const outputElement = document.getElementById('event-output');
+      outputElement.textContent = 'Testing event writing...';
+      
+      try {
+        let result;
+        
+        // Try console diagnostic first
+        if (window.consoleDiagnostic && typeof window.consoleDiagnostic.testWriteEvent === 'function') {
+          result = await window.consoleDiagnostic.testWriteEvent();
+        } 
+        // Fall back to simple diagnostic
+        else if (window.simpleDiagnostic && typeof window.simpleDiagnostic.testEventWrite === 'function') {
+          result = await window.simpleDiagnostic.testEventWrite();
+        }
+        // Manual check
+        else if (typeof firebase !== 'undefined' && firebase.firestore) {
+          const user = firebase.auth().currentUser;
+          if (user) {
+            try {
+              // Create test event
+              const testEvent = {
+                title: 'Diagnostic Test Event',
+                description: 'This is a test event created by the diagnostic tool',
+                userId: user.uid,
+                dateTime: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                source: 'diagnostic-tool'
+              };
+              
+              const docRef = await firebase.firestore().collection('events').add(testEvent);
+              
+              result = {
+                success: true,
+                eventId: docRef.id
+              };
+            } catch (error) {
+              result = {
+                success: false,
+                error: error.message
+              };
+            }
+          } else {
+            result = {
+              success: false,
+              error: 'Not authenticated'
+            };
+          }
+        } else {
+          result = {
+            success: false,
+            error: 'Firebase or Firestore not available'
+          };
+        }
+        
+        // Update state
+        state.events.write = result.success;
+        
+        // Update UI
+        updateStatus();
+        
+        // Show results
+        outputElement.textContent = JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent = `Error testing event write: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    async function checkLoops() {
+      const outputElement = document.getElementById('event-output');
+      outputElement.textContent = 'Checking for event loops...';
+      
+      try {
+        let result;
+        
+        // Check if event loop breaker is available
+        if (window._eventLoopBreaker && typeof window._eventLoopBreaker.getStats === 'function') {
+          result = window._eventLoopBreaker.getStats();
+        } else {
+          result = {
+            loopDetected: false,
+            message: 'Event loop breaker not installed'
+          };
+        }
+        
+        // Update state
+        state.events.loopsDetected = result.loopDetected;
+        
+        // Update UI
+        updateStatus();
+        
+        // Show results
+        outputElement.textContent = JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent = `Error checking for loops: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    // Provider diagnostic functions
+    async function testProviders() {
+      const outputElement = document.getElementById('provider-output');
+      outputElement.textContent = 'Testing provider reading...';
+      
+      try {
+        let result;
+        
+        // Try console diagnostic first
+        if (window.consoleDiagnostic && typeof window.consoleDiagnostic.testProviders === 'function') {
+          result = await window.consoleDiagnostic.testProviders();
+        } 
+        // Manual check
+        else if (typeof firebase !== 'undefined' && firebase.firestore) {
+          // Check if function exists
+          const hasCreateFn = typeof window.createProviderFromAllie === 'function';
+          
+          // Update state
+          state.providers.creationFunction = hasCreateFn;
+          
+          // Get family ID
+          const familyId = localStorage.getItem('selectedFamilyId') ||
+                         localStorage.getItem('currentFamilyId') ||
+                         localStorage.getItem('familyId');
+          
+          if (familyId) {
+            try {
+              const providersSnapshot = await firebase.firestore().collection('providers')
+                .where('familyId', '==', familyId)
+                .limit(20)
+                .get();
+              
+              result = {
+                success: true,
+                firestoreProviders: providersSnapshot.size,
+                hasCreateProviderFn: hasCreateFn,
+                familyId
+              };
+              
+              // Update state
+              state.providers.read = true;
+            } catch (error) {
+              result = {
+                success: false,
+                hasCreateProviderFn: hasCreateFn,
+                error: error.message,
+                familyId
+              };
+            }
+          } else {
+            result = {
+              success: false,
+              hasCreateProviderFn: hasCreateFn,
+              error: 'No family ID found in localStorage'
+            };
+          }
+        } else {
+          result = {
+            success: false,
+            hasCreateProviderFn: typeof window.createProviderFromAllie === 'function',
+            error: 'Firebase or Firestore not available'
+          };
+        }
+        
+        // Update UI
+        updateStatus();
+        
+        // Show results
+        outputElement.textContent = JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent = `Error testing providers: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    async function testProviderCreation() {
+      const outputElement = document.getElementById('provider-output');
+      outputElement.textContent = 'Testing provider creation...';
+      
+      try {
+        // Check if the function exists
+        if (typeof window.createProviderFromAllie !== 'function') {
+          const result = {
+            success: false,
+            error: 'createProviderFromAllie function not available'
+          };
+          
+          outputElement.textContent = JSON.stringify(result, null, 2);
+          return result;
+        }
+        
+        // Create test provider
+        const providerName = document.getElementById('provider-name').value || 'Dr. Test Provider';
+        const providerType = document.getElementById('provider-type').value || 'medical';
+        const specialty = document.getElementById('specialty').value || 'Pediatrician';
+        
+        const testProvider = {
+          name: providerName,
+          type: providerType,
+          specialty: specialty,
+          phone: '555-123-4567',
+          email: 'test@example.com',
+          notes: 'Created by diagnostic tool'
+        };
+        
+        // Call the function
+        const result = await window.createProviderFromAllie(testProvider);
+        
+        // Update state
+        state.providers.write = result.success && result.savedToFirestore;
+        state.providers.creationFunction = true;
+        
+        // Update UI
+        updateStatus();
+        
+        // Show results
+        outputElement.textContent = JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent = `Error creating provider: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    // Fix functions
+    async function fixFirebase() {
+      const outputElement = document.getElementById('firebase-output');
+      outputElement.textContent = 'Applying Firebase fixes...';
+      
+      try {
+        let result;
+        
+        // Try console diagnostic first
+        if (window.consoleDiagnostic && typeof window.consoleDiagnostic.fixFirebase === 'function') {
+          result = await window.consoleDiagnostic.fixFirebase();
+        } 
+        // Manual fix
+        else {
+          // Check if Firebase is available
+          if (typeof firebase === 'undefined') {
+            // Load Firebase from CDN
+            await loadScript('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
+            await loadScript('https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js');
+            await loadScript('https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js');
+            
+            // Initialize Firebase
+            if (typeof firebase !== 'undefined') {
+              if (firebase.apps.length === 0) {
+                firebase.initializeApp(firebaseConfig);
+              }
+              
+              result = {
+                success: true,
+                message: 'Firebase loaded from CDN and initialized'
+              };
+            } else {
+              result = {
+                success: false,
+                error: 'Failed to load Firebase from CDN'
+              };
+            }
+          } 
+          // Firebase available but not initialized
+          else if (firebase.apps.length === 0) {
+            firebase.initializeApp(firebaseConfig);
+            
+            result = {
+              success: true,
+              message: 'Firebase initialized'
+            };
+          } 
+          // Firebase already initialized
+          else {
+            result = {
+              success: true,
+              message: 'Firebase already initialized'
+            };
+          }
+        }
+        
+        // Test Firebase after fix
+        await testFirebase();
+        
+        // Show fix results
+        outputElement.textContent += '\n\nFix result:\n' + JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent += `\n\nError fixing Firebase: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    async function fixEventLoops() {
+      const outputElement = document.getElementById('event-output');
+      outputElement.textContent = 'Breaking event loops...';
+      
+      try {
+        let result;
+        
+        // Try console diagnostic first
+        if (window.consoleDiagnostic && typeof window.consoleDiagnostic.fixEventLoops === 'function') {
+          result = await window.consoleDiagnostic.fixEventLoops();
+        } 
+        // Try event loop breaker
+        else if (window._eventLoopBreaker && typeof window._eventLoopBreaker.resetEventTracking === 'function') {
+          window._eventLoopBreaker.resetEventTracking();
+          
+          result = {
+            success: true,
+            message: 'Event tracking reset'
+          };
+        }
+        // Try dispatching reset event
+        else {
+          window.dispatchEvent(new CustomEvent('force-reset-events', {
+            detail: { source: 'diagnostic-tool' }
+          }));
+          
+          window.dispatchEvent(new CustomEvent('force-data-refresh', {
+            detail: { source: 'diagnostic-tool' }
+          }));
+          
+          result = {
+            success: true,
+            message: 'Reset events dispatched'
+          };
+        }
+        
+        // Check loops after fix
+        await checkLoops();
+        
+        // Show fix results
+        outputElement.textContent += '\n\nFix result:\n' + JSON.stringify(result, null, 2);
+        
+        return result;
+      } catch (error) {
+        outputElement.textContent += `\n\nError fixing event loops: ${error.message}\n\n${error.stack}`;
+        return { success: false, error: error.message };
+      }
+    }
+
+    // Helper functions
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function runAllDiagnostics() {
+      if (state.diagnosticRunning) return;
+      state.diagnosticRunning = true;
+      
+      const outputElement = document.getElementById('diagnostic-output');
+      outputElement.textContent = '========== RUNNING COMPREHENSIVE DIAGNOSTICS ==========\n\n';
+      
+      try {
+        // Run Firebase diagnostics
+        outputElement.textContent += 'Testing Firebase...\n';
+        const firebaseResult = await testFirebase();
+        outputElement.textContent += `Firebase: ${firebaseResult.success ? 'OK' : 'FAILED'}\n\n`;
+        
+        // Run Auth diagnostics
+        outputElement.textContent += 'Testing Authentication...\n';
+        const authResult = await testAuth();
+        outputElement.textContent += `Authentication: ${authResult.authenticated ? 'Signed In' : 'Not Signed In'}\n\n`;
+        
+        // Run Firestore diagnostics
+        outputElement.textContent += 'Testing Firestore...\n';
+        const firestoreResult = await testFirestore();
+        outputElement.textContent += `Firestore: ${firestoreResult.success ? 'OK' : 'FAILED'}\n\n`;
+        
+        // Only continue if Firebase basics work
+        if (firebaseResult.success) {
+          // Run Event diagnostics
+          outputElement.textContent += 'Testing Events...\n';
+          const eventResult = await testEvents();
+          outputElement.textContent += `Events Read: ${eventResult.success ? 'OK' : 'FAILED'}\n\n`;
+          
+          // Check for event loops
+          outputElement.textContent += 'Checking for Event Loops...\n';
+          const loopResult = await checkLoops();
+          outputElement.textContent += `Event Loops: ${loopResult.loopDetected ? 'DETECTED' : 'None detected'}\n\n`;
+          
+          // Run Provider diagnostics
+          outputElement.textContent += 'Testing Providers...\n';
+          const providerResult = await testProviders();
+          outputElement.textContent += `Providers: ${providerResult.success ? 'OK' : 'FAILED'}\n\n`;
+        }
+        
+        // Run DOM diagnostics
+        outputElement.textContent += 'Checking for stuck spinners...\n';
+        
+        // Try to detect spinners
+        const spinners = document.querySelectorAll('.loading, [role="progressbar"], [aria-busy="true"]');
+        const spinnerCount = spinners.length;
+        state.dom.spinners = spinnerCount;
+        
+        outputElement.textContent += `Found ${spinnerCount} spinner elements\n\n`;
+        
+        // Summary
+        outputElement.textContent += '========== DIAGNOSTIC SUMMARY ==========\n\n';
+        
+        if (!firebaseResult.success) {
+          outputElement.textContent += '❌ CRITICAL: Firebase is not available or not initialized\n';
+          outputElement.textContent += '   Recommended fix: Click "Fix Firebase SDK" in the Firebase tab\n\n';
+        }
+        
+        if (!authResult.authenticated) {
+          outputElement.textContent += '❌ CRITICAL: User is not authenticated\n';
+          outputElement.textContent += '   Recommended fix: Sign in to the application\n\n';
+        }
+        
+        if (loopResult && loopResult.loopDetected) {
+          outputElement.textContent += '❌ CRITICAL: Event loops detected\n';
+          outputElement.textContent += '   Recommended fix: Click "Break Event Loops" in the Event System tab\n\n';
+        }
+        
+        if (state.dom.spinners > 0) {
+          outputElement.textContent += '⚠️ WARNING: Spinner elements detected\n';
+          outputElement.textContent += '   Recommended fix: Consider reloading the page or applying fixes\n\n';
+        }
+        
+        if (firebaseResult.success && authResult.authenticated && (!loopResult || !loopResult.loopDetected) && state.dom.spinners === 0) {
+          outputElement.textContent += '✅ No critical issues detected. The application should be working properly.\n';
+        }
+        
+        // Update UI state
+        updateStatus();
+      } catch (error) {
+        outputElement.textContent += `\n\nError running diagnostics: ${error.message}\n\n${error.stack}`;
+      }
+      
+      state.diagnosticRunning = false;
+    }
+
+    // Initialize page
+    function initPage() {
+      // Setup tabs
+      setupTabs();
+      
+      // Populate environment info
+      populateEnvironmentInfo();
+      
+      // Update status for the first time
+      updateStatus();
+      
+      // Check if diagnostic tools are available
+      if (!window.consoleDiagnostic && !window.simpleDiagnostic) {
+        document.getElementById('diagnostic-output').textContent = 'Warning: Diagnostic tools are not loaded. Some functions may not work properly.';
+      }
+      
+      // Attach event listeners
+      document.getElementById('refresh-status').addEventListener('click', updateStatus);
+      document.getElementById('run-all-diagnostics').addEventListener('click', runAllDiagnostics);
+      document.getElementById('fix-all-issues').addEventListener('click', async () => {
+        await fixFirebase();
+        await fixEventLoops();
+        updateStatus();
+      });
+      
+      // System tab
+      document.getElementById('system-diagnostic').addEventListener('click', runAllDiagnostics);
+      document.getElementById('clear-console').addEventListener('click', () => {
+        document.getElementById('diagnostic-output').textContent = 'Console cleared...';
+      });
+      
+      // Firebase tab
+      document.getElementById('test-firebase').addEventListener('click', testFirebase);
+      document.getElementById('test-auth').addEventListener('click', testAuth);
+      document.getElementById('test-firestore').addEventListener('click', testFirestore);
+      document.getElementById('fix-firebase').addEventListener('click', fixFirebase);
+      document.getElementById('clear-firebase-cache').addEventListener('click', () => {
+        try {
+          sessionStorage.removeItem('firebaseToken');
+          document.getElementById('firebase-output').textContent = 'Firebase cache cleared';
+        } catch (e) {
+          document.getElementById('firebase-output').textContent = `Error clearing Firebase cache: ${e.message}`;
+        }
+      });
+      document.getElementById('sign-out').addEventListener('click', () => {
+        try {
+          if (typeof firebase !== 'undefined' && firebase.auth) {
+            firebase.auth().signOut().then(() => {
+              document.getElementById('firebase-output').textContent = 'Signed out successfully';
+              testAuth();
+            }).catch(error => {
+              document.getElementById('firebase-output').textContent = `Error signing out: ${error.message}`;
+            });
+          } else {
+            document.getElementById('firebase-output').textContent = 'Firebase Auth not available';
+          }
+        } catch (e) {
+          document.getElementById('firebase-output').textContent = `Error signing out: ${e.message}`;
+        }
+      });
+      
+      // Event tab
+      document.getElementById('test-events').addEventListener('click', testEvents);
+      document.getElementById('test-event-write').addEventListener('click', testEventWrite);
+      document.getElementById('check-loops').addEventListener('click', checkLoops);
+      document.getElementById('fix-event-loops').addEventListener('click', fixEventLoops);
+      document.getElementById('clear-event-cache').addEventListener('click', () => {
+        try {
+          if (window.EventStore && typeof window.EventStore.clearCache === 'function') {
+            window.EventStore.clearCache();
+            document.getElementById('event-output').textContent = 'Event cache cleared';
+          } else {
+            document.getElementById('event-output').textContent = 'EventStore.clearCache not available';
+          }
+        } catch (e) {
+          document.getElementById('event-output').textContent = `Error clearing event cache: ${e.message}`;
+        }
+      });
+      document.getElementById('reset-event-system').addEventListener('click', () => {
+        try {
+          // Clear cached events
+          localStorage.removeItem('cachedEvents');
+          localStorage.removeItem('eventsLastRefreshed');
+          localStorage.removeItem('eventCache');
+          
+          // Dispatch reset events
+          window.dispatchEvent(new CustomEvent('force-reset-events'));
+          window.dispatchEvent(new CustomEvent('force-data-refresh'));
+          
+          // Reset event trackers if available
+          if (window._eventLoopBreaker && typeof window._eventLoopBreaker.resetEventTracking === 'function') {
+            window._eventLoopBreaker.resetEventTracking();
+          }
+          
+          document.getElementById('event-output').textContent = 'Event system reset';
+        } catch (e) {
+          document.getElementById('event-output').textContent = `Error resetting event system: ${e.message}`;
+        }
+      });
+      
+      // Provider tab
+      document.getElementById('test-providers').addEventListener('click', testProviders);
+      document.getElementById('test-provider-creation').addEventListener('click', testProviderCreation);
+      document.getElementById('create-test-provider').addEventListener('click', testProviderCreation);
+      document.getElementById('sync-providers').addEventListener('click', async () => {
+        const outputElement = document.getElementById('provider-output');
+        outputElement.textContent = 'Syncing local providers to Firestore...';
+        
+        try {
+          // Check if we have local providers
+          const storedProviders = localStorage.getItem('localProviders');
+          if (!storedProviders) {
+            outputElement.textContent = 'No local providers found';
+            return;
+          }
+          
+          // Parse providers
+          let providers = [];
+          try {
+            providers = JSON.parse(storedProviders);
+            if (!Array.isArray(providers)) {
+              providers = [];
+            }
+          } catch (e) {
+            outputElement.textContent = `Error parsing local providers: ${e.message}`;
+            return;
+          }
+          
+          // Check if we have any providers to sync
+          if (providers.length === 0) {
+            outputElement.textContent = 'No local providers to sync';
+            return;
+          }
+          
+          outputElement.textContent = `Found ${providers.length} local providers. Attempting to sync...`;
+          
+          // Check if Firebase is available
+          if (typeof firebase === 'undefined' || !firebase.firestore) {
+            outputElement.textContent += '\nFirebase or Firestore not available. Cannot sync.';
+            return;
+          }
+          
+          // Sync each provider
+          const results = [];
+          for (const provider of providers) {
+            if (provider.savedToFirestore) {
+              results.push({ id: provider.id, status: 'already-synced' });
+              continue;
+            }
+            
+            try {
+              // Write to Firestore
+              const providerDoc = await firebase.firestore().collection('providers').add({
+                ...provider,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                source: provider.source || 'local-sync'
+              });
+              
+              // Update local copy
+              provider.id = providerDoc.id;
+              provider.savedToFirestore = true;
+              
+              results.push({ id: provider.id, status: 'synced' });
+            } catch (error) {
+              results.push({ id: provider.id, status: 'error', error: error.message });
+            }
+          }
+          
+          // Save updated providers back to localStorage
+          localStorage.setItem('localProviders', JSON.stringify(providers));
+          
+          // Show results
+          outputElement.textContent += `\n\nSync results: ${results.filter(r => r.status === 'synced').length} synced, ${results.filter(r => r.status === 'already-synced').length} already synced, ${results.filter(r => r.status === 'error').length} errors\n\n`;
+          outputElement.textContent += JSON.stringify(results, null, 2);
+        } catch (error) {
+          outputElement.textContent += `\n\nError syncing providers: ${error.message}\n\n${error.stack}`;
+        }
+      });
+      
+      // Fixes tab
+      document.getElementById('clear-local-storage').addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all local storage data? This will remove all cached data, preferences, and local providers.')) {
+          try {
+            localStorage.clear();
+            alert('Local storage cleared successfully');
+          } catch (e) {
+            alert(`Error clearing local storage: ${e.message}`);
+          }
+        }
+      });
+      
+      document.getElementById('reset-app-state').addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset the application state? This will clear caches but preserve your login.')) {
+          try {
+            // Clear most localStorage items but keep login info
+            const keysToKeep = ['firebase:authUser', 'userId', 'currentUserId', 'user_id', 'uid'];
+            const keysToRemove = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (!keysToKeep.includes(key)) {
+                keysToRemove.push(key);
+              }
+            }
+            
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            // Clear session storage
+            sessionStorage.clear();
+            
+            alert('Application state reset successfully');
+          } catch (e) {
+            alert(`Error resetting app state: ${e.message}`);
+          }
+        }
+      });
+      
+      document.getElementById('full-reset').addEventListener('click', () => {
+        if (confirm('Are you sure you want to do a full reset? This will clear ALL data and sign you out.')) {
+          try {
+            // Clear all storage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Sign out if possible
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+              firebase.auth().signOut().catch(e => console.error(e));
+            }
+            
+            // Reload page
+            window.location.href = '/';
+          } catch (e) {
+            alert(`Error performing full reset: ${e.message}`);
+          }
+        }
+      });
+      
+      document.getElementById('return-to-app').addEventListener('click', () => {
+        window.location.href = '/';
+      });
+      
+      document.getElementById('safe-mode').addEventListener('click', () => {
+        localStorage.setItem('safe-mode', 'true');
+        window.location.href = '/?safe-mode=true';
+      });
+      
+      document.getElementById('minimal-mode').addEventListener('click', () => {
+        localStorage.setItem('minimal-mode', 'true');
+        localStorage.setItem('safe-mode', 'true');
+        window.location.href = '/?minimal-mode=true';
+      });
+      
+      // Run initial Firebase check
+      testFirebase();
+    }
+    
+    // Initialize when DOM loaded
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPage);
+    } else {
+      initPage();
+    }
+  </script>
+</body>
+</html>

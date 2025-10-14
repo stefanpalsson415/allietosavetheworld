@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allie Diagnostic Dashboard</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.5;
+      color: #333;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    h1 {
+      margin: 0;
+      color: #0084ff;
+    }
+    .header-subtitle {
+      color: #666;
+      font-size: 1.1em;
+      margin-top: 5px;
+    }
+    section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    h2 {
+      margin-top: 0;
+      color: #0084ff;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .status {
+      font-weight: bold;
+      padding: 5px 10px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .status-success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .status-warning {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    .status-error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .status-running {
+      background-color: #cce5ff;
+      color: #004085;
+    }
+    button {
+      background-color: #0084ff;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #0066cc;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .action-row {
+      margin-top: 15px;
+      display: flex;
+      justify-content: flex-start;
+      gap: 10px;
+    }
+    .log-container {
+      background-color: #282c34;
+      color: #abb2bf;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      margin-top: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      margin-right: 5px;
+    }
+    .tab.active {
+      background-color: #f9f9f9;
+      border-color: #ddd;
+      border-bottom: 1px solid #f9f9f9;
+      margin-bottom: -1px;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .data-table th, .data-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    .data-table th {
+      background-color: #f2f2f2;
+    }
+    .data-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: white;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 600px;
+      position: relative;
+    }
+    .close-modal {
+      position: absolute;
+      right: 20px;
+      top: 15px;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .result-summary {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Allie Diagnostic Dashboard</h1>
+    <div class="header-subtitle">Troubleshooting and System Status</div>
+  </header>
+  
+  <section>
+    <h2>System Status</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Firebase</h3>
+        <div id="firebase-status" class="status status-running">Checking...</div>
+        <div id="firebase-details">Loading Firebase status...</div>
+        <div class="action-row">
+          <button id="check-firebase">Check Firebase</button>
+          <button id="fix-firebase">Fix Firebase</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>Event Loop</h3>
+        <div id="event-loop-status" class="status status-running">Checking...</div>
+        <div id="event-loop-details">Loading event loop status...</div>
+        <div class="action-row">
+          <button id="check-event-loop">Check Event Loop</button>
+          <button id="fix-event-loop">Fix Event Loop</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>Loading Spinners</h3>
+        <div id="spinner-status" class="status status-running">Checking...</div>
+        <div id="spinner-details">Checking for stuck spinners...</div>
+        <div class="action-row">
+          <button id="find-spinners">Find Spinners</button>
+          <button id="fix-spinners">Fix Spinners</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>UI Status</h3>
+        <div id="ui-status" class="status status-running">Checking...</div>
+        <div id="ui-details">Analyzing UI elements...</div>
+        <div class="action-row">
+          <button id="check-ui">Scan UI</button>
+          <button id="refresh-page">Refresh Page</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <section>
+    <h2>Diagnostic Tools</h2>
+    <div class="tabs">
+      <div class="tab active" data-tab="firebase-diagnostics">Firebase</div>
+      <div class="tab" data-tab="event-diagnostics">Events</div>
+      <div class="tab" data-tab="network-diagnostics">Network</div>
+      <div class="tab" data-tab="comprehensive-diagnostics">Comprehensive</div>
+    </div>
+    
+    <div class="tab-content active" id="firebase-diagnostics">
+      <p>Diagnose Firebase connectivity and database operations</p>
+      <div class="action-row">
+        <button id="test-firebase-auth">Test Auth</button>
+        <button id="test-firebase-write">Test Write</button>
+        <button id="test-firebase-read">Test Read</button>
+        <button id="run-all-firebase-tests">Run All Tests</button>
+      </div>
+      <div id="firebase-log" class="log-container"></div>
+    </div>
+    
+    <div class="tab-content" id="event-diagnostics">
+      <p>Diagnose event processing and fix event loops</p>
+      <div class="action-row">
+        <button id="detect-event-loops">Detect Loops</button>
+        <button id="test-event-flow">Test Event Flow</button>
+        <button id="clear-event-queue">Clear Event Queue</button>
+      </div>
+      <div id="event-log" class="log-container"></div>
+    </div>
+    
+    <div class="tab-content" id="network-diagnostics">
+      <p>Diagnose network connectivity and API operations</p>
+      <div class="action-row">
+        <button id="test-api">Test API</button>
+        <button id="monitor-network">Monitor Network</button>
+        <button id="clear-cache">Clear Cache</button>
+      </div>
+      <div id="network-log" class="log-container"></div>
+    </div>
+    
+    <div class="tab-content" id="comprehensive-diagnostics">
+      <p>Run comprehensive diagnostics on the entire system</p>
+      <div class="action-row">
+        <button id="run-all-diagnostics">Run All Diagnostics</button>
+        <button id="export-diagnostics">Export Results</button>
+      </div>
+      <div id="comprehensive-log" class="log-container"></div>
+    </div>
+  </section>
+  
+  <section>
+    <h2>System Recovery</h2>
+    <p>If you're experiencing persistent issues with Allie, these recovery options can help restore functionality.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>Reset Event Queue</h3>
+        <p>Clears all pending events and resets the event processing system.</p>
+        <button id="reset-events">Reset Events</button>
+      </div>
+      
+      <div class="card">
+        <h3>Clear Application Cache</h3>
+        <p>Removes cached data that might be causing problems.</p>
+        <button id="clear-app-cache">Clear Cache</button>
+      </div>
+      
+      <div class="card">
+        <h3>Reset Firebase Connection</h3>
+        <p>Re-establishes connection to Firebase services.</p>
+        <button id="reset-firebase">Reset Firebase</button>
+      </div>
+      
+      <div class="card">
+        <h3>Complete Reset</h3>
+        <p>Performs a full application reset and page reload.</p>
+        <button id="complete-reset">Full Reset</button>
+      </div>
+    </div>
+  </section>
+  
+  <section>
+    <h2>Current Environment</h2>
+    <div id="environment-info">Loading environment information...</div>
+  </section>
+  
+  <!-- Modal for test results -->
+  <div id="results-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h2>Test Results</h2>
+      <div id="modal-content"></div>
+      <div class="result-summary" id="result-summary"></div>
+    </div>
+  </div>
+  
+  <footer>
+    Allie Diagnostic Dashboard &copy; 2025
+  </footer>
+
+  <!-- Load the fixes and diagnostic scripts first -->
+  <script src="./fix-firebase-sdk.js"></script>
+  <script src="./event-loop-breaker.js"></script>
+  <script src="./spinner-fix.js"></script>
+  <script src="./fix-event-loop.js"></script>
+  
+  <script>
+  // Wait for DOM to be fully loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    // Tab functionality
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and content
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+    
+    // Modal functionality
+    const modal = document.getElementById('results-modal');
+    const closeModal = document.querySelector('.close-modal');
+    
+    closeModal.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    
+    window.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+    
+    // Function to show modal with results
+    function showResultsModal(title, content) {
+      document.querySelector('.modal-content h2').textContent = title;
+      document.getElementById('modal-content').innerHTML = content;
+      modal.style.display = 'block';
+    }
+    
+    // Function to append to log container
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const messageElement = document.createElement('div');
+      messageElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      
+      if (type === 'error') {
+        messageElement.style.color = '#f56c6c';
+      } else if (type === 'success') {
+        messageElement.style.color = '#67c23a';
+      } else if (type === 'warning') {
+        messageElement.style.color = '#e6a23c';
+      }
+      
+      container.appendChild(messageElement);
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    // Update environment info
+    function updateEnvironmentInfo() {
+      const env = document.getElementById('environment-info');
+      const info = {
+        'Browser': navigator.userAgent,
+        'Screen Size': `${window.innerWidth}x${window.innerHeight}`,
+        'Firebase Status': typeof firebase !== 'undefined' ? 'Available' : 'Not Available',
+        'Firestore Status': typeof firebase !== 'undefined' && firebase.firestore ? 'Available' : 'Not Available',
+        'Location': window.location.href,
+        'Protocol': window.location.protocol,
+        'Cookies Enabled': navigator.cookieEnabled ? 'Yes' : 'No',
+        'localStorage Available': typeof localStorage !== 'undefined' ? 'Yes' : 'No',
+        'Online Status': navigator.onLine ? 'Online' : 'Offline',
+        'App Version': '1.0.0' // You can update this dynamically if version info is available
+      };
+      
+      let html = '<table class="data-table">';
+      html += '<tr><th>Property</th><th>Value</th></tr>';
+      
+      for (const [key, value] of Object.entries(info)) {
+        html += `<tr><td>${key}</td><td>${value}</td></tr>`;
+      }
+      
+      html += '</table>';
+      env.innerHTML = html;
+    }
+    
+    // Check Firebase status
+    function checkFirebaseStatus() {
+      const statusElement = document.getElementById('firebase-status');
+      const detailsElement = document.getElementById('firebase-details');
+      
+      statusElement.className = 'status status-running';
+      statusElement.textContent = 'Checking...';
+      
+      try {
+        if (typeof firebase === 'undefined') {
+          statusElement.className = 'status status-error';
+          statusElement.textContent = 'Not Available';
+          detailsElement.textContent = 'Firebase SDK is not loaded or not available';
+          log('firebase-log', 'Firebase SDK is not available', 'error');
+          return false;
+        }
+        
+        if (!firebase.apps || firebase.apps.length === 0) {
+          statusElement.className = 'status status-warning';
+          statusElement.textContent = 'Not Initialized';
+          detailsElement.textContent = 'Firebase is available but not initialized';
+          log('firebase-log', 'Firebase is not initialized', 'warning');
+          return false;
+        }
+        
+        if (!firebase.firestore) {
+          statusElement.className = 'status status-warning';
+          statusElement.textContent = 'Partial';
+          detailsElement.textContent = 'Firebase initialized but Firestore is not available';
+          log('firebase-log', 'Firestore is not available', 'warning');
+          return false;
+        }
+        
+        if (!firebase.auth) {
+          statusElement.className = 'status status-warning';
+          statusElement.textContent = 'Partial';
+          detailsElement.textContent = 'Firebase initialized but Auth is not available';
+          log('firebase-log', 'Auth is not available', 'warning');
+          return false;
+        }
+        
+        // All checks passed
+        statusElement.className = 'status status-success';
+        statusElement.textContent = 'Available';
+        detailsElement.textContent = `Firebase initialized with ${firebase.apps.length} app(s)`;
+        log('firebase-log', 'Firebase is fully initialized and available', 'success');
+        
+        // Get current user
+        const user = firebase.auth().currentUser;
+        if (user) {
+          log('firebase-log', `Current user: ${user.email} (${user.uid})`, 'info');
+        } else {
+          log('firebase-log', 'No user currently signed in', 'info');
+        }
+        
+        return true;
+      } catch (error) {
+        statusElement.className = 'status status-error';
+        statusElement.textContent = 'Error';
+        detailsElement.textContent = `Error checking Firebase: ${error.message}`;
+        log('firebase-log', `Error checking Firebase: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Check event loop status
+    function checkEventLoopStatus() {
+      const statusElement = document.getElementById('event-loop-status');
+      const detailsElement = document.getElementById('event-loop-details');
+      
+      try {
+        if (typeof window._eventLoopBreaker !== 'undefined') {
+          const stats = window._eventLoopBreaker.getStats();
+          
+          if (stats.loopDetected) {
+            statusElement.className = 'status status-error';
+            statusElement.textContent = 'Loop Detected';
+            detailsElement.textContent = `Event loop detected - ${stats.loopsDetected.length} loops detected`;
+            log('event-log', `Event loop detected: ${stats.loopsDetected.length} loops`, 'error');
+            
+            // Log the most recent loops
+            if (stats.loopsDetected.length > 0) {
+              const recentLoop = stats.loopsDetected[stats.loopsDetected.length - 1];
+              log('event-log', `Most recent loop: ${recentLoop.eventId} (${recentLoop.count} occurrences)`, 'warning');
+            }
+            
+            return false;
+          } else {
+            statusElement.className = 'status status-success';
+            statusElement.textContent = 'Normal';
+            detailsElement.textContent = 'No event loops detected';
+            log('event-log', 'Event processing is normal', 'success');
+            return true;
+          }
+        } else {
+          statusElement.className = 'status status-warning';
+          statusElement.textContent = 'Unknown';
+          detailsElement.textContent = 'Event loop breaker not initialized';
+          log('event-log', 'Event loop breaker not initialized', 'warning');
+          return false;
+        }
+      } catch (error) {
+        statusElement.className = 'status status-error';
+        statusElement.textContent = 'Error';
+        detailsElement.textContent = `Error checking event loop: ${error.message}`;
+        log('event-log', `Error checking event loop: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Check for stuck spinners
+    function checkSpinners() {
+      const statusElement = document.getElementById('spinner-status');
+      const detailsElement = document.getElementById('spinner-details');
+      
+      try {
+        // Look for spinner elements
+        const spinners = document.querySelectorAll('.loading, [role="progressbar"], [aria-busy="true"]');
+        
+        // Look for loading text
+        const loadingTexts = [];
+        const allElements = document.querySelectorAll('*');
+        for (let i = 0; i < allElements.length; i++) {
+          const el = allElements[i];
+          if (el.textContent && (
+              el.textContent.includes('Loading') || 
+              el.textContent.includes('loading')
+          )) {
+            loadingTexts.push(el);
+          }
+        }
+        
+        if (spinners.length > 0 || loadingTexts.length > 0) {
+          statusElement.className = 'status status-warning';
+          statusElement.textContent = 'Spinners Detected';
+          detailsElement.textContent = `Found ${spinners.length} spinner elements and ${loadingTexts.length} loading texts`;
+          log('event-log', `Found ${spinners.length + loadingTexts.length} loading indicators`, 'warning');
+          return false;
+        } else {
+          statusElement.className = 'status status-success';
+          statusElement.textContent = 'No Stuck Spinners';
+          detailsElement.textContent = 'No loading spinners detected';
+          log('event-log', 'No stuck spinners detected', 'success');
+          return true;
+        }
+      } catch (error) {
+        statusElement.className = 'status status-error';
+        statusElement.textContent = 'Error';
+        detailsElement.textContent = `Error checking spinners: ${error.message}`;
+        log('event-log', `Error checking spinners: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Check UI status
+    function checkUIStatus() {
+      const statusElement = document.getElementById('ui-status');
+      const detailsElement = document.getElementById('ui-details');
+      
+      try {
+        // Check for React app mount point
+        const reactRoot = document.getElementById('root');
+        
+        if (!reactRoot) {
+          statusElement.className = 'status status-error';
+          statusElement.textContent = 'React Root Missing';
+          detailsElement.textContent = 'React root element not found';
+          return false;
+        }
+        
+        // Check if React root has children
+        if (!reactRoot.children || reactRoot.children.length === 0) {
+          statusElement.className = 'status status-error';
+          statusElement.textContent = 'App Not Rendered';
+          detailsElement.textContent = 'React app not rendered in root element';
+          return false;
+        }
+        
+        // Check for error boundaries
+        const errorElements = document.querySelectorAll('.error-boundary, [role="alert"]');
+        if (errorElements.length > 0) {
+          statusElement.className = 'status status-warning';
+          statusElement.textContent = 'Error Boundaries Found';
+          detailsElement.textContent = `Found ${errorElements.length} error boundaries active`;
+          return false;
+        }
+        
+        // Check if page appears to be loaded
+        const mainApp = reactRoot.querySelector('main') || reactRoot.querySelector('header');
+        if (!mainApp) {
+          statusElement.className = 'status status-warning';
+          statusElement.textContent = 'Incomplete Render';
+          detailsElement.textContent = 'App appears to be partially rendered';
+          return false;
+        }
+        
+        // All checks passed
+        statusElement.className = 'status status-success';
+        statusElement.textContent = 'Normal';
+        detailsElement.textContent = 'UI appears to be rendered correctly';
+        return true;
+      } catch (error) {
+        statusElement.className = 'status status-error';
+        statusElement.textContent = 'Error';
+        detailsElement.textContent = `Error checking UI: ${error.message}`;
+        return false;
+      }
+    }
+    
+    // Test Firebase auth
+    function testFirebaseAuth() {
+      log('firebase-log', 'Testing Firebase authentication...', 'info');
+      
+      try {
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+          log('firebase-log', 'Firebase Auth not available', 'error');
+          return false;
+        }
+        
+        // Get current auth state
+        const user = firebase.auth().currentUser;
+        
+        if (user) {
+          log('firebase-log', `Currently signed in as: ${user.email} (${user.uid})`, 'success');
+          return true;
+        } else {
+          log('firebase-log', 'No user currently signed in', 'warning');
+          return false;
+        }
+      } catch (error) {
+        log('firebase-log', `Auth test error: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Test Firebase write
+    function testFirebaseWrite() {
+      log('firebase-log', 'Testing Firestore write operation...', 'info');
+      
+      try {
+        if (typeof firebase === 'undefined' || !firebase.firestore) {
+          log('firebase-log', 'Firestore not available', 'error');
+          return Promise.resolve(false);
+        }
+        
+        // Create a test document
+        const testDoc = {
+          testId: 'diagnostic-' + Date.now(),
+          timestamp: new Date().toISOString(),
+          browser: navigator.userAgent,
+          testType: 'diagnostic-write-test'
+        };
+        
+        // Create a unique collection name to avoid conflicts
+        const collectionName = `diagnostic_tests_${Date.now()}`;
+        
+        return firebase.firestore().collection(collectionName).add(testDoc)
+          .then(docRef => {
+            log('firebase-log', `Test document written successfully to ${collectionName}/${docRef.id}`, 'success');
+            
+            // Delete the test document to clean up
+            return docRef.delete()
+              .then(() => {
+                log('firebase-log', 'Test document deleted successfully', 'success');
+                return true;
+              })
+              .catch(error => {
+                log('firebase-log', `Error deleting test document: ${error.message}`, 'warning');
+                return true; // Still consider the test successful if write worked
+              });
+          })
+          .catch(error => {
+            log('firebase-log', `Error writing test document: ${error.message}`, 'error');
+            return false;
+          });
+      } catch (error) {
+        log('firebase-log', `Write test error: ${error.message}`, 'error');
+        return Promise.resolve(false);
+      }
+    }
+    
+    // Test Firebase read
+    function testFirebaseRead() {
+      log('firebase-log', 'Testing Firestore read operation...', 'info');
+      
+      try {
+        if (typeof firebase === 'undefined' || !firebase.firestore) {
+          log('firebase-log', 'Firestore not available', 'error');
+          return Promise.resolve(false);
+        }
+        
+        // Try to read from events collection
+        return firebase.firestore().collection('events').limit(1).get()
+          .then(snapshot => {
+            log('firebase-log', 'Read operation successful', 'success');
+            
+            if (snapshot.empty) {
+              log('firebase-log', 'No events found in collection', 'info');
+            } else {
+              log('firebase-log', `Found ${snapshot.size} event(s)`, 'success');
+            }
+            
+            return true;
+          })
+          .catch(error => {
+            log('firebase-log', `Error reading from Firestore: ${error.message}`, 'error');
+            return false;
+          });
+      } catch (error) {
+        log('firebase-log', `Read test error: ${error.message}`, 'error');
+        return Promise.resolve(false);
+      }
+    }
+    
+    // Run all Firebase tests
+    function runAllFirebaseTests() {
+      log('firebase-log', 'Running all Firebase tests...', 'info');
+      
+      // Run auth test
+      const authResult = testFirebaseAuth();
+      
+      // Run write test, then read test
+      testFirebaseWrite()
+        .then(writeResult => {
+          return testFirebaseRead()
+            .then(readResult => {
+              // Show summary
+              const summary = document.getElementById('result-summary');
+              
+              if (authResult && writeResult && readResult) {
+                summary.textContent = '✅ All Firebase tests passed!';
+                summary.style.color = '#67c23a';
+              } else {
+                summary.textContent = '❌ Some Firebase tests failed.';
+                summary.style.color = '#f56c6c';
+              }
+              
+              // Show detailed results
+              const results = `
+                <h3>Test Results</h3>
+                <ul>
+                  <li>Authentication: ${authResult ? '✅ Passed' : '❌ Failed'}</li>
+                  <li>Write Operation: ${writeResult ? '✅ Passed' : '❌ Failed'}</li>
+                  <li>Read Operation: ${readResult ? '✅ Passed' : '❌ Failed'}</li>
+                </ul>
+                
+                <h3>Recommendations</h3>
+                <ul>
+                  ${!authResult ? '<li>Try signing in again</li>' : ''}
+                  ${!writeResult ? '<li>Check Firebase security rules</li>' : ''}
+                  ${!readResult ? '<li>Verify database permissions</li>' : ''}
+                  ${!authResult || !writeResult || !readResult ? '<li>Try reloading the page</li>' : ''}
+                  ${authResult && writeResult && readResult ? '<li>Firebase is working correctly!</li>' : ''}
+                </ul>
+              `;
+              
+              showResultsModal('Firebase Test Results', results);
+            });
+        })
+        .catch(error => {
+          log('firebase-log', `Error in test sequence: ${error.message}`, 'error');
+        });
+    }
+    
+    // Fix Event Loop
+    function fixEventLoop() {
+      log('event-log', 'Attempting to fix event loops...', 'info');
+      
+      try {
+        // Reset event loop breaker if available
+        if (window._eventLoopBreaker && typeof window._eventLoopBreaker.resetEventTracking === 'function') {
+          window._eventLoopBreaker.resetEventTracking();
+          log('event-log', 'Event tracking reset successfully', 'success');
+        }
+        
+        // Dispatch custom event to notify the app
+        window.dispatchEvent(new CustomEvent('force-reset-events', {
+          detail: { source: 'diagnostic-dashboard' }
+        }));
+        
+        // Force global state refresh to break loops
+        window.dispatchEvent(new CustomEvent('force-data-refresh', {
+          detail: { source: 'diagnostic-dashboard' }
+        }));
+        
+        log('event-log', 'Event loop fix applied', 'success');
+        
+        // Update status
+        setTimeout(() => {
+          checkEventLoopStatus();
+        }, 500);
+        
+        return true;
+      } catch (error) {
+        log('event-log', `Error fixing event loop: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Fix Spinners
+    function fixSpinners() {
+      log('event-log', 'Attempting to fix stuck spinners...', 'info');
+      
+      try {
+        // Call unstickSpinner function if available
+        if (window.unstickSpinners && typeof window.unstickSpinners === 'function') {
+          window.unstickSpinners();
+          log('event-log', 'Unstick spinners function called', 'success');
+        }
+        
+        // Find and remove spinner elements
+        const spinners = document.querySelectorAll('.loading, [role="progressbar"], [aria-busy="true"]');
+        let spinnerCount = 0;
+        
+        spinners.forEach(spinner => {
+          try {
+            spinner.style.display = 'none';
+            spinner.style.visibility = 'hidden';
+            spinner.setAttribute('aria-hidden', 'true');
+            spinnerCount++;
+          } catch (e) {
+            // Ignore errors
+          }
+        });
+        
+        if (spinnerCount > 0) {
+          log('event-log', `Removed ${spinnerCount} spinner elements`, 'success');
+        }
+        
+        // Find and clear loading text
+        const loadingTexts = [];
+        const allElements = document.querySelectorAll('*');
+        for (let i = 0; i < allElements.length; i++) {
+          const el = allElements[i];
+          if (el.textContent && (
+              el.textContent.includes('Loading') || 
+              el.textContent.includes('loading')
+          )) {
+            loadingTexts.push(el);
+          }
+        }
+        
+        let textCount = 0;
+        loadingTexts.forEach(el => {
+          try {
+            el.style.display = 'none';
+            el.setAttribute('aria-hidden', 'true');
+            textCount++;
+          } catch (e) {
+            // Ignore errors
+          }
+        });
+        
+        if (textCount > 0) {
+          log('event-log', `Removed ${textCount} loading text elements`, 'success');
+        }
+        
+        // Dispatch events to break loading state
+        window.dispatchEvent(new CustomEvent('load-completed'));
+        window.dispatchEvent(new Event('DOMContentLoaded'));
+        window.dispatchEvent(new Event('load'));
+        
+        log('event-log', 'Spinner fix applied and events dispatched', 'success');
+        
+        // Update status
+        setTimeout(() => {
+          checkSpinners();
+        }, 500);
+        
+        return true;
+      } catch (error) {
+        log('event-log', `Error fixing spinners: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Fix Firebase
+    function fixFirebase() {
+      log('firebase-log', 'Attempting to fix Firebase...', 'info');
+      
+      try {
+        // Call fixFirebaseSDK function if available
+        if (window.fixFirebaseSDK && typeof window.fixFirebaseSDK === 'function') {
+          window.fixFirebaseSDK();
+          log('firebase-log', 'Firebase SDK fix initiated', 'success');
+        } else {
+          // Try to load Firebase manually
+          const script = document.createElement('script');
+          script.src = 'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js';
+          script.onload = function() {
+            // Load Firestore
+            const firestoreScript = document.createElement('script');
+            firestoreScript.src = 'https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js';
+            
+            firestoreScript.onload = function() {
+              // Load Auth
+              const authScript = document.createElement('script');
+              authScript.src = 'https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js';
+              
+              authScript.onload = function() {
+                log('firebase-log', 'Firebase scripts loaded manually', 'success');
+                
+                // Initialize Firebase if not already initialized
+                if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
+                  // Use configuration from before
+                  const firebaseConfig = {
+                    apiKey: "AIzaSyALjXkZiFZ_Fy143N_dzdaUbyDCtabBr7Y",
+                    authDomain: "parentload-ba995.firebaseapp.com",
+                    projectId: "parentload-ba995",
+                    storageBucket: "parentload-ba995.firebasestorage.app",
+                    messagingSenderId: "363935868004",
+                    appId: "1:363935868004:web:8802abceeca81cc10deb71"
+                  };
+                  
+                  try {
+                    firebase.initializeApp(firebaseConfig);
+                    log('firebase-log', 'Firebase initialized manually', 'success');
+                  } catch (initError) {
+                    log('firebase-log', `Error initializing Firebase: ${initError.message}`, 'error');
+                  }
+                }
+                
+                // Update status
+                setTimeout(() => {
+                  checkFirebaseStatus();
+                }, 1000);
+              };
+              
+              document.head.appendChild(authScript);
+            };
+            
+            document.head.appendChild(firestoreScript);
+          };
+          
+          script.onerror = function() {
+            log('firebase-log', 'Error loading Firebase scripts manually', 'error');
+          };
+          
+          document.head.appendChild(script);
+          log('firebase-log', 'Attempting to load Firebase scripts manually', 'info');
+        }
+        
+        // Update status after a delay
+        setTimeout(() => {
+          checkFirebaseStatus();
+        }, 2000);
+        
+        return true;
+      } catch (error) {
+        log('firebase-log', `Error fixing Firebase: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Button event listeners
+    document.getElementById('check-firebase').addEventListener('click', checkFirebaseStatus);
+    document.getElementById('fix-firebase').addEventListener('click', fixFirebase);
+    document.getElementById('check-event-loop').addEventListener('click', checkEventLoopStatus);
+    document.getElementById('fix-event-loop').addEventListener('click', fixEventLoop);
+    document.getElementById('find-spinners').addEventListener('click', checkSpinners);
+    document.getElementById('fix-spinners').addEventListener('click', fixSpinners);
+    document.getElementById('check-ui').addEventListener('click', checkUIStatus);
+    document.getElementById('refresh-page').addEventListener('click', () => window.location.reload());
+    
+    // Firebase test buttons
+    document.getElementById('test-firebase-auth').addEventListener('click', testFirebaseAuth);
+    document.getElementById('test-firebase-write').addEventListener('click', testFirebaseWrite);
+    document.getElementById('test-firebase-read').addEventListener('click', testFirebaseRead);
+    document.getElementById('run-all-firebase-tests').addEventListener('click', runAllFirebaseTests);
+    
+    // Complete reset button
+    document.getElementById('complete-reset').addEventListener('click', function() {
+      if (confirm('This will perform a complete reset of the application. Continue?')) {
+        // Clear localStorage
+        localStorage.clear();
+        
+        // Clear sessionStorage
+        sessionStorage.clear();
+        
+        // Reset event tracking
+        if (window._eventLoopBreaker && typeof window._eventLoopBreaker.resetEventTracking === 'function') {
+          window._eventLoopBreaker.resetEventTracking();
+        }
+        
+        // Reset Firebase
+        if (window.fixFirebaseSDK && typeof window.fixFirebaseSDK === 'function') {
+          window.fixFirebaseSDK();
+        }
+        
+        // Reload the page
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 1000);
+      }
+    });
+    
+    // Reset events button
+    document.getElementById('reset-events').addEventListener('click', function() {
+      log('event-log', 'Resetting all event queues...', 'info');
+      
+      // Reset event tracking
+      if (window._eventLoopBreaker && typeof window._eventLoopBreaker.resetEventTracking === 'function') {
+        window._eventLoopBreaker.resetEventTracking();
+      }
+      
+      // Dispatch events to reset state
+      window.dispatchEvent(new CustomEvent('force-reset-events'));
+      window.dispatchEvent(new CustomEvent('force-data-refresh'));
+      
+      log('event-log', 'Event queues have been reset', 'success');
+    });
+    
+    // Clear app cache button
+    document.getElementById('clear-app-cache').addEventListener('click', function() {
+      log('event-log', 'Clearing application cache...', 'info');
+      
+      // Clear localStorage except for critical items
+      const authToken = localStorage.getItem('authToken');
+      const userId = localStorage.getItem('userId');
+      
+      localStorage.clear();
+      
+      // Restore critical items
+      if (authToken) localStorage.setItem('authToken', authToken);
+      if (userId) localStorage.setItem('userId', userId);
+      
+      log('event-log', 'Application cache cleared', 'success');
+    });
+    
+    // Reset Firebase connection
+    document.getElementById('reset-firebase').addEventListener('click', function() {
+      fixFirebase();
+    });
+    
+    // Initial checks
+    updateEnvironmentInfo();
+    checkFirebaseStatus();
+    checkEventLoopStatus();
+    checkSpinners();
+    checkUIStatus();
+    
+    // Set up a periodic refresh of environment info
+    setInterval(updateEnvironmentInfo, 5000);
+  });
+  </script>
+</body>
+</html>

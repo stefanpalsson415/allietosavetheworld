@@ -1,0 +1,39 @@
+/* slideStyles.css - Common styling for investor slides */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+/* Apply Roboto font to all slide content */
+.investor-slide {
+  font-family: 'Roboto', sans-serif !important;
+}
+
+.investor-slide h1,
+.investor-slide h2,
+.investor-slide h3,
+.investor-slide h4,
+.investor-slide h5,
+.investor-slide h6,
+.investor-slide p,
+.investor-slide li,
+.investor-slide span,
+.investor-slide div,
+.investor-slide button,
+.investor-slide text,
+.investor-slide label,
+.investor-slide input {
+  font-family: 'Roboto', sans-serif !important;
+}
+
+/* Apply to Chart.js elements */
+canvas {
+  font-family: 'Roboto', sans-serif !important;
+}
+
+/* Make sure chart elements also use Roboto */
+.recharts-text,
+.recharts-legend-item-text,
+.recharts-tooltip-item,
+.recharts-default-tooltip,
+.recharts-cartesian-axis-tick-value,
+.recharts-radial-bar-label {
+  font-family: 'Roboto', sans-serif !important;
+}

@@ -1,0 +1,209 @@
+/* Modern Onboarding Styles */
+
+/* Smooth animations */
+.modern-onboarding-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.modern-onboarding-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 300ms ease-out;
+}
+
+.modern-onboarding-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.modern-onboarding-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 300ms ease-in;
+}
+
+/* Input focus animations */
+.modern-input {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.modern-input:focus-within {
+  transform: translateY(-2px);
+}
+
+/* Emoji selector animations */
+.emoji-selector {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.emoji-selector:hover {
+  transform: scale(1.1);
+}
+
+.emoji-selector:active {
+  transform: scale(0.95);
+}
+
+/* Card hover effects */
+.family-member-card {
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.family-member-card:hover {
+  border-color: #f3f4f6;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+/* Button press effects */
+.modern-button {
+  transition: all 0.15s ease;
+}
+
+.modern-button:active {
+  transform: scale(0.98);
+}
+
+/* Progress bar animation */
+.progress-bar-fill {
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Floating labels */
+.floating-label {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: all 0.2s ease;
+  pointer-events: none;
+  color: #9ca3af;
+}
+
+.has-value .floating-label,
+.focused .floating-label {
+  top: -8px;
+  left: 8px;
+  font-size: 12px;
+  background: white;
+  padding: 0 4px;
+  color: #1f2937;
+}
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0%,
+    #e5e7eb 50%,
+    #f3f4f6 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Notification toast animation */
+.toast-enter {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.toast-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  transition: all 0.3s ease-out;
+}
+
+.toast-exit {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.toast-exit-active {
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: all 0.3s ease-in;
+}
+
+/* Step indicator animations */
+.step-dot {
+  transition: all 0.3s ease;
+}
+
+.step-dot.active {
+  width: 32px;
+}
+
+.step-dot:not(.active):hover {
+  transform: scale(1.5);
+}
+
+/* Subtle background pattern */
+.notion-pattern {
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(0,0,0,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Modern scrollbar */
+.modern-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .family-member-card {
+    padding: 1rem;
+  }
+  
+  .emoji-selector {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .modern-onboarding {
+    background: #0f0f0f;
+    color: #f3f4f6;
+  }
+  
+  .modern-input {
+    background: #1a1a1a;
+    border-color: #2a2a2a;
+    color: #f3f4f6;
+  }
+  
+  .family-member-card {
+    background: #1a1a1a;
+    border-color: #2a2a2a;
+  }
+}

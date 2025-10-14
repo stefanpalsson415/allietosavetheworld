@@ -1,0 +1,1321 @@
+// src/components/dashboard/tabs/TasksTab.jsx - FIXED VERSION
+// This file has been updated to fix the duplicate triggerAllieChat declaration
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { 
+  Calendar, CheckCircle, X, Plus, Award, Flame, 
+  Zap, Info, ChevronDown, ChevronUp, MessageSquare,
+  Check, RefreshCw, Edit, Trash, Clock, Scale,
+  HelpCircle, ArrowRight
+} from 'lucide-react';
+import { useFamily } from '../../../contexts/FamilyContext';
+import { useSurvey } from '../../../contexts/SurveyContext';
+import { useChatDrawer } from '../../../contexts/ChatDrawerContext';
+import DatabaseService from '../../../services/DatabaseService';
+import AllieAIService from '../../../services/AllieAIService';
+import HabitGenerationService from '../../../services/HabitGenerationService';
+import { doc, getDoc, updateDoc, increment, serverTimestamp, setDoc } from 'firebase/firestore';
+import { db } from '../../../services/firebase';
+import confetti from 'canvas-confetti';
+import { 
+  EventManager as EnhancedEventManager, 
+  FloatingCalendar
+} from '../../../components/calendar';
+import CalendarService from '../../../services/CalendarService';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useEvents } from '../../../contexts/EventContext';
+import LazyCycleJourney from '../../cycles/LazyCycleJourney';
+import eventStore from '../../../services/EventStore';
+import { useCycleDueDate } from '../../../hooks/useEvent';
+import { knowledgeBase } from '../../../data/AllieKnowledgeBase';
+import HabitHelperSection from '../HabitHelperSection';
+import EnhancedHabitsSection from '../EnhancedHabitsSection';
+import WorkloadOptimizationWizard from '../WorkloadOptimizationWizard';
+import { 
+  analyzeTaskImbalances, 
+  generatePersonalizedExplanation, 
+  findMostAppropriateHabit 
+} from '../../../utils/SurveyAnalysisUtil';
+import NotionCard, { NotionPill, NotionProgressBar } from '../../common/NotionCard';
+import { NotionButton, NotionBadge, NotionInput, NotionCheckbox, NotionTabs } from '../../common/NotionUI';
+
+// Helper function to format dates consistently
+const formatDate = (date) => {
+  if (!date) return "Not scheduled yet";
+  
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  return dateObj.toLocaleDateString('en-US', { 
+    weekday: 'short',
+    month: 'short', 
+    day: 'numeric'
+  });
+};
+
+// Helper function to calculate days since a date
+const daysSince = (dateString) => {
+  if (!dateString) return 0;
+  
+  const date = new Date(dateString);
+  const today = new Date();
+  
+  // Reset hours to compare just the dates
+  date.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  
+  const diffTime = today - date;
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+};
+
+// Helper to generate avatar colors based on name
+const getAvatarColor = (name) => {
+  if (!name) return '#000000';
+  
+  // Simple hash function to get consistent colors
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  // Predefined colors for better aesthetics
+  const colors = [
+    '#FF5733', '#33A8FF', '#33FF57', '#B533FF', '#FF33E9',
+    '#FFD133', '#3346FF', '#FF336E', '#33FFD1', '#A2FF33'
+  ];
+  
+  return colors[hash % colors.length];
+};
+
+// Helper to get initials from name
+const getInitials = (name) => {
+  if (!name) return '?';
+  
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
+
+const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
+  // State and context variables
+  const { 
+    selectedUser, 
+    familyMembers,
+    currentWeek,
+    completedWeeks,
+    familyId,
+    familyName,
+    familyPicture,
+    addTaskComment,
+    updateTaskCompletion,
+    updateSubtaskCompletion,
+    updateSurveySchedule,
+    loadCurrentWeekTasks,
+    getWeekHistoryData,
+    getWeekStatus,
+    surveySchedule,
+    weekStatus,
+    weightedScores,
+    taskRecommendations,
+    surveyResponses
+  } = useFamily();
+  
+  // Chat drawer context for Allie interactions
+  const { openDrawerWithPrompt } = useChatDrawer();
+  
+  // Function to trigger Allie chat with a specific prompt
+  const triggerAllieChat = useCallback((prompt) => {
+    // Open the chat drawer with the provided prompt
+    console.log("Triggering Allie chat with prompt:", prompt);
+    openDrawerWithPrompt(prompt);
+  }, [openDrawerWithPrompt]);
+  
+  // Create a dummy selectedFamily object if it doesn't exist in the context
+  const selectedFamily = useMemo(() => ({
+    id: familyId,
+    name: familyName,
+    members: familyMembers
+  }), [familyId, familyName, familyMembers]);
+
+  // Main states
+  const [habits, setHabits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [celebrations, setCelebrations] = useState([]);
+  const [showAllieCoaching, setShowAllieCoaching] = useState(false);
+  const [showAddHabit, setShowAddHabit] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [allieIsThinking, setAllieIsThinking] = useState(false);
+  const [showHabitDetail, setShowHabitDetail] = useState(null);
+  const [selectedHabit, setSelectedHabit] = useState(null);
+  const [reflection, setReflection] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [datePickerDate, setDatePickerDate] = useState(null);
+  const [familyStreak, setFamilyStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  // Workload optimization wizard states
+  const [showOptimizationWizard, setShowOptimizationWizard] = useState(false);
+  const [optimizationResults, setOptimizationResults] = useState(null);
+  const [surveyAnalysis, setSurveyAnalysis] = useState(null);
+  const [surveyDue, setSurveyDue] = useState(null);
+  const [daysUntilSurvey, setDaysUntilSurvey] = useState(null);
+  const [showInfoModalContent, setShowInfoModalContent] = useState(null);
+  const [showEditEvent, setShowEditEvent] = useState(false);
+  const { currentUser } = useAuth();
+  const { fullQuestionSet, familyPriorities } = useSurvey();
+  const [existingDueDateEvent, setExistingDueDateEvent] = useState(null);
+  const [cycleData, setCycleData] = useState(null);
+  const [meetingDate, setMeetingDate] = useState(null);
+  const { dueEvent, dueDate } = useCycleDueDate(familyId, currentWeek);
+
+  // Cycle progress tracking
+  const [cycleStep, setCycleStep] = useState(1);
+  const [memberProgress, setMemberProgress] = useState({});
+  const [completedHabitInstances, setCompletedHabitInstances] = useState({});
+  const [canTakeSurvey, setCanTakeSurvey] = useState(false);
+  const [hasCompletedSurvey, setHasCompletedSurvey] = useState(false);
+  const [canScheduleMeeting, setCanScheduleMeeting] = useState(false);
+  
+  // Task imbalance analysis from survey data
+  useMemo(() => {
+    if (surveyResponses && Object.keys(surveyResponses).length > 0) {
+      setSurveyAnalysis(analyzeTaskImbalances(surveyResponses));
+    }
+  }, [surveyResponses]);
+  
+  
+  // Validate if a habit is appropriate for the parent
+  const validateHabitAppropriateForParent = (habit, parent) => {
+    if (!habit || !parent) return false;
+    
+    // 1. Check for meeting action items or inappropriate types
+    if (habit.title?.includes('Meeting Action Item') || 
+        habit.category?.includes('Meeting') ||
+        habit.type?.includes('meeting_action')) {
+      return false;
+    }
+    
+    // 2. Make sure the habit is assigned to the correct person
+    const isForThisParent = 
+      habit.assignedTo === (parent?.roleType || parent?.role) || 
+      habit.assignedToName === parent?.name ||
+      habit.assignedTo === "Everyone";
+    
+    if (!isForThisParent) {
+      return false;
+    }
+    
+    // 3. Check if the habit has proper structure for atomic habits
+    if (!habit.title || 
+        !habit.description || 
+        !(habit.cue || habit.atomicSteps?.[0]?.title) || 
+        !(habit.action || habit.atomicSteps?.[1]?.title) || 
+        !(habit.reward || habit.atomicSteps?.[2]?.title)) {
+      return false;
+    }
+    
+    // 4. Make sure it's a valid habit type
+    const isValidHabitType = 
+      habit.category?.includes('Habit') || 
+      habit.type?.includes('habit') || 
+      habit.title?.includes('Habit') ||
+      habit.category?.includes('Tasks') ||
+      habit.category?.includes('Balance') ||
+      habit.category?.includes('Planning');
+    
+    if (!isValidHabitType) {
+      return false;
+    }
+    
+    return true;
+  };
+  
+  // Load streak data from database
+  const loadStreakData = async () => {
+    try {
+      if (!familyId) return {};
+      
+      // Query streaks collection 
+      const streaksDoc = await getDoc(doc(db, "families", familyId));
+      if (!streaksDoc.exists()) return {};
+      
+      const streakData = streaksDoc.data().habitStreaks || {};
+      return streakData;
+    } catch (error) {
+      console.error("Error loading streak data:", error);
+      return {};
+    }
+  };
+  
+  // Load completion instances for a habit
+  const getHabitCompletionInstances = async (habitId) => {
+    try {
+      if (!familyId) return [];
+      
+      const habitDoc = await getDoc(doc(db, "families", familyId, "habitInstances", habitId));
+      if (!habitDoc.exists()) return [];
+      
+      return habitDoc.data().instances || [];
+    } catch (error) {
+      console.error(`Error loading completion instances for habit ${habitId}:`, error);
+      return [];
+    }
+  };
+  
+  // Load family streaks from database
+  const loadFamilyStreaks = async () => {
+    try {
+      if (!familyId) return;
+      
+      // Get family document
+      const docRef = doc(db, "families", familyId);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setFamilyStreak(data.currentStreak || 0);
+        setLongestStreak(data.longestStreak || 0);
+      } else {
+        // Default values if not found
+        setFamilyStreak(0);
+        setLongestStreak(0);
+      }
+    } catch (error) {
+      console.error("Error loading family streaks:", error);
+      // Set default values
+      setFamilyStreak(0);
+      setLongestStreak(0);
+    }
+  };
+  
+  // Calculate next survey due date
+  const calculateNextSurveyDue = () => {
+    if (!surveySchedule) return;
+    
+    const nextWeek = currentWeek;
+    const scheduledDate = surveySchedule[nextWeek];
+    
+    if (scheduledDate) {
+      setSurveyDue(new Date(scheduledDate));
+      
+      // Calculate days until survey
+      const today = new Date();
+      const dueDate = new Date(scheduledDate);
+      
+      today.setHours(0, 0, 0, 0);
+      dueDate.setHours(0, 0, 0, 0);
+      
+      const diffTime = dueDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      setDaysUntilSurvey(diffDays);
+    }
+  };
+  
+  // Load cycle progress - optimized with memoization
+  const loadCycleProgress = useCallback(async () => {
+    // Implementation would be placed here
+    console.log("Loading cycle progress");
+  }, []);
+  
+  // Generate fallback habits based on parent role and weighted scores
+  const generateFallbackHabits = (parentRole, weightedScores) => {
+    const currentDate = new Date().toISOString();
+    const habitId = `fallback-habit-${Date.now()}`;
+    
+    // Default fallback habit if we don't have specific data
+    const fallbackHabit = {
+      id: habitId,
+      title: "Meal Planning Check-in",
+      description: "Review upcoming meal plans and grocery needs to reduce decision fatigue and ensure balanced nutrition for the family.",
+      cue: "Before breakfast",
+      action: "Check meal plan and shopping list",
+      reward: "Feel prepared and reduce decision fatigue",
+      identity: "I am someone who helps manage family nutrition",
+      category: "Household Tasks",
+      assignedTo: parentRole,
+      assignedToName: parentRole,
+      streak: 0,
+      record: 0,
+      progress: 0,
+      completed: false,
+      isUserGenerated: false,
+      lastCompleted: null,
+      habitExplanation: "This meal planning habit addresses a common source of family stress by reducing daily decision fatigue and creating more structure.",
+      habitResearch: "Studies show that families with consistent meal planning routines report 32% less dinnertime stress and 27% fewer last-minute food decisions.",
+      insight: "This meal planning habit addresses a common source of family stress by reducing daily decision fatigue and creating more structure. Studies show that families with consistent meal planning routines report 32% less dinnertime stress and 27% fewer last-minute food decisions.",
+      atomicSteps: [
+        {
+          id: `${habitId}-step-1`,
+          title: "Before breakfast",
+          description: "Choose a consistent time when you're not rushed",
+          completed: false
+        },
+        {
+          id: `${habitId}-step-2`,
+          title: "Check meal plan and shopping list",
+          description: "Review what's planned and what ingredients you need",
+          completed: false
+        },
+        {
+          id: `${habitId}-step-3`,
+          title: "Feel prepared and reduce decision fatigue",
+          description: "Enjoy the peace of mind from knowing the plan",
+          completed: false
+        }
+      ],
+      completionInstances: []
+    };
+    
+    return [fallbackHabit];
+  };
+  
+
+  // Extract loadData function outside useEffect so it can be called from other places
+  // Using useCallback instead of useMemo for functions to avoid function recreation
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log(`Loading habits for Week ${currentWeek}, user:`, selectedUser?.name);
+      
+      if (familyId) {
+        // Load tasks from database
+        const tasks = await loadCurrentWeekTasks();
+        
+        // First apply basic filters to exclude obviously invalid tasks
+        const potentialHabits = tasks.filter(task => 
+          // Exclude kid-related tasks
+          !task.category?.includes('Kid') && 
+          !task.title?.includes('Kid') &&
+          !task.title?.includes('Child') &&
+          
+          // Exclude meeting action items 
+          !task.title?.includes('Meeting Action Item') &&
+          !task.type?.includes('meeting_action') &&
+          !task.category?.includes('Meeting')
+        );
+        
+        // Apply more advanced validation to ensure tasks are proper habits
+        const adultHabits = potentialHabits.filter(task => 
+          validateHabitAppropriateForParent(task, selectedUser)
+        );
+        
+        // Check for streak data in database
+        const streakData = await loadStreakData();
+        
+        // Transform tasks into habit format with completion tracking
+        const formattedHabits = await Promise.all(adultHabits.map(async (task) => {
+          // Skip tasks that are not for the current user
+          const isForSelectedUser = 
+            task.assignedTo === (selectedUser?.roleType || selectedUser?.role) || 
+            task.assignedToName === selectedUser?.name ||
+            task.assignedTo === "Everyone";
+            
+          if (!isForSelectedUser) {
+            return null;
+          }
+          
+          // Get streak data for this habit
+          const streak = streakData[task.id] || 0;
+          const record = streakData[`${task.id}_record`] || streak;
+          
+          // Calculate progress based on subtasks
+          const completedSubtasks = task.subTasks?.filter(st => st.completed)?.length || 0;
+          const totalSubtasks = task.subTasks?.length || 1;
+          const progress = task.completed ? 100 : Math.round((completedSubtasks / totalSubtasks) * 100);
+          
+          // Get completion instances for this habit
+          const completionInstances = await getHabitCompletionInstances(task.id) || [];
+          
+          return {
+            id: task.id,
+            title: task.title ? task.title.replace(/Week \d+: /g, '') : "Task",
+            description: task.description ? task.description.replace(/for this week/g, 'consistently') : "Description unavailable",
+            cue: task.subTasks?.[0]?.title || "After breakfast",
+            action: task.subTasks?.[1]?.title || task.title || "Complete task",
+            reward: task.subTasks?.[2]?.title || "Feel accomplished and balanced",
+            identity: task.focusArea 
+              ? `I am someone who values ${task.focusArea.toLowerCase()}` 
+              : "I am someone who values family balance",
+            assignedTo: task.assignedTo,
+            assignedToName: task.assignedToName,
+            category: task.category,
+            insight: task.insight || task.aiInsight || "",
+            completed: task.completed,
+            comments: task.comments || [],
+            streak: streak,
+            record: record,
+            progress: progress,
+            lastCompleted: task.completedDate || null,
+            atomicSteps: task.subTasks?.map(st => ({
+              id: st.id,
+              title: st.title,
+              description: st.description,
+              completed: st.completed || false
+            })) || [],
+            isUserGenerated: task.isUserGenerated || false,
+            completionInstances: completionInstances
+          };
+        }));
+        
+        // Filter out null values
+        const filteredAdultHabits = formattedHabits.filter(Boolean);
+            
+        // Check if we have any valid habits after filtering
+        let usableHabits = [...filteredAdultHabits];
+
+        // If there are no valid habits, try to generate or use fallbacks
+        if (filteredAdultHabits.length === 0) {
+          console.log("No valid habits found, trying Claude-generated personalized habits");
+          
+          try {
+            // Try to generate personalized habits using Claude
+            const parentRole = selectedUser?.roleType || selectedUser?.role || "parent";
+            
+            // Generate personalized habits based on survey data and imbalances
+            const generatedHabits = await HabitGenerationService.generatePersonalizedHabits(
+              familyId,
+              selectedUser,
+              surveyResponses,
+              weightedScores
+            );
+            
+            if (generatedHabits && generatedHabits.length > 0) {
+              console.log("Successfully generated personalized habits with Claude:", generatedHabits);
+              usableHabits = generatedHabits;
+            } else {
+              // Fall back to static habits if generation fails
+              console.log("Claude generation failed, using fallback habits");
+              const fallbackHabits = generateFallbackHabits(parentRole, weightedScores);
+              usableHabits = fallbackHabits;
+            }
+          } catch (error) {
+            console.error("Error generating personalized habits:", error);
+            // Use the static fallback habits if anything fails
+            const parentRole = selectedUser?.roleType || selectedUser?.role || "parent";
+            const fallbackHabits = generateFallbackHabits(parentRole, weightedScores);
+            usableHabits = fallbackHabits;
+          }
+        }
+            
+        // Only show one system-generated habit plus any user-generated habits
+        const systemHabit = usableHabits.find(h => !h.isUserGenerated);
+        const userHabits = usableHabits.filter(h => h.isUserGenerated);
+            
+        // Combine, putting uncompleted first
+        const finalHabits = [systemHabit, ...userHabits].filter(Boolean).sort((a, b) => {
+          if (a.completed && !b.completed) return 1;
+          if (!a.completed && b.completed) return -1;
+          return 0;
+        });
+
+        setHabits(finalHabits);
+                
+        // Load family streaks
+        await loadFamilyStreaks();
+        
+        // Calculate when the next survey is due
+        calculateNextSurveyDue();
+        
+        // Load cycle progress
+        await loadCycleProgress();
+        
+        // Track habit completion instances
+        const allInstances = {};
+        filteredAdultHabits.forEach(habit => {
+          allInstances[habit.id] = habit.completionInstances || [];
+        });
+        setCompletedHabitInstances(allInstances);
+        
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error loading habits:", error);
+      setHabits([]);
+      setLoading(false);
+    }
+  }, [familyId, currentWeek, selectedUser, loadCurrentWeekTasks, validateHabitAppropriateForParent, surveyResponses, weightedScores, generateFallbackHabits, HabitGenerationService, loadFamilyStreaks, calculateNextSurveyDue, loadCycleProgress]);
+
+  useEffect(() => {
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyId, currentWeek, selectedUser]);
+  
+
+
+
+  // Handle creating a new habit
+  const createNewHabit = async (isSystemHabit = false) => {
+    // Implementation would be placed here
+    console.log("Creating new habit, system habit:", isSystemHabit);
+  };
+
+  // Handle optimization completion
+  const handleOptimizationComplete = (results) => {
+    setOptimizationResults(results);
+    setShowOptimizationWizard(false);
+    
+    // Refresh habits data based on new plan
+    loadData();
+  };
+
+  // Show the radar chart info modal
+  const showRadarChartInfoModal = (content) => {
+    setShowInfoModalContent(content);
+  };
+
+  // Handle starting the survey
+  const handleStartSurvey = () => {
+    if (typeof onStartWeeklyCheckIn === 'function') {
+      onStartWeeklyCheckIn();
+    } else {
+      console.warn("onStartWeeklyCheckIn is not defined or not a function");
+      // Fallback implementation
+      createCelebration("Survey Feature", false, "The survey feature is not available at the moment.");
+    }
+  };
+
+
+  // Record habit instance
+  const recordHabitInstance = async (habitId, notes = '') => {
+    if (!habitId || !selectedUser || !familyId) {
+      console.error("Missing required parameters for recordHabitInstance:", 
+        { habitId, selectedUserId: selectedUser?.id, familyId });
+      return false;
+    }
+    
+    try {
+      console.log(`Recording habit instance for habit ${habitId}`);
+      
+      // Create the instance data with a unique timestamp
+      const instance = {
+        timestamp: new Date().toISOString(),
+        userId: selectedUser.id,
+        userName: selectedUser.name,
+        notes: notes || "Completed via dashboard",
+        difficulty: 3,
+      };
+      
+      // Update firestore document
+      const habitRef = doc(db, "families", familyId, "habitInstances", habitId);
+      const habitDoc = await getDoc(habitRef);
+      
+      if (habitDoc.exists()) {
+        console.log(`Updating existing habit instance document`);
+        // Add to existing instances
+        const instances = habitDoc.data().instances || [];
+        await updateDoc(habitRef, {
+          instances: [...instances, instance],
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        console.log(`Creating new habit instance document`);
+        // Create new document
+        await setDoc(habitRef, {
+          instances: [instance],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+      
+      // Update habit streak
+      console.log(`Updating habit streak`);
+      const streakRef = doc(db, "families", familyId);
+      await updateDoc(streakRef, {
+        [`habitStreaks.${habitId}`]: increment(1),
+        [`habitStreaks.${habitId}_record`]: increment(0) // This will be updated in a transaction if needed
+      });
+      
+      // Trigger confetti
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      
+      // Show celebration message in console for debugging
+      console.log("Habit completed successfully!");
+      
+      // Refresh the data
+      console.log("Refreshing habit data...");
+      await loadData();
+      
+      return true;
+    } catch (error) {
+      console.error("Error recording habit instance:", error);
+      return false;
+    }
+  };
+
+  // Delete habit
+  const deleteHabit = async (habitId) => {
+    // Implementation would be placed here
+    console.log("Deleting habit:", habitId);
+  };
+
+  // Helper function to create celebration messages
+  const createCelebration = (title, success, message) => {
+    const id = Date.now();
+    setCelebrations(prev => [...prev, { id, title, success, message }]);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      setCelebrations(prev => prev.filter(c => c.id !== id));
+    }, 5000);
+  };
+
+
+
+  // New JSX with Notion styling
+  return (
+    <div className="font-roboto notion-enabled">
+      {/* CycleJourney component */}
+      <NotionCard className="mb-6">
+        {/* Memoize cycle data to prevent unnecessary rerenders */}
+        <LazyCycleJourney
+          cycleType="family"
+          currentCycle={currentWeek}
+          cycleData={useMemo(() => ({
+            meeting: {
+              scheduled: !!meetingDate,
+              scheduledDate: meetingDate || null,
+              completed: cycleData?.meeting?.completed === true,
+              eventId: dueEvent?.id || dueEvent?.firestoreId || dueEvent?.universalId || null
+            },
+            survey: {
+              enabled: canTakeSurvey,
+              completed: selectedUser?.weeklyCompleted?.[currentWeek-1]?.completed === true
+            },
+            step: cycleStep,
+            stepComplete: {
+              1: Object.values(completedHabitInstances).some(instances => 
+                  instances && instances.some(instance => 
+                    instance.userId === selectedUser?.id) && 
+                  instances.length >= 5
+                ),
+              2: selectedUser?.weeklyCompleted?.[currentWeek-1]?.completed === true,
+              3: cycleData?.meeting?.completed === true
+            }
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+          }), [])}
+          familyMembers={familyMembers}
+          currentUser={selectedUser}
+          memberProgress={memberProgress}
+          onStartStep={useCallback((action, step) => {
+            if (action === "habit") {
+              // Find first uncompleted habit
+              const firstHabit = habits.find(h => !h.completed);
+              if (firstHabit) {
+                setSelectedHabit(firstHabit);
+                setShowHabitDetail(firstHabit.id);
+              } else {
+                createNewHabit();
+              }
+            }
+            else if (action === "survey") {
+              if (typeof handleStartSurvey === 'function') {
+                handleStartSurvey();
+              } else {
+                console.warn("handleStartSurvey is not defined or not a function");
+                // Fallback implementation
+                createCelebration("Survey Feature", false, "The survey feature is not available at the moment.");
+              }
+            }
+            else if (action === "meeting") {
+              if (typeof onOpenFamilyMeeting === 'function') {
+                try {
+                  console.log("TasksTab: User requested to open family meeting");
+                  
+                  // Simply call the passed function that shows the meeting
+                  onOpenFamilyMeeting();
+                } catch (error) {
+                  console.error("Error opening family meeting:", error);
+                  createCelebration("Meeting Feature", false, "Error opening the family meeting feature.");
+                }
+              } else {
+                console.warn("onOpenFamilyMeeting is not defined or not a function");
+                createCelebration("Meeting Feature", false, "The family meeting feature is not available at the moment.");
+              }
+            }
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+          }, [])}
+          dueDate={surveyDue}
+          onChangeDueDate={useCallback((eventId) => {
+            // Set the event ID to edit if available
+            if (eventId) {
+              setExistingDueDateEvent(eventId);
+            }
+            // Show calendar in place rather than navigating
+            setShowCalendar(true);
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+          }, [])}
+          loading={loading}
+        />
+      </NotionCard>
+      
+      {/* Workload Optimization Wizard (shown when active) */}
+      {showOptimizationWizard && (
+        <NotionCard className="mb-6">
+          <WorkloadOptimizationWizard 
+            familyData={{
+              ...selectedFamily,
+              workloadData: surveyAnalysis || { imbalances: [] }
+            }}
+            onComplete={handleOptimizationComplete}
+          />
+        </NotionCard>
+      )}
+
+      {/* Show optimization results summary if available */}
+      {!showOptimizationWizard && optimizationResults && (
+        <NotionCard 
+          className="mb-6 border-[#DBEAFE]"
+          icon={<Zap size={18} className="text-blue-600" />}
+          title="Workload Optimization Plan"
+        >
+          <p className="text-gray-600 mb-4">
+            The {optimizationResults.selectedOption?.title || "workload optimization"} strategy has been applied.
+          </p>
+          <NotionButton
+            variant="outline"
+            size="sm"
+            icon={<RefreshCw size={16} />}
+            onClick={() => setShowOptimizationWizard(true)}
+          >
+            View or Update Plan
+          </NotionButton>
+        </NotionCard>
+      )}
+
+      {/* Enhanced Habits Section with Radar Chart */}
+      <EnhancedHabitsSection 
+        showInfoModal={showRadarChartInfoModal}
+        onCategorySelect={(category) => {
+          // When a radar chart category is selected, scroll to the habits section
+          const habitsSection = document.getElementById('current-habits-section');
+          if (habitsSection) {
+            habitsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }}
+        onCreateHabit={(habit) => {
+          // Add the generated habit to the current habits
+          setHabits(prevHabits => [habit, ...prevHabits]);
+          createCelebration("Habit Created", true, `New habit "${habit.title}" has been added to your list.`);
+        }}
+        onRefreshHabits={() => {
+          // Reload all habits data
+          setLoading(true);
+          loadData()
+            .then(() => {
+              createCelebration("Habits Refreshed", true, "Your habit recommendations have been updated based on the latest data.");
+            })
+            .catch(error => {
+              console.error("Error refreshing habits:", error);
+              createCelebration("Error", false, "Failed to refresh habits. Please try again.");
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+        }}
+      />
+
+      {/* Current habits section */}
+      <NotionCard
+        id="current-habits-section"
+        title="Your Current Habits"
+        icon={<Award size={18} className="text-gray-600" />}
+        actions={
+          <>
+            <NotionButton
+              variant="default"
+              size="sm"
+              icon={<Plus size={16} />}
+              onClick={() => setShowAddHabit(true)}
+              className="mr-1"
+            >
+              Add Habit
+            </NotionButton>
+            <NotionButton
+              variant="subtle"
+              size="sm"
+              icon={<RefreshCw size={16} />}
+              onClick={() => {
+                // More robust check for ANY habit completions
+                const hasCompletions = Object.values(completedHabitInstances).some(
+                  instances => instances && instances.length > 0
+                );
+                
+                if (hasCompletions) {
+                  if (window.confirm("This will replace your current system habit. Any habit completion progress will be lost. Continue?")) {
+                    createNewHabit(true);
+                  }
+                } else {
+                  createNewHabit(true);
+                }
+              }}
+              disabled={allieIsThinking}
+            >
+              Refresh
+            </NotionButton>
+          </>
+        }
+        className="mb-6"
+      >
+        {/* Habit explanation section */}
+        {!loading && habits.length > 0 && habits.some(h => !h.isUserGenerated) && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-100">
+            <div className="flex items-start">
+              <Info size={18} className="text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+              <div>
+                <h4 className="font-medium text-blue-800 mb-1">Why Allie recommended this habit:</h4>
+                <p className="text-blue-800 text-sm" dangerouslySetInnerHTML={{ 
+                  __html: surveyAnalysis 
+                    ? generatePersonalizedExplanation(
+                        habits.find(h => !h.isUserGenerated), 
+                        surveyAnalysis, 
+                        selectedUser?.roleType || 'Parent'
+                      )
+                    : `Allie selected <strong>${habits.find(h => !h.isUserGenerated)?.title || "Meal Planning Check-in"}</strong> for you because this personalized habit addresses the challenge of meal decision fatigue and creates more structure in your daily routine. Studies show that families with consistent meal planning routines report 32% less dinnertime stress and 27% fewer last-minute food decisions.`
+                }} />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {loading ? (
+          <div className="p-8 flex justify-center">
+            <div className="w-8 h-8 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div>
+          </div>
+        ) : habits.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>No habits set for this cycle yet</p>
+            <NotionButton 
+              variant="primary"
+              size="md"
+              icon={<Plus size={16} />}
+              onClick={() => createNewHabit()}
+              className="mt-3"
+            >
+              Create Your First Habit
+            </NotionButton>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {habits.map(habit => (
+              <NotionCard 
+                key={habit.id}
+                className={`hover:border-[#C1C7CD] transition-all duration-150 ${habit.completed ? 'bg-gray-50' : ''}`}
+                hover={true}
+              >
+                <div className="p-4">
+                  <div className="flex flex-col">
+                    {/* Habit header with enhanced typography */}
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-lg mb-2">{habit.title}</h4>
+                        <p className="text-gray-600">{habit.description}</p>
+                      </div>
+                      
+                      {/* Enhanced streak badge */}
+                      <NotionBadge color={habit.streak > 0 ? "yellow" : "default"} className="ml-3">
+                        <span className="flex items-center">
+                          <Flame size={14} className="mr-1" />
+                          {habit.streak} day{habit.streak !== 1 ? 's' : ''}
+                        </span>
+                      </NotionBadge>
+                    </div>
+                    
+                    {/* Enhanced cue, routine, reward pattern with notion styling */}
+                    <div className="grid grid-cols-3 gap-4 my-4">
+                      <div className="border border-gray-200 rounded-md overflow-hidden">
+                        <div className="bg-gray-100 px-3 py-2 text-center text-sm font-medium">Cue</div>
+                        <div className="p-3 min-h-16 flex items-center justify-center text-center text-sm">
+                          {habit.cue || "After breakfast"}
+                        </div>
+                      </div>
+                      
+                      <div className="border border-gray-200 rounded-md overflow-hidden">
+                        <div className="bg-gray-100 px-3 py-2 text-center text-sm font-medium">Routine</div>
+                        <div className="p-3 min-h-16 flex items-center justify-center text-center text-sm">
+                          {habit.action || habit.title}
+                        </div>
+                      </div>
+                      
+                      <div className="border border-gray-200 rounded-md overflow-hidden">
+                        <div className="bg-gray-100 px-3 py-2 text-center text-sm font-medium">Reward</div>
+                        <div className="p-3 min-h-16 flex items-center justify-center text-center text-sm">
+                          {habit.reward || "Feel accomplished"}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Enhanced identity statement */}
+                    <div className="my-4 text-sm p-3 bg-gray-50 rounded-md border border-gray-200 text-center">
+                      {habit.identity || "I am someone who values balance"}
+                    </div>
+                    
+                    {/* Child Helper Section - Using the modular component */}
+                    <HabitHelperSection
+                      habit={habit}
+                      familyMembers={familyMembers}
+                      currentUser={currentUser}
+                      familyId={familyId}
+                      onHabitUpdate={(updatedHabit) => {
+                        // Update local habits state
+                        setHabits(habits.map(h => 
+                          h.id === updatedHabit.id ? updatedHabit : h
+                        ));
+                      }}
+                    />
+                    
+                    {/* Enhanced completion progress with fun avatars */}
+                    <div className="mt-6 mb-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-gray-700">Completion Progress</span>
+                        <NotionBadge color="default">
+                          {(habit.completionInstances?.length || 0)}/11 instances
+                        </NotionBadge>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        {Array.from({ length: 11 }).map((_, index) => {
+                          // Ensure we have a valid array to check against
+                          const completionInstances = habit.completionInstances || [];
+                          const isCompleted = index < completionInstances.length;
+                          const isMinimumReached = index === 4 && isCompleted;
+                          const isComplete = index === 10 && isCompleted;
+                          
+                          // Get a profile pic or initials for each completed instance
+                          let displayContent;
+                          if (isCompleted) {
+                            // Use the actual user from completion instance if available
+                            const completionUser = completionInstances[index]?.userId 
+                              ? familyMembers.find(m => m.id === completionInstances[index].userId)
+                              : selectedUser;
+                            
+                            if (completionUser?.photoURL) {
+                              // If user has a photo, show it with a fun hat overlay for milestones
+                              displayContent = (
+                                <div className="relative w-full h-full rounded-full overflow-hidden">
+                                  <img 
+                                    src={completionUser.photoURL} 
+                                    alt={completionUser.name} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {/* Add party hat for milestones */}
+                                  {(isMinimumReached || isComplete) && (
+                                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                                      {isComplete ? '🎓' : '🎉'}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            } else {
+                              // If no photo, show initials with a festive background for milestones
+                              const initials = getInitials(completionUser?.name || 'U');
+                              const backgroundColor = getAvatarColor(completionUser?.name || 'User');
+                              
+                              displayContent = (
+                                <div className="relative w-full h-full flex items-center justify-center">
+                                  <div 
+                                    className="w-full h-full rounded-full flex items-center justify-center text-white font-medium"
+                                    style={{ backgroundColor }}
+                                  >
+                                    {initials}
+                                  </div>
+                                  {/* Add party hat for milestones */}
+                                  {(isMinimumReached || isComplete) && (
+                                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                                      {isComplete ? '🎓' : '🎉'}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                          } else {
+                            // Empty circle for uncompleted steps
+                            displayContent = null;
+                          }
+                          
+                          return (
+                            <div 
+                              key={index} 
+                              className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                isCompleted 
+                                  ? isComplete
+                                    ? 'border-2 border-green-500 shadow-md' // Mastered
+                                    : isMinimumReached
+                                      ? 'border-2 border-blue-500 shadow-md' // Survey unlocked
+                                      : 'border-2 border-purple-400' // Regular completion
+                                  : 'bg-white border-2 border-gray-300' // Not completed
+                              }`}
+                            >
+                              {displayContent}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      <div className="flex justify-between mt-2">
+                        <span className="text-xs font-medium text-gray-700">Start</span>
+                        <span className="text-xs font-medium text-blue-700">
+                          Survey Unlocked (5)
+                        </span>
+                        <span className="text-xs font-medium text-green-700">
+                          Habit Mastered!
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Enhanced action buttons */}
+                    <div className="mt-4 flex justify-between items-center">
+                      <div className="space-x-2">
+                        {habit.isUserGenerated && (
+                          <NotionButton
+                            variant="subtle"
+                            size="sm"
+                            icon={<Trash size={14} />}
+                            onClick={() => deleteHabit(habit.id)}
+                            className="text-red-600 hover:bg-red-50"
+                          >
+                            Delete Habit
+                          </NotionButton>
+                        )}
+                      </div>
+                      
+                      <NotionButton
+                        variant="primary"
+                        size="md"
+                        icon={<CheckCircle size={16} />}
+                        onClick={() => {
+                          // Set habit first, then show detail view
+                          setSelectedHabit(habit);
+                          setShowHabitDetail(habit.id);
+                          // Reset reflection input each time
+                          setReflection('');
+                        }}
+                      >
+                        Practice This Habit
+                      </NotionButton>
+                    </div>
+                  </div>
+                </div>
+              </NotionCard>
+            ))}
+          </div>
+        )}
+      </NotionCard>
+      
+      {/* Allie chat integration */}
+      <NotionCard 
+        title="Allie Coaching"
+        icon={<MessageSquare size={18} className="text-gray-600" />}
+        className="mb-6"
+      >
+        <p className="text-gray-600 mb-4">
+          Get personalized advice from Allie on how to build lasting habits
+        </p>
+        <NotionButton 
+          variant="primary"
+          size="md"
+          onClick={() => triggerAllieChat(`I want to build better habits to improve family balance. ${
+            habits.length > 0 ? `I'm currently working on "${habits[0]?.title}" habit. ` : ''
+          }Can you give me some tips based on Atomic Habits principles?`)}
+        >
+          Chat with Allie
+        </NotionButton>
+      </NotionCard>
+      
+      {/* Floating Calendar */}
+      {showCalendar && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4 z-40">
+          <div className="bg-white rounded-md border border-gray-200 w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="font-medium text-lg">Schedule Family Meeting</h3>
+              <NotionButton 
+                variant="subtle"
+                size="sm"
+                icon={<X size={18} />}
+                onClick={() => setShowCalendar(false)}
+              />
+            </div>
+            <div className="p-6">
+              <FloatingCalendar 
+                familyId={familyId}
+                userId={selectedUser?.id}
+                onClose={() => setShowCalendar(false)}
+                onEventCreated={(event) => {
+                  // Save the meeting date
+                  setMeetingDate(event.start);
+                  // Update the cycle data
+                  setShowCalendar(false);
+                  // Refresh the cycle data
+                  loadCycleProgress();
+                  // Show celebration message
+                  createCelebration("Meeting Scheduled", true, `Family meeting scheduled for ${formatDate(event.start)}`);
+                }}
+                existingEventId={existingDueDateEvent}
+                defaultEventType="Family Meeting"
+                defaultTitle="Weekly Family Meeting"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Celebration messages */}
+      <div className="fixed bottom-4 right-4 space-y-2 z-30">
+        {celebrations.map(celebration => (
+          <div 
+            key={celebration.id} 
+            className={`p-3 rounded-md border shadow-sm animation-bounce-in max-w-xs ${
+              celebration.success 
+                ? 'bg-green-50 text-green-700 border-green-200' 
+                : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+            }`}
+          >
+            <div className="flex items-center">
+              {celebration.success ? (
+                <Check className="mr-2" size={18} />
+              ) : (
+                <Info className="mr-2" size={18} />
+              )}
+              <div>
+                <div className="font-medium">{celebration.title}</div>
+                <div className="text-sm">{celebration.message}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Habit detail/log modal - Notion styled */}
+      {showHabitDetail && selectedHabit && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4 z-40">
+          <div className="bg-white rounded-md border border-gray-200 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="font-medium text-lg">{selectedHabit.title}</h3>
+              <NotionButton 
+                variant="subtle"
+                size="sm"
+                icon={<X size={18} />}
+                onClick={() => setShowHabitDetail(null)}
+              />
+            </div>
+            
+            <div className="p-6">
+              {/* Identity statement */}
+              <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                <div className="text-xs text-gray-500 mb-1">Identity:</div>
+                <div className="text-gray-700">{selectedHabit.identity}</div>
+              </div>
+              
+              {/* Simple steps */}
+              <div className="mb-4">
+                <div className="space-y-2">
+                  {selectedHabit.atomicSteps.map((step, idx) => (
+                    <div key={idx} className="flex items-center p-2 bg-gray-50 rounded-md border border-gray-200">
+                      <div className="w-6 h-6 rounded-full bg-gray-100 border border-gray-200 text-gray-700 mr-2 flex items-center justify-center text-xs">
+                        {idx + 1}
+                      </div>
+                      <div className="text-sm">{step.title}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Progress indicator */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-100 text-center">
+                <p className="text-sm text-blue-700">
+                  You've completed this habit {selectedHabit.completionInstances?.length || 0} times.
+                  {selectedHabit.completionInstances?.length >= 5 ? 
+                    " Survey is unlocked!" : 
+                    ` Complete ${5 - (selectedHabit.completionInstances?.length || 0)} more times to unlock the survey.`}
+                </p>
+              </div>
+              
+              {/* Reflection input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1 text-gray-700">
+                  Reflection (optional):
+                </label>
+                <NotionInput
+                  value={reflection}
+                  onChange={(e) => setReflection(e.target.value)}
+                  placeholder="Add any thoughts or reflections about this habit..."
+                  as="textarea"
+                  rows={3}
+                />
+              </div>
+              
+              {/* Previous completions */}
+              {selectedHabit.completionInstances?.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-2">Previous completions:</h4>
+                  <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md">
+                    {selectedHabit.completionInstances.map((instance, idx) => (
+                      <div key={idx} className="text-xs p-2 bg-gray-50 border-b border-gray-200">
+                        <div className="flex justify-between">
+                          <span>{new Date(instance.timestamp).toLocaleDateString()}</span>
+                          <span className="text-gray-500">{instance.userName}</span>
+                        </div>
+                        {instance.notes && <p className="mt-1 text-gray-600">{instance.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Log habit button - centered and prominent */}
+              <div className="flex justify-center">
+                <NotionButton
+                  variant="primary"
+                  size="lg"
+                  icon={isProcessing ? null : <CheckCircle size={18} />}
+                  onClick={async () => {
+                    if (selectedHabit) {
+                      // Show processing state
+                      setIsProcessing(true);
+                      
+                      try {
+                        // Try to record the habit completion
+                        const success = await recordHabitInstance(selectedHabit.id, reflection);
+                        
+                        if (success) {
+                          // Show clear success feedback
+                          createCelebration("Habit Completed", true, 
+                            `Great job completing "${selectedHabit.title}"!`);
+                          
+                          // Close the dialog after successful completion
+                          setShowHabitDetail(null);
+                        } else {
+                          // Show error message if recording failed
+                          createCelebration("Error", false, 
+                            "There was a problem recording your habit. Please try again.");
+                          setIsProcessing(false);
+                        }
+                      } catch (error) {
+                        console.error("Error recording habit completion:", error);
+                        createCelebration("Error", false, 
+                          "An unexpected error occurred. Please try again.");
+                        setIsProcessing(false);
+                      }
+                    }
+                  }}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    "Log Habit Completion"
+                  )}
+                </NotionButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TasksTab;

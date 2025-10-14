@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+    margin: 20px;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    border: 1px solid #ccc;
+    margin: 10px;
+  }
+</style>
+</head>
+<body>
+<h1>Generate Family Logo PNGs</h1>
+<p>Right-click each image and save as:</p>
+
+<canvas id="canvas192" width="192" height="192"></canvas>
+<p>Save as: logo192.png</p>
+
+<canvas id="canvas512" width="512" height="512"></canvas>
+<p>Save as: logo512.png</p>
+
+<script>
+// The family stick figure SVG
+const familySvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="white"/>
+  <circle cx="256" cy="150" r="60" stroke="black" stroke-width="8" fill="none"/>
+  <circle cx="150" cy="200" r="50" stroke="black" stroke-width="8" fill="none"/>
+  <circle cx="362" cy="200" r="50" stroke="black" stroke-width="8" fill="none"/>
+  <path d="M130,250 Q256,400 382,250" stroke="black" stroke-width="8" fill="none"/>
+</svg>`;
+
+function drawSvgToCanvas(canvasId, size) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+
+  // White background
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, size, size);
+
+  const img = new Image();
+  const svgBlob = new Blob([familySvgContent], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(svgBlob);
+
+  img.onload = function() {
+    ctx.drawImage(img, 0, 0, size, size);
+    URL.revokeObjectURL(url);
+
+    // Create download link
+    canvas.toBlob(function(blob) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `logo${size}.png`;
+      a.textContent = `Download logo${size}.png`;
+      a.style.display = 'block';
+      a.style.marginTop = '5px';
+      canvas.parentNode.insertBefore(a, canvas.nextSibling);
+    });
+  };
+
+  img.src = url;
+}
+
+// Generate both sizes
+drawSvgToCanvas('canvas192', 192);
+drawSvgToCanvas('canvas512', 512);
+</script>
+
+</body>
+</html>

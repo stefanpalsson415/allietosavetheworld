@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-10-13T13:09:31.348Z",
+  "stats": {
+    "authUsers": {
+      "total": 0,
+      "deleted": 0
+    },
+    "collections": {
+      "total": 45,
+      "deleted": 10
+    },
+    "documents": {
+      "total": 1449,
+      "deleted": 1449
+    }
+  },
+  "collectionsDeleted": [
+    "blogPosts",
+    "bucksBalances",
+    "bucksTransactions",
+    "calendarSyncState",
+    "chatMessages",
+    "choreInstances",
+    "choreSchedules",
+    "choreTemplates",
+    "emailInbox",
+    "emailToFamily"
+  ]
+}

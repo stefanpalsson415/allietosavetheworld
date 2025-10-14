@@ -1,0 +1,662 @@
+// src/services/ClaudeResponseParser.js
+/**
+ * Dedicated utility for parsing Claude AI responses consistently
+ * Addresses issues with parsing calendar events vs tasks
+ */
+class ClaudeResponseParser {
+  /**
+   * Parse a Claude response to extract structured content
+   * @param {string} responseText - Raw text response from Claude
+   * @param {string} type - Expected type of content (calendar, task, provider, etc)
+   * @returns {Object} Parsed data or null if parsing failed
+   */
+  static parseResponse(responseText, type = 'general') {
+    if (!responseText) return null;
+    
+    // Log the parsing request for debugging
+    console.log(`🔍 Parsing Claude response as ${type}:`, 
+      responseText.length > 100 ? responseText.substring(0, 100) + '...' : responseText);
+    
+    try {
+      // Try to extract JSON content if present - IMPROVED JSON EXTRACTION
+      const jsonMatches = this.extractJsonObjects(responseText);
+      
+      if (jsonMatches && jsonMatches.length > 0) {
+        for (const jsonStr of jsonMatches) {
+          try {
+            const parsedJson = JSON.parse(jsonStr);
+            console.log("✅ Successfully parsed JSON from Claude response");
+            return parsedJson;
+          } catch (jsonError) {
+            console.warn("⚠️ Found JSON-like content but couldn't parse it:", jsonError);
+            // Continue to next match
+          }
+        }
+      }
+      
+      // Type-specific parsing strategies
+      switch (type.toLowerCase()) {
+        case 'calendar':
+          return this.parseCalendarEvent(responseText);
+          
+        case 'task':
+          return this.parseTaskInfo(responseText);
+          
+        case 'provider':
+          return this.parseProviderInfo(responseText);
+          
+        default:
+          // Generic parsing based on content patterns
+          if (responseText.toLowerCase().includes('task') && 
+              (responseText.toLowerCase().includes('due') || 
+               responseText.toLowerCase().includes('assigned'))) {
+            return this.parseTaskInfo(responseText);
+          }
+          
+          if (responseText.toLowerCase().includes('event') && 
+              (responseText.toLowerCase().includes('date') || 
+               responseText.toLowerCase().includes('calendar'))) {
+            return this.parseCalendarEvent(responseText);
+          }
+          
+          // Return simple object with the full text if no specific pattern found
+          return { 
+            fullText: responseText,
+            parsed: false
+          };
+      }
+    } catch (error) {
+      console.error("❌ Error parsing Claude response:", error);
+      return null;
+    }
+  }
+  
+  /**
+   * Extract all potential JSON objects from text
+   * @param {string} text - Text to extract JSON from
+   * @returns {Array} Array of potential JSON strings
+   */
+  static extractJsonObjects(text) {
+    const results = [];
+    
+    // First try: look for JSON in markdown code blocks (most reliable)
+    const markdownRegex = /```(?:json)?\s*({[\s\S]*?})\s*```/g;
+    let markdownMatch;
+    while ((markdownMatch = markdownRegex.exec(text)) !== null) {
+      if (markdownMatch[1] && markdownMatch[1].trim()) {
+        results.push(markdownMatch[1].trim());
+      }
+    }
+    
+    // Second try: look for standalone JSON objects
+    const jsonRegex = /{(?:[^{}]|{(?:[^{}]|{[^{}]*})*})*}/g;
+    let jsonMatch;
+    while ((jsonMatch = jsonRegex.exec(text)) !== null) {
+      if (jsonMatch[0] && jsonMatch[0].trim()) {
+        results.push(jsonMatch[0].trim());
+      }
+    }
+    
+    return results;
+  }
+  
+  /**
+   * Parse a response as a calendar event
+   * @param {string} text - Text containing calendar event info
+   * @returns {Object} Calendar event data
+   */
+  static parseCalendarEvent(text) {
+    // Try to extract JSON first - most reliable if properly formatted
+    try {
+      const jsonMatches = this.extractJsonObjects(text);
+      if (jsonMatches && jsonMatches.length > 0) {
+        for (const jsonStr of jsonMatches) {
+          try {
+            const eventData = JSON.parse(jsonStr);
+            
+            // If we have a parsable JSON with the expected properties, use it
+            if (eventData.title && (eventData.date || eventData.dateTime)) {
+              console.log("✅ Successfully parsed event JSON:", eventData);
+              
+              // Convert ISO date string to Date object if needed
+              let eventDate;
+              try {
+                // If we have both date and time
+                if (eventData.date && eventData.time) {
+                  eventDate = new Date(`${eventData.date}T${eventData.time}`);
+                } 
+                // If we only have date
+                else if (eventData.date) {
+                  eventDate = new Date(`${eventData.date}T12:00:00`); // Default to noon
+                }
+                // If we have dateTime ISO string 
+                else if (eventData.dateTime) {
+                  eventDate = new Date(eventData.dateTime);
+                } else {
+                  eventDate = new Date();
+                }
+                
+                if (isNaN(eventDate.getTime())) {
+                  console.warn("⚠️ Invalid date from JSON, using current date");
+                  eventDate = new Date();
+                }
+              } catch (dateError) {
+                console.warn("⚠️ Error parsing date from JSON:", dateError);
+                eventDate = new Date();
+              }
+              
+              // Ensure event has all required fields for the calendar
+              const enhancedEvent = {
+                ...eventData,
+                dateTime: eventDate.toISOString(),
+                date: eventData.date || eventDate.toISOString().split('T')[0], // Keep original ISO date or create one
+                time: eventData.time || eventDate.toLocaleTimeString(),
+                isCalendarEvent: true,
+                parsed: true,
+                // Critical: ensure we have both start and end properties for the calendar
+                start: {
+                  dateTime: eventDate.toISOString(),
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                },
+                end: {
+                  dateTime: new Date(eventDate.getTime() + 60 * 60 * 1000).toISOString(), // 1 hour later
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                }
+              };
+              
+              return enhancedEvent;
+            }
+          } catch (jsonError) {
+            console.warn("⚠️ Error parsing JSON object:", jsonError);
+          }
+        }
+      }
+    } catch (jsonError) {
+      console.warn("⚠️ Failed to parse JSON from event text:", jsonError);
+    }
+    
+    // If JSON parsing failed, fall back to regex-based parsing
+    console.log("Falling back to regex-based event parsing");
+    
+    // Define enhanced date/time patterns
+    const isoDatePattern = /(\d{4}-\d{2}-\d{2})/; // YYYY-MM-DD
+    const usDatePattern = /(\d{1,2}\/\d{1,2}\/\d{4})/; // MM/DD/YYYY
+    const namedDatePattern = /\b(today|tomorrow|next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/i;
+    const timePattern = /(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?|\d{1,2}\s*(?:AM|PM))/i;
+    
+    // Extract event title - look for explicit title or extract appointment type
+    const titleMatches = 
+      text.match(/title[\s:]+"([^"]+)"|title[\s:]+([^,\.\n]+)/i) ||
+      text.match(/(?:event|appointment|meeting)[\s:]+"([^"]+)"|(?:event|appointment|meeting)[\s:]+([^,\.\n]+)/i) ||
+      text.match(/(?:schedule|book|add)[\s:]+(?:a|an)?\s+([^,\.\n]+?)(?:\s+on|\s+for|\s+at|\.)/i);
+    
+    const title = titleMatches ? (titleMatches[1] || titleMatches[2] || titleMatches[3]).trim() : "New Event";
+    
+    // Extract childName if present
+    const childMatches = 
+      text.match(/(?:for|with)\s+([A-Z][a-z]+)(?:'s|\s|,|\.)/i) || 
+      text.match(/([A-Z][a-z]+)'s\s+(?:appointment|event|meeting)/i);
+    const childName = childMatches ? childMatches[1].trim() : null;
+    
+    // Extract date - try ISO format first, then US format, then named dates
+    let dateStr = new Date().toISOString().split('T')[0]; // Default to today ISO format
+    let eventDate = new Date();
+    
+    // Try to extract ISO date (YYYY-MM-DD)
+    const isoDateMatches = text.match(isoDatePattern);
+    if (isoDateMatches) {
+      dateStr = isoDateMatches[0];
+      eventDate = new Date(dateStr + 'T12:00:00'); // Default to noon
+    } 
+    // Try US date format (MM/DD/YYYY)
+    else {
+      const usDateMatches = text.match(usDatePattern);
+      if (usDateMatches) {
+        const parts = usDateMatches[0].split('/');
+        // Ensure we have valid parts and properly handle MM/DD/YYYY format
+        if (parts.length === 3) {
+          const month = parseInt(parts[0], 10);
+          const day = parseInt(parts[1], 10);
+          const year = parseInt(parts[2], 10);
+          
+          if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            // Format as ISO date
+            dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            eventDate = new Date(dateStr + 'T12:00:00');
+          }
+        }
+      }
+      // Try named dates like "tomorrow"
+      else {
+        const namedDateMatches = text.match(namedDatePattern);
+        if (namedDateMatches) {
+          const namedDate = namedDateMatches[0].toLowerCase();
+          
+          if (namedDate.includes('today')) {
+            // Use today's date (already default)
+          } 
+          else if (namedDate.includes('tomorrow')) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            dateStr = tomorrow.toISOString().split('T')[0];
+            eventDate = tomorrow;
+          }
+          else if (namedDate.includes('next')) {
+            // Handle "next Monday", etc.
+            const dayMatch = namedDate.match(/next\s+(\w+)/i);
+            if (dayMatch && dayMatch[1]) {
+              const dayOfWeek = dayMatch[1].toLowerCase();
+              const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+              const targetDay = daysOfWeek.indexOf(dayOfWeek);
+              
+              if (targetDay !== -1) {
+                const next = new Date();
+                const currentDay = next.getDay();
+                const daysUntilNext = (targetDay - currentDay + 7) % 7;
+                next.setDate(next.getDate() + (daysUntilNext === 0 ? 7 : daysUntilNext));
+                dateStr = next.toISOString().split('T')[0];
+                eventDate = next;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Extract time
+    const timeMatches = text.match(timePattern);
+    let timeStr = null;
+    
+    if (timeMatches) {
+      timeStr = timeMatches[0];
+      
+      // Try to normalize time to 24-hour format
+      if (timeStr.match(/\d{1,2}\s*(?:AM|PM)/i)) {
+        // Handle cases like "3 PM"
+        const timeParts = timeStr.match(/(\d{1,2})\s*(AM|PM)/i);
+        if (timeParts) {
+          let hour = parseInt(timeParts[1], 10);
+          const meridiem = timeParts[2].toUpperCase();
+          
+          // Convert to 24-hour
+          if (meridiem === 'PM' && hour < 12) hour += 12;
+          if (meridiem === 'AM' && hour === 12) hour = 0;
+          
+          timeStr = `${hour.toString().padStart(2, '0')}:00`;
+          
+          // Update the event date with the correct time
+          eventDate.setHours(hour, 0, 0, 0);
+        }
+      } else if (timeStr.match(/\d{1,2}:\d{2}/)) {
+        // Handle cases like "15:30"
+        const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+        if (timeParts) {
+          const hour = parseInt(timeParts[1], 10);
+          const minute = parseInt(timeParts[2], 10);
+          
+          // Update the event date with the correct time
+          eventDate.setHours(hour, minute, 0, 0);
+        }
+      }
+    }
+    
+    // Get event type based on title
+    let eventType = 'event';
+    if (title.toLowerCase().includes('dentist') || title.toLowerCase().includes('doctor') || 
+        title.toLowerCase().includes('medical') || title.toLowerCase().includes('appointment')) {
+      eventType = 'appointment';
+    } else if (title.toLowerCase().includes('practice') || title.toLowerCase().includes('game') ||
+               title.toLowerCase().includes('soccer') || title.toLowerCase().includes('baseball')) {
+      eventType = 'sport';
+    }
+    
+    // Calculate end time (1 hour later)
+    const endDate = new Date(eventDate);
+    endDate.setHours(endDate.getHours() + 1);
+    
+    // Build the final response with complete calendar properties
+    const result = {
+      title,
+      dateTime: eventDate.toISOString(),
+      endDateTime: endDate.toISOString(),
+      date: dateStr,
+      time: timeStr || eventDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      isCalendarEvent: true,
+      eventType,
+      category: eventType,
+      parsed: true,
+      start: {
+        dateTime: eventDate.toISOString(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      },
+      end: {
+        dateTime: endDate.toISOString(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      }
+    };
+    
+    // Add optional properties if available
+    if (childName) result.childName = childName;
+    
+    console.log("✅ Extracted event details:", result);
+    return result;
+  }
+  
+  /**
+   * Parse a response as a task
+   * @param {string} text - Text containing task info
+   * @returns {Object} Task data
+   */
+  static parseTaskInfo(text) {
+    // Extract task title
+    const titleMatches = text.match(/task[\s:]+"([^"]+)"|task[\s:]+([^,\.\n]+)/i);
+    const title = titleMatches ? (titleMatches[1] || titleMatches[2]).trim() : text.split('\n')[0].trim();
+    
+    // Look for assignee
+    const assigneeMatches = text.match(/(?:assigned to|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
+    const assignedToName = assigneeMatches ? assigneeMatches[1].trim() : null;
+    
+    // Look for due date
+    const dueDateMatches = text.match(/due\s+(?:on|by)?\s+(\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4})/i);
+    const dueDate = dueDateMatches ? new Date(dueDateMatches[1]).toISOString() : null;
+    
+    return {
+      title,
+      description: text,
+      assignedToName,
+      dueDate,
+      isTask: true,
+      parsed: true
+    };
+  }
+  
+  /**
+   * Parse a response as provider information
+   * @param {string} text - Text containing provider info
+   * @returns {Object} Provider data
+   */
+  static parseProviderInfo(text) {
+    // Extract provider name
+    const nameMatches = text.match(/name[\s:]+"([^"]+)"|name[\s:]+([^,\.\n]+)/i);
+    const name = nameMatches ? (nameMatches[1] || nameMatches[2]).trim() : null;
+    
+    // Extract provider type
+    const typeMatches = text.match(/type[\s:]+"([^"]+)"|type[\s:]+([^,\.\n]+)/i) || 
+                        text.match(/(doctor|coach|teacher|trainer|therapist|specialist)/i);
+    const type = typeMatches ? (typeMatches[1] || typeMatches[2] || typeMatches[0]).trim().toLowerCase() : 'provider';
+    
+    // Extract contact info
+    const emailMatches = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
+    const email = emailMatches ? emailMatches[0] : null;
+    
+    const phoneMatches = text.match(/\b(?:\+?1[-\s]?)?(?:\(?\d{3}\)?[-\s]?)?\d{3}[-\s]?\d{4}\b/);
+    const phone = phoneMatches ? phoneMatches[0] : null;
+    
+    // Extract child relation
+    const childMatches = text.match(/(?:for|to)\s+([A-Z][a-z]+)'s/i) || 
+                        text.match(/(?:for|to)\s+([A-Z][a-z]+)(?:\s|,|\.)/i);
+    const childName = childMatches ? childMatches[1] : null;
+    
+    return {
+      name,
+      type,
+      email,
+      phone,
+      childName,
+      forChild: childName,
+      isProvider: true,
+      parsed: true
+    };
+  }
+  
+  /**
+   * Detect whether a response contains calendar event information
+   * @param {string} text - Response text
+   * @returns {boolean} True if text appears to describe a calendar event
+   */
+  static containsCalendarEvent(text) {
+    if (!text) return false;
+    
+    const lowerText = text.toLowerCase();
+    
+    // Check for event indicators
+    const hasEventKeywords = lowerText.includes('event') || 
+                            lowerText.includes('appointment') || 
+                            lowerText.includes('schedule') || 
+                            lowerText.includes('calendar');
+                            
+    // Check for date indicators
+    const hasDatePatterns = /\b(\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{4})\b/i.test(lowerText) || 
+                          /\b(tomorrow|today|next week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(lowerText);
+                          
+    // Check for time indicators
+    const hasTimePatterns = /\b(\d{1,2}:\d{2}(?::\d{2})?\s*(?:am|pm)?)\b/i.test(lowerText);
+    
+    // Only return true if we have both event keywords and time/date indicators
+    return hasEventKeywords && (hasDatePatterns || hasTimePatterns);
+  }
+  
+  /**
+   * Detect whether a response contains task information
+   * @param {string} text - Response text
+   * @returns {boolean} True if text appears to describe a task
+   */
+  static containsTaskInfo(text) {
+    if (!text) return false;
+    
+    const lowerText = text.toLowerCase();
+    
+    // Check for task indicators that are very unlikely to be calendar events
+    return (lowerText.includes('task') || lowerText.includes('todo') || lowerText.includes('to-do')) && 
+           (lowerText.includes('assigned') || 
+            lowerText.includes('complete') || 
+            lowerText.includes('done') || 
+            lowerText.includes('pending'));
+  }
+  
+  /**
+   * Extract entity from Claude response
+   * @param {string} text - Claude's response text
+   * @param {string} entityType - Type of entity to extract (event, task, provider, etc.)
+   * @returns {Object} Extracted entity data
+   */
+  static extractEntity(text, entityType) {
+    console.log(`🔍 Extracting ${entityType} from response:`, text.substring(0, 100) + (text.length > 100 ? '...' : ''));
+    
+    // Always try to extract JSON first (most reliable method)
+    try {
+      // Try to find and parse JSON in the response using more robust pattern matching
+      const jsonMatches = this.extractJsonObjects(text);
+      
+      if (jsonMatches && jsonMatches.length > 0) {
+        // Try each match, starting with the longest/most complex one
+        // Sort matches by length (most complete JSON object likely to be longest)
+        const sortedMatches = [...jsonMatches].sort((a, b) => b.length - a.length);
+        
+        for (const match of sortedMatches) {
+          try {
+            const parsedEntity = JSON.parse(match);
+            
+            // Validate that we have a proper entity based on type
+            if (this.validateEntity(parsedEntity, entityType)) {
+              console.log(`✅ Successfully extracted ${entityType} from JSON:`, parsedEntity);
+              
+              // Post-process based on entity type
+              switch (entityType) {
+                case 'event':
+                  return this.enhanceEventEntity(parsedEntity);
+                default:
+                  return parsedEntity;
+              }
+            }
+          } catch (innerError) {
+            console.log(`Failed to parse JSON match: ${match.substring(0, 50)}... Error:`, innerError.message);
+            // Continue to next match
+          }
+        }
+        
+        // If all matches fail, try the largest one as a last resort
+        try {
+          const largestMatch = sortedMatches[0];
+          const parsedEntity = JSON.parse(largestMatch);
+          console.log(`⚠️ Using best-effort JSON parsing:`, parsedEntity);
+          
+          // Post-process even though validation failed
+          switch (entityType) {
+            case 'event':
+              return this.enhanceEventEntity(parsedEntity);
+            default:
+              return parsedEntity;
+          }
+        } catch (lastResortError) {
+          console.warn(`❌ All JSON parsing attempts failed`);
+        }
+      }
+    } catch (error) {
+      console.error("Error in JSON extraction:", error);
+    }
+    
+    // Fallback to entity-specific parsing
+    console.log(`🔄 Falling back to special ${entityType} parser`);
+    
+    switch (entityType) {
+      case 'event':
+        return this.parseCalendarEvent(text);
+      case 'task':
+        return this.parseTaskInfo(text);
+      case 'provider':
+        return this.parseProviderInfo(text);
+      default:
+        return { text, parsed: false };
+    }
+  }
+  
+  /**
+   * Validate extracted entity based on type
+   * @param {Object} entity - Extracted entity data 
+   * @param {string} entityType - Type of entity (event, task, provider)
+   * @returns {boolean} True if entity is valid for its type
+   */
+  static validateEntity(entity, entityType) {
+    if (!entity || typeof entity !== 'object') return false;
+    
+    switch (entityType) {
+      case 'event':
+        // At minimum, events need title and date
+        return (
+          entity.title && 
+          (entity.date || entity.dateTime || entity.startDate)
+        );
+        
+      case 'task':
+        // Tasks need at least a title
+        return !!entity.title;
+        
+      case 'provider':
+        // Providers need at least a name and type
+        return (entity.name && (entity.type || entity.providerType));
+        
+      default:
+        // For unknown types, accept anything that's not empty
+        return Object.keys(entity).length > 0;
+    }
+  }
+  
+  /**
+   * Enhance event entity with standardized fields
+   * @param {Object} event - Raw event data
+   * @returns {Object} Enhanced event with standardized fields
+   */
+  static enhanceEventEntity(event) {
+    // Create a new object with all original properties
+    const enhancedEvent = { ...event };
+    
+    // Ensure we have proper ISO date
+    if (event.date) {
+      // Try to detect if date is already in ISO format (YYYY-MM-DD)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(event.date)) {
+        // Try to convert from MM/DD/YYYY format
+        const dateMatches = event.date.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (dateMatches) {
+          const month = parseInt(dateMatches[1], 10).toString().padStart(2, '0');
+          const day = parseInt(dateMatches[2], 10).toString().padStart(2, '0');
+          const year = dateMatches[3];
+          enhancedEvent.date = `${year}-${month}-${day}`;
+        }
+      }
+      
+      // Create a proper dateTime field if we have both date and time
+      if (event.date && event.time) {
+        try {
+          const dateObj = new Date(`${event.date}T${event.time}`);
+          if (!isNaN(dateObj.getTime())) {
+            enhancedEvent.dateTime = dateObj.toISOString();
+          }
+        } catch (dateError) {
+          console.warn("⚠️ Error creating dateTime:", dateError);
+        }
+      } 
+      else if (event.date) {
+        // Create dateTime with default time (noon)
+        try {
+          const dateObj = new Date(`${event.date}T12:00:00`);
+          if (!isNaN(dateObj.getTime())) {
+            enhancedEvent.dateTime = dateObj.toISOString();
+          }
+        } catch (dateError) {
+          console.warn("⚠️ Error creating dateTime with default time:", dateError);
+        }
+      }
+    }
+    
+    // Create end date and time (1 hour after start)
+    if (enhancedEvent.dateTime) {
+      const endDate = new Date(enhancedEvent.dateTime);
+      endDate.setHours(endDate.getHours() + 1);
+      enhancedEvent.endDateTime = endDate.toISOString();
+      
+      // CRITICAL: Add Google Calendar format properties
+      enhancedEvent.start = {
+        dateTime: enhancedEvent.dateTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      };
+      
+      enhancedEvent.end = {
+        dateTime: enhancedEvent.endDateTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      };
+    }
+    
+    // Ensure we have a standardized eventType 
+    if (!enhancedEvent.eventType && enhancedEvent.title) {
+      const title = enhancedEvent.title.toLowerCase();
+      
+      if (title.includes('dentist') || title.includes('doctor') || title.includes('medical') || 
+          title.includes('appointment') || title.includes('visit')) {
+        enhancedEvent.eventType = 'appointment';
+      } else if (title.includes('practice') || title.includes('game') || 
+                 title.includes('soccer') || title.includes('sports')) {
+        enhancedEvent.eventType = 'sport';
+      } else if (title.includes('school') || title.includes('class') || 
+                 title.includes('lesson')) {
+        enhancedEvent.eventType = 'school';
+      } else {
+        enhancedEvent.eventType = 'general';
+      }
+    }
+    
+    // Make sure we have a category (default to eventType if missing)
+    if (!enhancedEvent.category && enhancedEvent.eventType) {
+      enhancedEvent.category = enhancedEvent.eventType;
+    }
+    
+    // Add isCalendarEvent flag and parsed flag
+    enhancedEvent.isCalendarEvent = true;
+    enhancedEvent.parsed = true;
+    
+    console.log(`✅ Enhanced event data:`, enhancedEvent);
+    return enhancedEvent;
+  }
+}
+
+export default ClaudeResponseParser;

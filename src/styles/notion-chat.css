@@ -1,0 +1,45 @@
+/* Notion-style chat panel CSS */
+
+/* When chat is open, ensure content doesn't shift */
+body.allie-chat-open .app-container {
+  padding-right: 0; /* Don't add padding to avoid content shifting */
+}
+
+/* Make sure the content stays in place */
+body.allie-chat-open main,
+body.allie-chat-open .main-content,
+body.allie-chat-open .flex-1 {
+  margin-right: 0;
+  transform: none;
+  width: auto;
+}
+
+/* Chat button styling for top navigation */
+.chat-toggle-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background-color: white;
+  color: #37352F;
+  border: 1px solid #E0E0E0;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.chat-toggle-button:hover {
+  background-color: #F7F7F7;
+}
+
+/* Remove any floating buttons */
+.chat-toggle-button.floating {
+  display: none;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  /* Full width panel on mobile */
+  body.allie-chat-open .chat-panel {
+    width: 100%;
+  }
+}

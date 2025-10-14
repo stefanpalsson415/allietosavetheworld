@@ -1,0 +1,46 @@
+Starting global test setup...
+Test environment: development
+Test URL: http://localhost:3000
+Global setup complete. Tests ready to run.
+
+Running 4 tests using 1 worker
+
+✅ Authentication state saved!
+⚠️ May not be fully logged in, current URL: http://localhost:3000/
+  ✓  1 [chromium] › tests/auth-setup.spec.js:7:3 › Authentication Setup › Login and save authentication state (2.4s)
+
+🏠 HOME PAGE CONTENT AUDIT:
+==================================================
+
+Found 3 headings:
+  H1: "Allie"
+  H2: "Log In"
+  H3: "Chat with Allie"
+
+Found 6 buttons:
+  - "Email Code"
+  - "Password"
+  - "Log In"
+  - "Forgot Password?"
+  - "Create New Family"
+
+Checking for key sections:
+  "Family Overview": ❌ Not found
+  "Weekly Progress": ❌ Not found
+  "trust": ❌ Not found
+  "transparency": ❌ Not found
+  "Allie": ✅ Found
+  "Chat": ✅ Found
+
+📸 Full page screenshot saved to: test-results/home-page-full.png
+  ✓  2 [chromium] › tests/dashboard-feature-check.spec.js:24:3 › Dashboard Feature Verification › Check what's on the Home page (4.0s)
+
+🔍 DEEP CONTENT CHECK:
+  ✓  3 [chromium] › tests/dashboard-feature-check.spec.js:74:3 › Dashboard Feature Verification › Check PersonalizedHomePage component (5.7s)
+Current URL: http://localhost:3000/
+✅ Authentication state saved!
+✅ Debug auth info saved
+⚠️ Final URL is not dashboard: http://localhost:3000/
+  ✓  4 [chromium] › tests/improved-auth-setup.spec.js:7:3 › Improved Authentication Setup › Login with automatic family selection (3.4s)
+
+  4 passed (17.1s)

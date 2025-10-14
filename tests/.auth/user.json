@@ -1,0 +1,39 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "https://checkallie.com",
+      "localStorage": [
+        {
+          "name": "firebase:authUser:AIzaSyALjXkZiFZ_Fy143N_dzdaUbyDCtabBr7Y:[DEFAULT]",
+          "value": "{\"uid\":\"M424l8lIxWMI12N0XSz6I8HJRnD2\",\"email\":\"test@parentload.com\",\"emailVerified\":false,\"displayName\":\"Test User\",\"isAnonymous\":false,\"providerData\":[{\"providerId\":\"password\",\"uid\":\"test@parentload.com\",\"displayName\":\"Test User\",\"email\":\"test@parentload.com\",\"phoneNumber\":null,\"photoURL\":null}],\"stsTokenManager\":{\"refreshToken\":\"AMf-vBwtPIJUQj5Lu7V9_S_Swof7CZABwbQgch4F_fXjq7V_ft7KR7p7FNceJaWJJIeusmF66qhxhwRAVlbBVfgLM3uHCDGFf_EUbywJXSbAED-5ackfRJg3zBuz42n-y8Zn5nu2qe7HZJaMEcW0gT7pCQEDCWx_MXyP_lG0TEZBC6WTxLoNuu3CCCNkg1RHOxFbxJ7bTr2zSPeeRJLLlMUx015ET1djBWFnaLCzuSz3C0VN7GBrZeQ\",\"accessToken\":\"eyJhbGciOiJSUzI1NiIsImtpZCI6ImE1YTAwNWU5N2NiMWU0MjczMDBlNTJjZGQ1MGYwYjM2Y2Q4MDYyOWIiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiVGVzdCBVc2VyIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL3BhcmVudGxvYWQtYmE5OTUiLCJhdWQiOiJwYXJlbnRsb2FkLWJhOTk1IiwiYXV0aF90aW1lIjoxNzYwMTEyNTcxLCJ1c2VyX2lkIjoiTTQyNGw4bEl4V01JMTJOMFhTejZJOEhKUm5EMiIsInN1YiI6Ik00MjRsOGxJeFdNSTEyTjBYU3o2SThISlJuRDIiLCJpYXQiOjE3NjAxMTI1NzEsImV4cCI6MTc2MDExNjE3MSwiZW1haWwiOiJ0ZXN0QHBhcmVudGxvYWQuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbInRlc3RAcGFyZW50bG9hZC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.QnWdSQqCQTGGLOoQ-umf13Bg4nthUyzqOF9NezxUBxzKmudfhSh0sF8Pk9l0D4s2M8SRNhIDislCwPz1S2OtmVvPa-sAMp2gc96jVdY_1U2_P8TL4nUHhR9Oes2KiuLHe7fu2VHHKetdTUkr8AkI-Kk5Xom-yN-9dH0722PMo2ERUbDEHPCekpnY3qOkdrLHd76LikcztFTJmKIUAx61xivyNLapR5tZRfZjXSWRFau__8J_OB-hm52lDnfObJwKRc0D-EWhxcIzJMBi4aXwDqnXfqNcNZZfkEWgVun9vOhF717-bBr-YdXm1oOmROSs0chfXdF-sDXjWrtvbkGQYg\",\"expirationTime\":1760116171390},\"createdAt\":\"1760110851037\",\"lastLoginAt\":\"1760112571325\",\"apiKey\":\"AIzaSyALjXkZiFZ_Fy143N_dzdaUbyDCtabBr7Y\",\"appName\":\"[DEFAULT]\"}"
+        },
+        {
+          "name": "allie_product_images_cache",
+          "value": "{}"
+        }
+      ]
+    },
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "selectedUserId",
+          "value": "zJ70Yc4bgkea71ztUneHfjyOuYk2"
+        },
+        {
+          "name": "tempOtp",
+          "value": "274521"
+        },
+        {
+          "name": "onboardingChecklist_mcq5374e2bkcnx9z1lo",
+          "value": "[\"survey-zJ70Yc4bgkea71ztUneHfjyOuYk2\",\"survey-G4BOHma0eWM1UxIGaEQ5z6wlCJo1\",\"survey-lillian-mcq5374e2bkcnx9z1lo\",\"survey-oly-mcq5374e2bkcnx9z1lo\",\"survey-tegner-mcq5374e2bkcnx9z1lo\",\"add-family-photos\"]"
+        },
+        {
+          "name": "allie_product_images_cache",
+          "value": "{}"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+// Firestore Security Rules for New Survey System
+// Add these rules to your existing firestore.rules file
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Survey Responses Collection
+    // Pattern: /surveyResponses/{familyId}_{memberId}_{surveyType}_{timestamp}
+    match /surveyResponses/{docId} {
+      // Helper function to extract familyId from document ID
+      function getFamilyIdFromDoc() {
+        return docId.split('_')[0];
+      }
+      
+      // Helper function to extract memberId from document ID
+      function getMemberIdFromDoc() {
+        return docId.split('_')[1];
+      }
+      
+      // Allow read if user is part of the family
+      allow read: if request.auth != null && 
+        (request.auth.token.familyId == getFamilyIdFromDoc() ||
+         request.auth.token.familyId == resource.data.familyId);
+      
+      // Allow create if:
+      // 1. User is authenticated
+      // 2. Creating their own survey or has family admin role
+      // 3. Status is not 'completed' on creation
+      allow create: if request.auth != null && 
+        (request.auth.uid == getMemberIdFromDoc() || 
+         request.auth.token.role == 'admin') &&
+        request.resource.data.status in ['draft', 'in_progress'] &&
+        request.resource.data.familyId == request.auth.token.familyId;
+      
+      // Allow update if:
+      // 1. User owns the survey
+      // 2. Cannot change completed surveys (except to mark as completed)
+      // 3. Cannot change familyId or memberId
+      allow update: if request.auth != null && 
+        request.auth.uid == resource.data.memberId &&
+        request.resource.data.familyId == resource.data.familyId &&
+        request.resource.data.memberId == resource.data.memberId &&
+        (resource.data.status != 'completed' || 
+         (resource.data.status == 'in_progress' && request.resource.data.status == 'completed'));
+      
+      // No delete allowed - surveys are permanent records
+      allow delete: if false;
+    }
+    
+    // Survey Checkpoints Collection
+    // Pattern: /surveyCheckpoints/{familyId}_{memberId}
+    match /surveyCheckpoints/{checkpointId} {
+      // Extract memberId from checkpoint ID
+      function getMemberIdFromCheckpoint() {
+        return checkpointId.split('_')[1];
+      }
+      
+      // Only the member can read/write their own checkpoint
+      allow read, write: if request.auth != null && 
+        request.auth.uid == getMemberIdFromCheckpoint();
+      
+      // Allow delete for cleanup
+      allow delete: if request.auth != null && 
+        request.auth.uid == getMemberIdFromCheckpoint();
+    }
+    
+    // Survey Aggregates Collection
+    // Pattern: /surveyAggregates/{surveyType}_{familyId}
+    match /surveyAggregates/{aggregateId} {
+      // Extract familyId from aggregate ID
+      function getFamilyIdFromAggregate() {
+        return aggregateId.split('_')[1];
+      }
+      
+      // Any family member can read aggregates
+      allow read: if request.auth != null && 
+        request.auth.token.familyId == getFamilyIdFromAggregate();
+      
+      // Only cloud functions should write aggregates directly
+      // But allow family members to update their own status
+      allow update: if request.auth != null && 
+        request.auth.token.familyId == getFamilyIdFromAggregate() &&
+        // Only allow updating own member status
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberStatus', 'lastUpdated']) &&
+        // Ensure only updating own member data
+        request.resource.data.memberStatus[request.auth.uid] != null;
+      
+      // Allow create if doesn't exist (initialization)
+      allow create: if request.auth != null && 
+        request.auth.token.familyId == getFamilyIdFromAggregate();
+      
+      // No delete allowed
+      allow delete: if false;
+    }
+    
+    // Existing rules for other collections remain unchanged...
+    
+    // Helper function to check if user is in a family
+    function isInFamily(familyId) {
+      return request.auth != null && 
+        (request.auth.token.familyId == familyId ||
+         exists(/databases/$(database)/documents/families/$(familyId)) &&
+         get(/databases/$(database)/documents/families/$(familyId)).data.members[request.auth.uid] != null);
+    }
+    
+    // Helper function to check if user has completed initial survey
+    function hasCompletedInitialSurvey(familyId, userId) {
+      return exists(/databases/$(database)/documents/families/$(familyId)) &&
+        get(/databases/$(database)/documents/families/$(familyId)).data.members[userId].surveys.initial.completed == true;
+    }
+  }
+}

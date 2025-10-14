@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Conversation Test | Allie</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <!-- React and ReactDOM from CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script type="module">
+    // This will load the test component directly without going through App.js routing
+    import SimpleConversationTest from '/static/js/components/testing/SimpleConversationTest.jsx';
+
+    const { createRoot } = ReactDOM;
+    const root = createRoot(document.getElementById('root'));
+    root.render(React.createElement(SimpleConversationTest));
+  </script>
+
+  <noscript>
+    <div class="min-h-screen flex items-center justify-center">
+      <div class="text-center p-8">
+        <h1 class="text-2xl font-bold mb-4">JavaScript Required</h1>
+        <p>Please enable JavaScript to use this test page.</p>
+      </div>
+    </div>
+  </noscript>
+</body>
+</html>

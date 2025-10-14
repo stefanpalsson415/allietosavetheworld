@@ -1,0 +1,1628 @@
+{
+  "timestamp": "2025-06-23T08:04:58.905Z",
+  "serviceUsage": {
+    "EventStore": {
+      "replacement": "CalendarServiceV2",
+      "files": [
+        {
+          "path": "src/apply-event-loop-fix.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/components/calendar-v2/core/CalendarProvider.js",
+          "methods": [
+            "getEventsForUser"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "methods": [
+            "eventCache"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/components/chat/EventCreationForm.jsx",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/components/dashboard/tabs/TasksTab.jsx",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/components/inbox/UnifiedInbox.jsx",
+          "methods": [
+            "eventCache",
+            "getEventById"
+          ],
+          "lineCount": 15
+        },
+        {
+          "path": "src/components/kanban/AIKanbanBoard.jsx",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/components/kanban/TaskDetailModal.jsx",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/contexts/NewEventContext.js",
+          "methods": [
+            "getEventsForUser",
+            "addEvent",
+            "updateEvent",
+            "deleteEvent",
+            "subscribe"
+          ],
+          "lineCount": 8
+        },
+        {
+          "path": "src/contexts/UnifiedEventContext.js",
+          "methods": [],
+          "lineCount": 6
+        },
+        {
+          "path": "src/debug-allie-appointments.js",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/event-loop-guard-enhanced.js",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/hooks/useEvent.fixed.js",
+          "methods": [
+            "fixed"
+          ],
+          "lineCount": 1
+        },
+        {
+          "path": "src/hooks/useEvent.js",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/services/CalendarService.js",
+          "methods": [],
+          "lineCount": 5
+        },
+        {
+          "path": "src/services/DocumentProcessingService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 2
+        },
+        {
+          "path": "src/services/EnhancedCalendarService.js",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/services/EntityManagementService.js",
+          "methods": [],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/EventRelationshipGraph.js",
+          "methods": [
+            "getEventById",
+            "getEventsForDateRange"
+          ],
+          "lineCount": 13
+        },
+        {
+          "path": "src/services/EventStore-fixed.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/services/EventStore.fixed.js",
+          "methods": [
+            "fixed"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/EventStore.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 15
+        },
+        {
+          "path": "src/services/HabitDJService.js",
+          "methods": [
+            "getEventsForUser"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/ImprovedEventStore.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/services/ProactiveAlertSystem.js",
+          "methods": [
+            "getEvents"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/services/ProactiveAlertSystem.test.js",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/services/QuantumIntegrationService.js",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/services/QuantumKnowledgeGraph.js",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/services/RelatedEventDetector.js",
+          "methods": [
+            "getEvents"
+          ],
+          "lineCount": 8
+        },
+        {
+          "path": "src/services/UnifiedEventService.js",
+          "methods": [],
+          "lineCount": 10
+        },
+        {
+          "path": "src/use-fixed-event-store.js",
+          "methods": [
+            "fixed"
+          ],
+          "lineCount": 10
+        }
+      ]
+    },
+    "CalendarService": {
+      "replacement": "CalendarServiceV2",
+      "files": [
+        {
+          "path": "src/components/assessment/CoupleCheckInScreen.jsx",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/components/calendar-v2/core/CalendarProvider.js",
+          "methods": [
+            "subscribeToEvents",
+            "getEvents",
+            "createEvent",
+            "updateEvent",
+            "deleteEvent"
+          ],
+          "lineCount": 18
+        },
+        {
+          "path": "src/components/calendar/AdvancedCalendarDemo.jsx",
+          "methods": [
+            "createRecurringSeries",
+            "baseService"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/components/calendar/CalendarIntegrationButton.jsx",
+          "methods": [
+            "loadUserCalendarSettings",
+            "createEventFromTask",
+            "createFamilyMeetingEvent",
+            "createTaskReminderEvent",
+            "addEvent",
+            "saveUserCalendarSettings",
+            "appleCalendarAvailable"
+          ],
+          "lineCount": 16
+        },
+        {
+          "path": "src/components/calendar/EnhancedEventManager.jsx",
+          "methods": [
+            "updateEvent",
+            "createEvent"
+          ],
+          "lineCount": 8
+        },
+        {
+          "path": "src/components/calendar/LocationAwareScheduler.jsx",
+          "methods": [
+            "detectSchedulingConflicts",
+            "baseService",
+            "calculateTravelTime"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/components/calendar/MergedEventParser.jsx",
+          "methods": [
+            "getEventsForUser",
+            "addEvent"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/components/calendar/RevisedFloatingCalendarWidget.jsx",
+          "methods": [
+            "showNotification",
+            "createEventFromTask",
+            "createFamilyMeetingEvent"
+          ],
+          "lineCount": 29
+        },
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "methods": [
+            "getEventById",
+            "updateEvent",
+            "addEvent",
+            "deleteEvent",
+            "createEvent"
+          ],
+          "lineCount": 15
+        },
+        {
+          "path": "src/components/dashboard/CalendarDashboardWidget.jsx",
+          "methods": [
+            "createEventFromTask",
+            "addEvent",
+            "showNotification",
+            "createFamilyMeetingEvent"
+          ],
+          "lineCount": 10
+        },
+        {
+          "path": "src/components/dashboard/tabs/EnhancedTasksTab.jsx",
+          "methods": [
+            "getEventsForUser",
+            "updateEvent",
+            "addEvent"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/components/dashboard/tabs/RelationshipTab.jsx",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/components/dashboard/tabs/TasksTab.jsx",
+          "methods": [
+            "getEventsForUser",
+            "deleteEvent"
+          ],
+          "lineCount": 9
+        },
+        {
+          "path": "src/components/documents/FamilyDocumentHub.jsx",
+          "methods": [
+            "createEvent"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/components/inbox/UnifiedInbox.jsx",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/components/kanban/AIKanbanBoard.jsx",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/components/kanban/FamilyKanbanBoard.jsx",
+          "methods": [
+            "deleteEvent",
+            "addEvent",
+            "updateEvent"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/components/meeting/FamilyMeetingScreen.jsx",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/components/meeting/RelationshipMeetingScreen.jsx",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/components/user/UserSettingsScreen.jsx",
+          "methods": [
+            "loadUserCalendarSettings",
+            "saveUserCalendarSettings"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/contexts/ChoreContext.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/contexts/FamilyContext.js",
+          "methods": [
+            "addEvent",
+            "getEvent",
+            "updateEvent"
+          ],
+          "lineCount": 7
+        },
+        {
+          "path": "src/contexts/UnifiedEventContext.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 11
+        },
+        {
+          "path": "src/services/ActivityManager.js",
+          "methods": [
+            "createEvent",
+            "deleteEvent"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/services/AllieAIService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 7
+        },
+        {
+          "path": "src/services/CalendarIntegrationService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 8
+        },
+        {
+          "path": "src/services/CalendarService.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/ChildTrackingService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/services/ChoreService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/ClaudeDirectService.js",
+          "methods": [
+            "getEventsForDateRange"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/ContextAwareSurveyEngine.js",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/services/DocumentProcessingService.js",
+          "methods": [
+            "createEvent"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/EmailIngestService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/services/EnhancedCalendarService.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 8
+        },
+        {
+          "path": "src/services/EntityManagementService.js",
+          "methods": [
+            "updateEvent"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/services/EventStore.js",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/services/HabitBankService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/services/HabitDJService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/services/HabitQuestService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/services/HabitService2.js",
+          "methods": [
+            "addEvent",
+            "getEventsForDate",
+            "updateEvent"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/services/HomeworkTracker.js",
+          "methods": [
+            "createEvent"
+          ],
+          "lineCount": 5
+        },
+        {
+          "path": "src/services/MasterCalendarService.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 10
+        },
+        {
+          "path": "src/services/MedicalChatService.js",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/services/MedicalEventHandler.js",
+          "methods": [
+            "createEvent",
+            "updateEvent",
+            "deleteEvent"
+          ],
+          "lineCount": 7
+        },
+        {
+          "path": "src/services/MultiModalLearningService.js",
+          "methods": [],
+          "lineCount": 1
+        },
+        {
+          "path": "src/services/ProactiveAlertSystem.js",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/services/ProactiveAlertSystem.test.js",
+          "methods": [],
+          "lineCount": 2
+        },
+        {
+          "path": "src/services/RelationshipCalendarIntegration.js",
+          "methods": [
+            "addEvent",
+            "getEventsForUser"
+          ],
+          "lineCount": 8
+        },
+        {
+          "path": "src/services/RelationshipChatService.js",
+          "methods": [
+            "addEvent"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/RewardService.js",
+          "methods": [
+            "addEvent",
+            "updateEvent"
+          ],
+          "lineCount": 8
+        },
+        {
+          "path": "src/services/SchoolEventHandler.js",
+          "methods": [
+            "createEvent"
+          ],
+          "lineCount": 3
+        }
+      ]
+    },
+    "MasterCalendarService": {
+      "replacement": "CalendarServiceV2",
+      "files": [
+        {
+          "path": "src/components/calendar-v2/core/CalendarProvider.js",
+          "methods": [
+            "subscribeToEvents",
+            "getEvents",
+            "createEvent",
+            "updateEvent",
+            "deleteEvent"
+          ],
+          "lineCount": 18
+        },
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "methods": [
+            "deleteEvent",
+            "createEvent"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/services/MasterCalendarService.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 8
+        }
+      ]
+    },
+    "HabitService2": {
+      "replacement": "HabitServiceV2",
+      "files": [
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "methods": [],
+          "lineCount": 3
+        },
+        {
+          "path": "src/components/chat/HabitSetupFlow.jsx",
+          "methods": [
+            "createHabit"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/components/habits/FamilyHabitsView.jsx",
+          "methods": [
+            "getFamilyHabits"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/components/habits/HabitCard2.jsx",
+          "methods": [
+            "completeHabit"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/components/habits/HabitHelperTab.jsx",
+          "methods": [
+            "getAvailableHabitsForHelper",
+            "claimHabitToHelp",
+            "releaseHabitClaim",
+            "completeHabit"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/services/HabitService2.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/QuantumIntegrationService.js",
+          "methods": [],
+          "lineCount": 2
+        }
+      ]
+    },
+    "HabitCyclesService": {
+      "replacement": "HabitServiceV2",
+      "files": [
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "methods": [
+            "createHabit"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/components/dashboard/tabs/RefreshedDashboardTab.jsx",
+          "methods": [
+            "addHabit"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/components/dashboard/tabs/TasksTab.jsx",
+          "methods": [
+            "getHabits",
+            "deleteHabit"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/components/dashboard/WorkloadRadarLayout.jsx",
+          "methods": [],
+          "lineCount": 3
+        },
+        {
+          "path": "src/components/habits/EnhancedHabitContainer.jsx",
+          "methods": [
+            "getHabits"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/hooks/useEnhancedHabitHelpers.js",
+          "methods": [
+            "getHabits",
+            "trackHabitCompletion",
+            "createHabit"
+          ],
+          "lineCount": 6
+        },
+        {
+          "path": "src/services/HabitBankService.js",
+          "methods": [
+            "getHabitById"
+          ],
+          "lineCount": 4
+        },
+        {
+          "path": "src/services/HabitCyclesService.js",
+          "methods": [
+            "js"
+          ],
+          "lineCount": 3
+        },
+        {
+          "path": "src/services/HabitQuestService.js",
+          "methods": [
+            "getHabitById"
+          ],
+          "lineCount": 3
+        }
+      ]
+    }
+  },
+  "collectionUsage": {
+    "calendar_events": {
+      "replacement": "events",
+      "files": [
+        {
+          "path": "src/check-calendar-data.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/fix-calendar-appointment.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/IntentActionService.js",
+          "occurrences": 1
+        }
+      ]
+    },
+    "familyDocuments": {
+      "replacement": "documents",
+      "files": [
+        {
+          "path": "src/components/calendar/DocumentSelector.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/dashboard/tabs/ChildrenTrackingTab-fixed.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/dashboard/tabs/ChildrenTrackingTab.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/dashboard/tabs/PowerfulKnowledgeGraphTab.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/document/DocumentLibrary.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/document/FamilyAllieDrive.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/documents/FamilyDocumentHub.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/inbox/FamilyInbox.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/inbox/UnifiedInbox.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/kanban/TaskDetailModal.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/services/DatabaseService.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/services/DocumentProcessingService.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/services/DocumentRetrievalService.js",
+          "occurrences": 8
+        },
+        {
+          "path": "src/services/EnhancedKnowledgeGraphService.js",
+          "occurrences": 1
+        }
+      ]
+    },
+    "documentInbox": {
+      "replacement": "documents",
+      "files": [
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "occurrences": 1
+        }
+      ]
+    },
+    "documentFolders": {
+      "replacement": "documents",
+      "files": [
+        {
+          "path": "src/components/document/DocumentLibrary.jsx",
+          "occurrences": 2
+        }
+      ]
+    },
+    "familyContacts": {
+      "replacement": "families",
+      "files": [
+        {
+          "path": "src/components/documents/FamilyDocumentHub.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/inbox/UnifiedInbox.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/DocumentProcessingService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/UniversalAIProcessor.js",
+          "occurrences": 1
+        }
+      ]
+    },
+    "familyMembers": {
+      "replacement": "families",
+      "files": [
+        {
+          "path": "src/fix-calendar-appointment.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/EmailIngestService.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/services/MedicalEventHandler.js",
+          "occurrences": 1
+        }
+      ]
+    },
+    "eventRelationships": {
+      "replacement": "events",
+      "files": [
+        {
+          "path": "src/services/EventRelationshipGraph.js",
+          "occurrences": 1
+        }
+      ]
+    },
+    "habitCycles": {
+      "replacement": "habits",
+      "files": [
+        {
+          "path": "src/services/HabitCyclesService.js",
+          "occurrences": 2
+        }
+      ]
+    },
+    "habitHelperFeedback": {
+      "replacement": "habits",
+      "files": [
+        {
+          "path": "src/services/SurveyKnowledgeGraphIntegration.js",
+          "occurrences": 1
+        }
+      ]
+    },
+    "familyProfiles": {
+      "replacement": "families",
+      "files": [
+        {
+          "path": "src/services/TaskSequenceManager.js",
+          "occurrences": 1
+        }
+      ]
+    },
+    "failedCalendarEvents": {
+      "replacement": "events",
+      "files": [
+        {
+          "path": "src/utils/CalendarRetryHelper.js",
+          "occurrences": 2
+        }
+      ]
+    }
+  },
+  "idPatternUsage": {
+    "firestoreId": {
+      "files": [
+        {
+          "path": "src/components/calendar-v2/core/CalendarProvider.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/calendar/EnhancedEventManager.jsx",
+          "occurrences": 9
+        },
+        {
+          "path": "src/components/calendar/GoogleStyleCalendarView.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/calendar/MergedEventParser.jsx",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/calendar/NewFloatingCalendarWidget.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/calendar/renderEventCard.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/calendar/RevisedFloatingCalendarWidget.jsx",
+          "occurrences": 39
+        },
+        {
+          "path": "src/components/calendar/SimpleEventList.jsx",
+          "occurrences": 3
+        },
+        {
+          "path": "src/components/calendar/TabConnectors.jsx",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "occurrences": 6
+        },
+        {
+          "path": "src/components/chat/EventCreationForm.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/dashboard/NotionUpcomingEvents.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/dashboard/tabs/EnhancedTasksTab.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/dashboard/tabs/TasksTab.jsx",
+          "occurrences": 6
+        },
+        {
+          "path": "src/components/inbox/UnifiedInbox.jsx",
+          "occurrences": 8
+        },
+        {
+          "path": "src/contexts/NewEventContext.js",
+          "occurrences": 12
+        },
+        {
+          "path": "src/hooks/useEvent.fixed.js",
+          "occurrences": 9
+        },
+        {
+          "path": "src/hooks/useEvent.js",
+          "occurrences": 9
+        },
+        {
+          "path": "src/services/ChildTrackingService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/EnhancedCalendarService.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/services/EventStore-fixed.js",
+          "occurrences": 25
+        },
+        {
+          "path": "src/services/EventStore.fixed.js",
+          "occurrences": 20
+        },
+        {
+          "path": "src/services/EventStore.js",
+          "occurrences": 23
+        },
+        {
+          "path": "src/services/ImprovedEventStore.js",
+          "occurrences": 16
+        },
+        {
+          "path": "src/services/MasterCalendarService.js",
+          "occurrences": 11
+        },
+        {
+          "path": "src/services/UnifiedEventService.js",
+          "occurrences": 5
+        }
+      ]
+    },
+    "universalId": {
+      "files": [
+        {
+          "path": "src/components/calendar-v2/core/CalendarProvider.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/calendar/EnhancedEventManager.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/calendar/GoogleStyleCalendarView.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/calendar/MergedEventParser.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/calendar/NewFloatingCalendarWidget.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/calendar/RevisedFloatingCalendarWidget.jsx",
+          "occurrences": 16
+        },
+        {
+          "path": "src/components/calendar/SimpleEventList.jsx",
+          "occurrences": 3
+        },
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/dashboard/NotionUpcomingEvents.jsx",
+          "occurrences": 3
+        },
+        {
+          "path": "src/components/dashboard/tabs/EnhancedTasksTab.jsx",
+          "occurrences": 3
+        },
+        {
+          "path": "src/components/dashboard/tabs/TasksTab.jsx",
+          "occurrences": 8
+        },
+        {
+          "path": "src/components/meeting/FamilyMeetingScreen.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/contexts/NewEventContext.js",
+          "occurrences": 13
+        },
+        {
+          "path": "src/contexts/UnifiedEventContext.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/fix-calendar-appointment.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/hooks/useEvent.fixed.js",
+          "occurrences": 9
+        },
+        {
+          "path": "src/hooks/useEvent.js",
+          "occurrences": 9
+        },
+        {
+          "path": "src/services/CalendarService.js",
+          "occurrences": 8
+        },
+        {
+          "path": "src/services/EnhancedCalendarService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/EventStore-fixed.js",
+          "occurrences": 34
+        },
+        {
+          "path": "src/services/EventStore.fixed.js",
+          "occurrences": 31
+        },
+        {
+          "path": "src/services/EventStore.js",
+          "occurrences": 31
+        },
+        {
+          "path": "src/services/ImprovedEventStore.js",
+          "occurrences": 23
+        },
+        {
+          "path": "src/services/MasterCalendarService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/UnifiedEventService.js",
+          "occurrences": 4
+        }
+      ]
+    },
+    "eventId": {
+      "files": [
+        {
+          "path": "src/components/calendar-v2/core/CalendarProvider.js",
+          "occurrences": 10
+        },
+        {
+          "path": "src/components/calendar-v2/services/CalendarSyncService.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/calendar-v2/services/GoogleCalendarAdapter.js",
+          "occurrences": 6
+        },
+        {
+          "path": "src/components/calendar-v2/services/NotificationManager.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/calendar-v2/services/NotificationService.js",
+          "occurrences": 10
+        },
+        {
+          "path": "src/components/calendar-v2/services/OutlookCalendarAdapter.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/calendar-v2/services/PrepTaskGenerator.js",
+          "occurrences": 6
+        },
+        {
+          "path": "src/components/calendar-v2/views/Calendar.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/calendar-v2/views/NotificationToast.js",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/calendar/AdvancedCalendarDemo.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/calendar/CalendarIntegrationButton.jsx",
+          "occurrences": 6
+        },
+        {
+          "path": "src/components/calendar/EnhancedEventManager.jsx",
+          "occurrences": 3
+        },
+        {
+          "path": "src/components/calendar/MergedEventParser.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/calendar/NewEnhancedEventManager.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/calendar/NewFloatingCalendarWidget.jsx",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/calendar/RevisedFloatingCalendarWidget.jsx",
+          "occurrences": 12
+        },
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "occurrences": 46
+        },
+        {
+          "path": "src/components/chat/EventCreationForm.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/cycles/OptimizedCycleJourney.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/dashboard/DashboardScreen.jsx",
+          "occurrences": 6
+        },
+        {
+          "path": "src/components/dashboard/NotionUpcomingEvents.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/dashboard/tabs/EnhancedTasksTab.jsx",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/dashboard/tabs/RelationshipTab.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/inbox/UnifiedInbox.jsx",
+          "occurrences": 56
+        },
+        {
+          "path": "src/components/kanban/FamilyKanbanBoard.jsx",
+          "occurrences": 8
+        },
+        {
+          "path": "src/components/medical/FollowUpManager.jsx",
+          "occurrences": 6
+        },
+        {
+          "path": "src/components/medical/MedicalEventCreator.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/medical/MedicalEventDetail.jsx",
+          "occurrences": 21
+        },
+        {
+          "path": "src/components/medical/MedicalEventHandler.jsx",
+          "occurrences": 6
+        },
+        {
+          "path": "src/components/medical/MedicalReminderManager.jsx",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/medical/MedicalReminderNotification.jsx",
+          "occurrences": 12
+        },
+        {
+          "path": "src/components/medical/PreparationReminders.jsx",
+          "occurrences": 17
+        },
+        {
+          "path": "src/components/notifications/ProactiveAlertExample.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/school/SchoolEventManager.jsx",
+          "occurrences": 16
+        },
+        {
+          "path": "src/components/school/SpecialRequirementsManager.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/school/SuppliesManager.jsx",
+          "occurrences": 9
+        },
+        {
+          "path": "src/contexts/FamilyContext.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/contexts/NewEventContext.js",
+          "occurrences": 20
+        },
+        {
+          "path": "src/contexts/UnifiedEventContext.js",
+          "occurrences": 10
+        },
+        {
+          "path": "src/hooks/useCalendarIntegration.js",
+          "occurrences": 6
+        },
+        {
+          "path": "src/hooks/useEvent.fixed.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/hooks/useEvent.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/services/ActivityManager.js",
+          "occurrences": 7
+        },
+        {
+          "path": "src/services/AllieAIService.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/services/CalendarIntegrationService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/CalendarService.js",
+          "occurrences": 15
+        },
+        {
+          "path": "src/services/ChildTrackingService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/ChoreService.js",
+          "occurrences": 3
+        },
+        {
+          "path": "src/services/DatabaseService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/DocumentProcessingService.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/services/EmailIngestService.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/services/EnhancedCalendarService.js",
+          "occurrences": 15
+        },
+        {
+          "path": "src/services/EventRelationshipGraph.js",
+          "occurrences": 34
+        },
+        {
+          "path": "src/services/EventStore-fixed.js",
+          "occurrences": 27
+        },
+        {
+          "path": "src/services/EventStore.fixed.js",
+          "occurrences": 33
+        },
+        {
+          "path": "src/services/EventStore.js",
+          "occurrences": 33
+        },
+        {
+          "path": "src/services/FamilyProfileService.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/services/HabitService2.js",
+          "occurrences": 3
+        },
+        {
+          "path": "src/services/HomeworkTracker.js",
+          "occurrences": 7
+        },
+        {
+          "path": "src/services/ImprovedEventStore.js",
+          "occurrences": 21
+        },
+        {
+          "path": "src/services/knowledge/ProactiveInsightEngine.js",
+          "occurrences": 6
+        },
+        {
+          "path": "src/services/MasterCalendarService.js",
+          "occurrences": 20
+        },
+        {
+          "path": "src/services/MedicalEventHandler.js",
+          "occurrences": 65
+        },
+        {
+          "path": "src/services/MedicalReminderScheduler.js",
+          "occurrences": 8
+        },
+        {
+          "path": "src/services/RewardService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/SchoolEventHandler.js",
+          "occurrences": 53
+        },
+        {
+          "path": "src/services/UnifiedEventService.js",
+          "occurrences": 16
+        },
+        {
+          "path": "src/utils/calendarEventHelper.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/utils/CalendarOperations.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/utils/CalendarRetryHelper.js",
+          "occurrences": 5
+        }
+      ]
+    },
+    "documentId": {
+      "files": [
+        {
+          "path": "src/components/calendar/DocumentSelector.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/chat/AllieChat.jsx",
+          "occurrences": 8
+        },
+        {
+          "path": "src/components/chat/ChatMessage.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/document/DocumentLibrary.jsx",
+          "occurrences": 7
+        },
+        {
+          "path": "src/components/document/FamilyAllieDrive.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/inbox/UnifiedInbox.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/kanban/TaskDetailModal.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/medical/DocumentManager.jsx",
+          "occurrences": 5
+        },
+        {
+          "path": "src/components/medical/MedicalEventDetail.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/hooks/useDocumentUnderstanding.js",
+          "occurrences": 9
+        },
+        {
+          "path": "src/services/DatabaseService.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/services/DocumentProcessingService.js",
+          "occurrences": 41
+        },
+        {
+          "path": "src/services/EntityManagementService.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/services/knowledge/DocumentKnowledgeExtractor.js",
+          "occurrences": 11
+        },
+        {
+          "path": "src/services/knowledge/DocumentSimilarityDetector.js",
+          "occurrences": 9
+        },
+        {
+          "path": "src/services/MedicalEventHandler.js",
+          "occurrences": 6
+        },
+        {
+          "path": "src/services/QuantumIntegrationService.js",
+          "occurrences": 1
+        },
+        {
+          "path": "src/utils/CalendarRetryHelper.js",
+          "occurrences": 3
+        },
+        {
+          "path": "src/utils/DatabaseDebugger.js",
+          "occurrences": 6
+        }
+      ]
+    },
+    "habitId": {
+      "files": [
+        {
+          "path": "src/components/dashboard/EnhancedHabitsSection.jsx",
+          "occurrences": 8
+        },
+        {
+          "path": "src/components/dashboard/HabitCarryOverDialog.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/dashboard/HabitHelperSection.jsx",
+          "occurrences": 3
+        },
+        {
+          "path": "src/components/dashboard/tabs/EnhancedTasksTab.jsx",
+          "occurrences": 20
+        },
+        {
+          "path": "src/components/dashboard/tabs/TasksTab.jsx",
+          "occurrences": 22
+        },
+        {
+          "path": "src/components/dashboard/tabs/WeekHistoryTab.jsx",
+          "occurrences": 3
+        },
+        {
+          "path": "src/components/debug/HabitDiagnosticPanel.jsx",
+          "occurrences": 20
+        },
+        {
+          "path": "src/components/habits/EnhancedHabitContainer.jsx",
+          "occurrences": 8
+        },
+        {
+          "path": "src/components/habits/FamilyHabitsView.jsx",
+          "occurrences": 3
+        },
+        {
+          "path": "src/components/habits/HabitBankDashboard.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/habits/HabitCard2.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/components/habits/HabitHelperTab.jsx",
+          "occurrences": 4
+        },
+        {
+          "path": "src/components/habits/HabitQuestView.jsx",
+          "occurrences": 18
+        },
+        {
+          "path": "src/components/habits/MilestoneCelebration.jsx",
+          "occurrences": 2
+        },
+        {
+          "path": "src/components/habits/SiblingHabitManager.jsx",
+          "occurrences": 1
+        },
+        {
+          "path": "src/hooks/useEnhancedHabitHelpers.js",
+          "occurrences": 28
+        },
+        {
+          "path": "src/hooks/useHabitHelpers.js",
+          "occurrences": 6
+        },
+        {
+          "path": "src/hooks/useHabitManager.js",
+          "occurrences": 31
+        },
+        {
+          "path": "src/services/HabitBankService.js",
+          "occurrences": 10
+        },
+        {
+          "path": "src/services/HabitCyclesService.js",
+          "occurrences": 63
+        },
+        {
+          "path": "src/services/HabitDJService.js",
+          "occurrences": 20
+        },
+        {
+          "path": "src/services/HabitGenerationService.js",
+          "occurrences": 5
+        },
+        {
+          "path": "src/services/HabitHelperService.js",
+          "occurrences": 15
+        },
+        {
+          "path": "src/services/HabitQuestService.js",
+          "occurrences": 13
+        },
+        {
+          "path": "src/services/HabitReminderService.js",
+          "occurrences": 8
+        },
+        {
+          "path": "src/services/HabitService2.js",
+          "occurrences": 34
+        },
+        {
+          "path": "src/services/QuantumIntegrationService.js",
+          "occurrences": 2
+        },
+        {
+          "path": "src/services/SurveyKnowledgeGraphIntegration.js",
+          "occurrences": 4
+        },
+        {
+          "path": "src/utils/HabitDiagnostics.js",
+          "occurrences": 65
+        },
+        {
+          "path": "src/utils/ImbalanceHabitGenerator.js",
+          "occurrences": 10
+        }
+      ]
+    }
+  },
+  "filesAnalyzed": 803,
+  "totalIssues": 1908
+}

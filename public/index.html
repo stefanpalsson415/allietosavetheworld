@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Bootstrap script temporarily disabled for mobile debugging -->
+    <!-- <script src="%PUBLIC_URL%/bootstrap.js"></script> -->
+
+    <!-- PDF.js worker configuration temporarily disabled -->
+    <!-- <script src="%PUBLIC_URL%/pdf-worker-loader.js"></script> -->
+    
+    <!-- Fix for DOM manipulation errors -->
+    <!-- <script src="%PUBLIC_URL%/fix-dom-errors.js"></script> -->
+    
+    <!-- Note: We previously needed external fixes for charts and habits,
+         but they've now been properly integrated into the React components -->
+    
+    <!-- Favicon setup - Using family stick figure logo -->
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg?v=4" />
+    <link rel="icon" type="image/x-icon" href="%PUBLIC_URL%/favicon.ico?v=4" />
+    <link rel="shortcut icon" type="image/x-icon" href="%PUBLIC_URL%/favicon.ico?v=4" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png?v=4" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png?v=4" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png?v=4" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#14B8A6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Allie" />
+    
+    <!-- Critical CSS to prevent white flash on mobile -->
+    <style>
+      html, body, #root {
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+        margin: 0;
+        padding: 0;
+        background-color: white;
+      }
+      @media (max-width: 768px) {
+        html, body {
+          overflow-x: hidden;
+        }
+        /* Emergency mobile visibility fix */
+        * {
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+      }
+    </style>
+
+    <!-- Mobile Diagnostic Script -->
+    <script>
+      // Unregister any service workers that might be causing cache issues
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('Service worker unregistered:', registration);
+          }
+        });
+      }
+
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.error);
+        // Don't show parser errors on mobile - they're usually harmless localStorage issues
+        var errorMessage = e.error ? e.error.message : e.message;
+        if (errorMessage && errorMessage.toLowerCase().includes('parser error')) {
+          console.warn('Suppressing parser error on mobile');
+          e.preventDefault();
+          return;
+        }
+        if (window.innerWidth <= 768 && errorMessage && !errorMessage.toLowerCase().includes('parser')) {
+          document.body.innerHTML += '<div style="color:red; padding:20px; position:fixed; top:0; left:0; right:0; background:white; z-index:9999;">Error: ' + errorMessage + '</div>';
+        }
+      });
+
+      // Check if React loaded
+      window.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM Content Loaded');
+        setTimeout(function() {
+          var root = document.getElementById('root');
+          if (root && !root.hasChildNodes()) {
+            console.error('React app failed to mount');
+            if (window.innerWidth <= 768) {
+              document.body.innerHTML += '<div style="color:orange; padding:20px; position:fixed; bottom:0; left:0; right:0; background:white; z-index:9999;">React app failed to mount - clearing cache may help</div>';
+            }
+          } else {
+            console.log('React app mounted successfully');
+          }
+        }, 3000);
+      });
+    </script>
+    
+    <!-- Google Maps API for Places Autocomplete -->
+    <script>
+      // Initialize Google Maps callback
+      window.initGoogleMaps = function() {
+        console.log('Google Maps initialized');
+        window.googleMapsReady = true;
+        // Dispatch event for React components
+        window.dispatchEvent(new Event('google-maps-ready'));
+      };
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBfevuDutdWiyHPZ8XWLLLmXz6UkRpA9vY&libraries=places&callback=initGoogleMaps&loading=async" async defer></script>
+    
+    <!-- Primary description for SEO -->
+    <meta
+      name="description"
+      content="Allie: The AI-powered solution for family management and mental load balance."
+    />
+
+    <!-- Open Graph / Social Media Preview -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://checkallie.com/" />
+    <meta property="og:title" content="Allie | The AI-powered Family Assistant" />
+    <meta
+      property="og:description"
+      content="The AI-powered solution for family management and mental load balance"
+    />
+    <meta property="og:image" content="https://checkallie.com/favicon.svg" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Allie | The AI-powered Family Assistant" />
+    <meta name="twitter:description" content="The AI-powered solution for family management and mental load balance" />
+    <meta name="twitter:image" content="https://checkallie.com/favicon.svg" />
+
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.svg" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Mapbox CSS -->
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.css' rel='stylesheet' />
+    <link href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css' rel='stylesheet' />
+    
+    <!-- Google Calendar API -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+
+    <!-- Apple PWA splash screens -->
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1668-2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1536-2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-1125-2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/apple-splash-828-1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+
+    <title>Allie | The AI-powered Family Assistant</title>
+    
+    <!-- PWA install prompt styles - COMPLETELY REMOVED to fix mobile blank screen issue -->
+    <!-- The styles were still being loaded even though the HTML was commented out -->
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    
+    <!-- PWA install prompt - DISABLED to fix mobile blank screen issue -->
+    <!-- <div id="pwa-install-prompt">
+      <p>Get the Allie app experience</p>
+      <button id="pwa-install-button">Add to Home Screen</button>
+      <button id="pwa-dismiss-button">Not Now</button>
+    </div> -->
+    
+    <!-- Comprehensive fix for event loops and error suppression -->
+    <!-- TEMPORARILY DISABLED FOR MOBILE DEBUGGING
+    <script>
+      window.addEventListener('load', function() {
+        console.log("🔧 Loading built-in error prevention...");
+        
+        // ---- PART 1: EVENT LOOP PREVENTION ----
+        
+        // Track refresh counts to prevent infinite loops
+        let refreshCounts = {};
+        let lastRefreshTimes = {};
+
+        // Monitor and prevent excessive refresh events
+        function handleRefreshEvents(event) {
+          const eventType = event.type;
+          const now = Date.now();
+
+          // Initialize counters if needed
+          if (!refreshCounts[eventType]) {
+            refreshCounts[eventType] = 0;
+            lastRefreshTimes[eventType] = 0;
+          }
+
+          // Count events in a short window
+          if (now - lastRefreshTimes[eventType] < 2000) {
+            refreshCounts[eventType]++;
+          } else {
+            refreshCounts[eventType] = 1;
+          }
+
+          lastRefreshTimes[eventType] = now;
+
+          // Block if too many refreshes
+          if (refreshCounts[eventType] > 5) {
+            console.warn("Blocking excessive " + eventType + " events");
+            event.stopImmediatePropagation();
+
+            // Reset after a delay
+            setTimeout(function() {
+              refreshCounts[eventType] = 0;
+            }, 5000);
+
+            return false;
+          }
+        }
+
+        // Adding event listeners to common refresh events
+        window.addEventListener('force-calendar-refresh', handleRefreshEvents, true);
+        window.addEventListener('directory-refresh-needed', handleRefreshEvents, true);
+        window.addEventListener('provider-added', handleRefreshEvents, true);
+        window.addEventListener('family-data-updated', handleRefreshEvents, true);
+        
+        // ---- PART 2: ERROR HANDLING (REMOVED) ----
+        // Error suppression has been removed in favor of fixing issues at the source
+        // All errors are now properly handled in the application code
+        
+        // ---- PART 3: MOCK MISSING FUNCTIONS ----
+        
+        // Mock missing functions to prevent errors
+        function mockMissingFunctions() {
+          try {
+            // Mock AI Orchestrator if needed
+            if (window.AIOrchestrator) {
+              if (!window.AIOrchestrator.initialize || 
+                  typeof window.AIOrchestrator.initialize !== 'function') {
+                window.AIOrchestrator.initialize = function() {
+                  console.log("ℹ️ Using mocked AIOrchestrator.initialize()");
+                  return Promise.resolve({ success: true, mocked: true });
+                };
+              }
+            }
+            
+            // Fix ClaudeService if available
+            if (window.ClaudeService) {
+              if (!window.ClaudeService.testConnectionWithRetry) {
+                window.ClaudeService.testConnectionWithRetry = function() {
+                  console.log("ℹ️ Using mocked ClaudeService.testConnectionWithRetry()");
+                  return Promise.resolve({ success: true, mocked: true });
+                };
+              }
+            }
+            
+            // Add mock Google Maps API
+            if (!window.google || !window.google.maps) {
+              window.google = window.google || {};
+              window.google.maps = window.google.maps || {
+                Map: function() { return {}; },
+                places: {
+                  Autocomplete: function() { return {}; }
+                },
+                event: {
+                  addListener: function() {}
+                }
+              };
+              
+              // Dispatch a fake load event to satisfy any waiting code
+              setTimeout(() => {
+                if (typeof window.dispatchEvent === 'function') {
+                  window.dispatchEvent(new Event('google-maps-api-loaded'));
+                }
+              }, 1000);
+            }
+            
+            console.log("✅ Missing functions successfully mocked");
+          } catch (error) {
+            console.log("⚠️ Error while mocking functions:", error);
+          }
+        }
+        
+        // Run mocking after a short delay
+        setTimeout(mockMissingFunctions, 2000);
+        
+        console.log("✅ Error prevention system initialized successfully");
+      });
+    </script>
+    END OF DISABLED SCRIPT -->
+
+    <!-- Permanent fixes have been implemented in the source code directly -->
+    
+    <!-- Authentication diagnostic script - advanced version -->
+    <!-- <script src="%PUBLIC_URL%/auth-diagnostic.js"></script> -->
+    
+    <!-- Test event creator - helps add test events to the database -->
+    <!-- <script src="%PUBLIC_URL%/create-test-event.js"></script> -->
+    
+    <!-- Firebase index fix script -->
+    <!-- <script src="%PUBLIC_URL%/firebase-index-fix.js"></script> -->
+    
+    <!-- Cleanup script to remove diagnostic UI elements -->
+    <!-- <script src="%PUBLIC_URL%/clean-diagnostic-ui.js"></script> -->
+    
+    <!-- Service worker registration - TEMPORARILY DISABLED while debugging mobile issue -->
+    <!--
+    <script>
+      // Wait until the page is fully loaded before registering service worker
+      window.addEventListener('load', function() {
+        // Only register if the browser supports service workers
+        if ('serviceWorker' in navigator) {
+          // Delay to ensure application is responsive first
+          setTimeout(function() {
+            navigator.serviceWorker.register('/service-worker.js')
+              .then(function(registration) {
+                console.log('Service worker registered successfully');
+              })
+              .catch(function(error) {
+                console.log('Service worker registration failed:', error);
+              });
+          }, 3000);
+        }
+      });
+    </script>
+    -->
+
+    <script>
+      // PWA prompt setup - DISABLED to fix mobile blank screen issue
+      // The PWA install prompt was covering the entire screen on mobile devices
+      // causing a blank screen experience. Commenting out for now.
+      /*
+      window.addEventListener('load', function() {
+        // Get UI elements
+        const pwaPrompt = document.getElementById('pwa-install-prompt');
+        const installButton = document.getElementById('pwa-install-button');
+        const dismissButton = document.getElementById('pwa-dismiss-button');
+
+        if (!pwaPrompt || !installButton || !dismissButton) return;
+
+        // Check if this is a mobile device in browser mode
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile && window.matchMedia('(display-mode: browser)').matches) {
+          // Show prompt after page load
+          setTimeout(() => {
+            pwaPrompt.style.display = 'block';
+          }, 5000);
+        }
+
+        // Handle dismiss button
+        dismissButton.addEventListener('click', () => {
+          pwaPrompt.style.display = 'none';
+          localStorage.setItem('pwa-prompt-dismissed', Date.now());
+        });
+
+        // Handle install button
+        installButton.addEventListener('click', () => {
+          pwaPrompt.style.display = 'none';
+
+          // Show iOS-specific instructions
+          if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            alert('To install Allie on your home screen: tap the share button, then "Add to Home Screen".');
+          }
+        });
+
+        // Handle Android installation
+        let deferredPrompt;
+        */
+
+        // The rest of the PWA installation code - also disabled
+        /*
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+
+          installButton.addEventListener('click', () => {
+            if (deferredPrompt) {
+              deferredPrompt.prompt();
+              deferredPrompt.userChoice.then(() => {
+                deferredPrompt = null;
+              });
+            }
+          });
+        });
+
+      });
+      */
+    </script>
+    <!-- Event loop monitor -->
+  <!-- <script src="/event-loop-monitor.js"></script> -->
+  
+  <!-- Personalized habit explanations -->
+  <!-- <script src="/personalized-habit-explanation.js"></script> -->
+  
+  <!-- DISABLED: Old iframe-based chat (replaced by ResizableChatDrawer) -->
+  <!-- <script src="/chat-iframe-bridge.js"></script> -->
+  <!-- <script src="/iframe-chat-injector.js"></script> -->
+  
+  <!-- Fix for calendar refresh from chat events -->
+  <!-- <script src="/fix-calendar-refresh-from-chat.js"></script> -->
+  
+  <!-- Debug overflow issues -->
+  <!-- <script src="/debug-overflow.js"></script> -->
+  </body>
+</html>

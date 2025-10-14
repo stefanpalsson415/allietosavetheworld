@@ -1,0 +1,658 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOTPUser() {
+      return isAuthenticated() && request.auth.uid.matches('^otp_.*');
+    }
+
+    function belongsToFamily(familyId) {
+      return isAuthenticated() && (
+        // OTP users can access during login
+        request.auth.uid.matches('^otp_.*') ||
+        // Regular users must have matching familyId
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == familyId) ||
+        // Or be in the family's memberIds (for initial setup when user doc doesn't exist yet)
+        (exists(/databases/$(database)/documents/families/$(familyId)) &&
+         request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.memberIds)
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isFamilyMember(resource) {
+      return isAuthenticated() && (
+        request.auth.uid in resource.data.familyMembers ||
+        request.auth.uid == resource.data.createdBy
+      );
+    }
+
+    // Calendar events collection
+    match /events/{eventId} {
+      allow read: if isAuthenticated() && (
+        // Must have a familyId and belong to it
+        (resource.data.familyId != null && belongsToFamily(resource.data.familyId)) ||
+        // Or be an attendee
+        (request.auth.uid in resource.data.attendees) ||
+        // Or be the creator
+        (request.auth.uid == resource.data.createdBy) ||
+        // Or be a system event (for Allie-created events)
+        (resource.data.createdBy == 'allie-ai' || resource.data.createdBy == 'allie-system')
+      );
+
+      allow create: if isAuthenticated() && (
+        // Must provide a familyId
+        request.resource.data.familyId != null &&
+        // And belong to that family or be creating as system
+        (belongsToFamily(request.resource.data.familyId) ||
+         request.resource.data.createdBy == 'allie-ai' ||
+         request.resource.data.createdBy == 'allie-system')
+      );
+
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid in resource.data.attendees
+      );
+
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        belongsToFamily(resource.data.familyId)
+      );
+    }
+
+    // Notifications collection for @mentions and alerts
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        belongsToFamily(resource.data.familyId)
+      );
+      allow create: if isAuthenticated() && (
+        belongsToFamily(request.resource.data.familyId)
+      );
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        belongsToFamily(resource.data.familyId)
+      );
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        belongsToFamily(resource.data.familyId)
+      );
+    }
+
+    // User tokens for Google Calendar auth
+    match /userTokens/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Calendar sync state
+    match /calendarSyncState/{familyId} {
+      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      allow write: if isAuthenticated() && belongsToFamily(familyId);
+    }
+
+    // User settings collection
+    match /userSettings/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Calendar conflicts
+    match /calendarConflicts/{conflictId} {
+      allow read: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy
+      );
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy
+      );
+    }
+
+    // Google Calendar sync status
+    match /googleCalendarSync/{syncId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        belongsToFamily(resource.data.familyId)
+      );
+    }
+
+    // Chore templates
+    match /choreTemplates/{choreId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update, delete: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Chore instances
+    match /choreInstances/{instanceId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow delete: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Provider collection
+    match /providers/{providerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Child interests subcollections
+    match /families/{familyId}/childInterests/{childId} {
+      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      allow write: if isAuthenticated() && belongsToFamily(familyId);
+
+      // Interests subcollection
+      match /interests/{interestId} {
+        allow read: if isAuthenticated() && belongsToFamily(familyId);
+        allow write: if isAuthenticated() && belongsToFamily(familyId);
+      }
+    }
+
+    // Wardrobe collections
+    match /families/{familyId}/wardrobes/{childId} {
+      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      allow write: if isAuthenticated() && belongsToFamily(familyId);
+
+      // Wardrobe items subcollection
+      match /items/{itemId} {
+        allow read: if isAuthenticated() && belongsToFamily(familyId);
+        allow write: if isAuthenticated() && belongsToFamily(familyId);
+      }
+
+      // Size history subcollection
+      match /sizeHistory/{historyId} {
+        allow read: if isAuthenticated() && belongsToFamily(familyId);
+        allow write: if isAuthenticated() && belongsToFamily(familyId);
+      }
+
+      // Outfit history subcollection
+      match /history/{historyId} {
+        allow read: if isAuthenticated() && belongsToFamily(familyId);
+        allow write: if isAuthenticated() && belongsToFamily(familyId);
+      }
+
+      // Donations subcollection
+      match /donations/{donationId} {
+        allow read: if isAuthenticated() && belongsToFamily(familyId);
+        allow write: if isAuthenticated() && belongsToFamily(familyId);
+      }
+    }
+
+    // Gift recommendations
+    match /families/{familyId}/giftRecommendations/{recommendationId} {
+      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      allow write: if isAuthenticated() && belongsToFamily(familyId);
+    }
+
+    // Gift alerts
+    match /families/{familyId}/giftAlerts/{alertId} {
+      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      allow write: if isAuthenticated() && belongsToFamily(familyId);
+    }
+
+    // Family profiles subcollection for enhanced profiles
+    match /families/{familyId}/familyProfiles/{profileId} {
+      // TEMPORARY: Very permissive rules to fix errors
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false; // Profiles should not be deleted
+    }
+
+    // Root-level familyProfiles collection (used by FamilyProfileService)
+    match /familyProfiles/{profileId} {
+      // TEMPORARY: Very permissive rules to fix errors
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // Also need memberPreferences collection
+    match /memberPreferences/{profileId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // memberLifestyle collection
+    match /memberLifestyle/{profileId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // memberPatterns collection
+    match /memberPatterns/{profileId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // memberInsights collection
+    match /memberInsights/{profileId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // Knowledge graphs collection
+    match /knowledgeGraphs/{graphId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // ELO Ratings collection for survey responses
+    match /familyELORatings/{ratingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // ELO History collection for match tracking
+    match /familyELOHistory/{historyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if false; // History should be immutable
+      allow delete: if false;
+    }
+
+    // Survey Responses collection
+    match /surveyResponses/{responseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false; // Survey responses should not be deleted
+    }
+
+    // Analytics collection for tracking family events
+    match /analytics/{documentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Habits collection for family habits tracking
+    match /habits/{habitId} {
+      allow read: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy
+      );
+      allow create: if isAuthenticated() && (
+        belongsToFamily(request.resource.data.familyId) ||
+        request.resource.data.createdBy == 'allie-ai' ||
+        request.resource.data.createdBy == 'allie-system'
+      );
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid in resource.data.assignedTo
+      );
+      allow delete: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy
+      );
+    }
+
+    // Habits2 collection (root level, used by SMS webhook)
+    match /habits2/{habitId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && (
+        belongsToFamily(request.resource.data.familyId) ||
+        request.resource.data.createdBy == 'allie-ai' ||
+        request.resource.data.createdBy == 'allie-system'
+      );
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid in resource.data.assignedTo
+      );
+      allow delete: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy
+      );
+    }
+
+    // Kanban tasks collection (also used by SMS webhook)
+    match /kanbanTasks/{taskId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && (
+        belongsToFamily(request.resource.data.familyId) ||
+        request.resource.data.createdBy == 'allie-ai' ||
+        request.resource.data.createdBy == 'allie-system'
+      );
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid in resource.data.assignedTo
+      );
+      allow delete: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.createdBy
+      );
+    }
+
+    // Habit instances for tracking individual completions
+    match /habitInstances/{instanceId} {
+      allow read: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.userId
+      );
+      allow create: if isAuthenticated() && (
+        belongsToFamily(request.resource.data.familyId) ||
+        request.auth.uid == request.resource.data.userId
+      );
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.userId
+      );
+      allow delete: if false; // Keep history
+    }
+
+    // Habit cache for storing generated habit suggestions
+    match /habitCache/{cacheId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false; // Keep cache for performance
+    }
+
+    // Chat messages collection for Allie chat persistence
+    match /chatMessages/{messageId} {
+      allow read: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.userId
+      );
+      allow create: if isAuthenticated() && (
+        belongsToFamily(request.resource.data.familyId) ||
+        request.resource.data.userId == 'allie' ||
+        request.resource.data.sender == 'allie'
+      );
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.userId
+      );
+      allow delete: if false; // Keep chat history
+    }
+
+    // Bucks balances for children
+    match /bucksBalances/{balanceId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid == resource.data.childId
+      );
+      allow delete: if false;
+    }
+
+    // Bucks settings (family-wide configuration)
+    match /bucksSettings/{familyId} {
+      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      allow create: if isAuthenticated() && belongsToFamily(familyId);
+      allow update: if isAuthenticated() && belongsToFamily(familyId);
+      allow delete: if false;
+    }
+
+    // Bucks transactions
+    match /bucksTransactions/{transactionId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update: if false; // Transactions are immutable
+      allow delete: if false;
+    }
+
+    // Reward templates
+    match /rewardTemplates/{rewardId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow delete: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Reward instances
+    match /rewardInstances/{instanceId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow delete: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Email registry for family email addresses
+    match /email_registry/{emailId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        // Allow updating if you belong to the family that owns this email
+        belongsToFamily(resource.data.familyId)
+      );
+      allow delete: if false; // Email registrations should not be deleted
+    }
+
+    // Email inbox for incoming emails
+    match /emailInbox/{emailId} {
+      allow read: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        resource.data.familyId == 'unassigned'
+      );
+      allow create: if true; // Allow webhook to create emails
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        resource.data.familyId == 'unassigned'
+      );
+      allow delete: if false; // Emails should not be deleted
+    }
+
+    // SMS inbox for incoming SMS messages
+    match /smsInbox/{smsId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if true; // Allow webhook to create SMS
+      allow update: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow delete: if false; // SMS should not be deleted
+    }
+
+    // SMS conversations for thread history (full feature parity)
+    match /smsConversations/{messageId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if true; // Allow webhook to create conversation messages
+      allow update: if false; // Conversation history is immutable
+      allow delete: if false; // Keep conversation history
+    }
+
+    // Documents collection for uploaded files
+    match /documents/{documentId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow delete: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Families collection - MUST be before default rule
+    match /families/{familyId} {
+      // Habits2 subcollection for HabitService2
+      match /habits2/{habitId} {
+        allow read: if isAuthenticated() && belongsToFamily(familyId);
+        allow create: if isAuthenticated() && (
+          belongsToFamily(familyId) ||
+          request.auth.uid.matches('^otp_.*')
+        );
+        allow update: if isAuthenticated() && (
+          belongsToFamily(familyId) ||
+          request.auth.uid == resource.data.createdBy ||
+          request.auth.uid in resource.data.assignedTo
+        );
+        allow delete: if isAuthenticated() && (
+          belongsToFamily(familyId) ||
+          request.auth.uid == resource.data.createdBy
+        );
+      }
+
+      // Calendar events subcollection for habits
+      match /calendarEvents/{eventId} {
+        allow read, write: if isAuthenticated() && belongsToFamily(familyId);
+      }
+
+      // Allow list/get operations (needed for queries in resume setup)
+      allow list: if true; // Temporarily allow listing to enable resume setup queries
+
+      allow get: if
+        // Allow unauthenticated read for resume setup (searching by email/phone)
+        // This is needed for the onboarding "Resume Your Setup" feature
+        (!isAuthenticated() && (
+          resource.data.setupComplete == false ||
+          resource.data.surveyCompleted == false ||
+          resource.data.phoneVerified == false
+        )) ||
+        // Standard authenticated access
+        (isAuthenticated() && (
+          // Can read if you belong to this family
+          belongsToFamily(familyId) ||
+          // Or if you're listed in memberIds
+          request.auth.uid in resource.data.memberIds ||
+          // Or during family creation (new family)
+          !exists(/databases/$(database)/documents/families/$(familyId))
+        ));
+
+      allow create: if isAuthenticated() && (
+        // Can create if you're one of the memberIds being added
+        request.auth.uid in request.resource.data.memberIds ||
+        // OR allow during onboarding (family doesn't exist yet)
+        !exists(/databases/$(database)/documents/families/$(familyId)) ||
+        // OR if this is a new family setup (setupComplete is false)
+        request.resource.data.setupComplete == false
+      );
+
+      allow update: if isAuthenticated() && (
+        // Can update if you belong to this family
+        belongsToFamily(familyId) ||
+        // Or if you're in the memberIds
+        request.auth.uid in resource.data.memberIds
+      );
+
+      allow delete: if false; // Families should not be deleted
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        // Allow reading users in same family
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == resource.data.familyId)
+      );
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Interviews collection for Allie Family Interview System
+    match /interviews/{sessionId} {
+      allow read: if isAuthenticated() && (
+        // Can read if you belong to the family being interviewed
+        belongsToFamily(resource.data.familyId) ||
+        // Or if you're one of the participants
+        request.auth.uid in resource.data.participants.userId ||
+        // Or if the interview is shared/public
+        resource.data.status == 'shared'
+      );
+
+      allow create: if isAuthenticated() && (
+        // Can create interview if you belong to the family
+        belongsToFamily(request.resource.data.familyId) ||
+        // Or if you're one of the participants
+        request.auth.uid in request.resource.data.participants.userId
+      );
+
+      allow update: if isAuthenticated() && (
+        // Can update if you belong to the family
+        belongsToFamily(resource.data.familyId) ||
+        // Or if you're one of the participants
+        request.auth.uid in resource.data.participants.userId ||
+        // Or if it's a system update (for AI processing)
+        request.resource.data.lastUpdatedBy == 'allie-ai'
+      );
+
+      allow delete: if isAuthenticated() && (
+        // Only family members can delete interviews
+        belongsToFamily(resource.data.familyId)
+      );
+    }
+
+    // Interview insights for storing detailed analysis results
+    match /interviewInsights/{insightId} {
+      allow read: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.auth.uid in resource.data.participants.userId
+      );
+      allow create: if isAuthenticated() && (
+        belongsToFamily(request.resource.data.familyId) ||
+        // Allow system to create insights
+        request.resource.data.createdBy == 'allie-ai'
+      );
+      allow update: if isAuthenticated() && (
+        belongsToFamily(resource.data.familyId) ||
+        request.resource.data.lastUpdatedBy == 'allie-ai'
+      );
+      allow delete: if false; // Insights should not be deleted
+    }
+
+    // Blog posts collection - publicly readable for SEO and visitors
+    match /blogPosts/{postId} {
+      // Anyone can read published blog posts (for SEO and public access)
+      allow read: if resource.data.published == true || isAuthenticated();
+      // Only authenticated users can create/update/delete (admin access)
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Blog comments collection - Google Docs style commenting
+    match /blogComments/{commentId} {
+      // Anyone can read comments (public discussion)
+      allow read: if true;
+      // Only authenticated users can create comments
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Users can update their own comments (for replies)
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can delete/resolve their own comments
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Leads collection - Marketing leads from blog/quiz (NOT full users)
+    match /leads/{leadId} {
+      // Anyone can create leads (for blog subscribe, quiz completion)
+      allow create: if true;
+      // Anyone can read their own lead by email (for unsubscribe links)
+      allow read: if true;
+      // Only authenticated admins can update leads (for conversion tracking)
+      allow update: if isAuthenticated();
+      // Leads should not be deleted (keep for analytics)
+      allow delete: if false;
+    }
+
+    // Default rule for other collections (existing functionality)
+    match /{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

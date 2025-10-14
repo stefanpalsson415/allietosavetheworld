@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allie Chat</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100%;
+      width: 100%;
+    }
+    
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background-color: white;
+      border-left: 1px solid #e5e7eb;
+    }
+    
+    .chat-header {
+      height: 56px;
+      padding: 0 16px;
+      background-color: #F7F7F7;
+      color: #2F3437;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #E5E7EB;
+    }
+    
+    .chat-title {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+    }
+    
+    .chat-close {
+      background: none;
+      border: none;
+      color: #6B6E70;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    
+    .chat-close:hover {
+      background-color: #EBEBEB;
+    }
+    
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background-color: #F7F7F7;
+    }
+    
+    .message {
+      display: flex;
+      margin-bottom: 16px;
+    }
+    
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: black;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    .message-content {
+      background-color: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 12px;
+      max-width: 80%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .input-container {
+      height: 64px;
+      padding: 8px 16px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      background-color: white;
+    }
+    
+    .chat-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .send-button {
+      margin-left: 8px;
+      background-color: #0F62FE;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    
+    .send-button:hover {
+      background-color: #0050D9;
+    }
+    
+    .message-icon {
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h3 class="chat-title">
+        <svg class="message-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F62FE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Chat with Allie
+      </h3>
+      <button class="chat-close" onclick="window.parent.postMessage('close-chat', '*')">×</button>
+    </div>
+    
+    <div class="messages-container">
+      <div class="message">
+        <div class="avatar">A</div>
+        <div class="message-content">
+          <div style="font-size: 14px;">Hi there! How can I help you today?</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="input-container">
+      <input type="text" class="chat-input" placeholder="Type a message..." id="messageInput">
+      <button class="send-button" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // Handle sending a message
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      
+      if (!text) return;
+      
+      // Add user message
+      const messagesContainer = document.querySelector('.messages-container');
+      
+      const userMessageHtml = `
+        <div class="message" style="justify-content: flex-end;">
+          <div class="message-content" style="background-color: black; color: white;">
+            <div style="font-size: 14px;">${text}</div>
+          </div>
+        </div>
+      `;
+      
+      messagesContainer.innerHTML += userMessageHtml;
+      input.value = '';
+      
+      // Automatically scroll to bottom
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      // Don't add bot response here - the bridge script will handle that
+      // by communicating with the parent window
+    }
+    
+    // Listen for Enter key press
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    
+    // Let parent know the iframe is loaded
+    window.addEventListener('load', function() {
+      window.parent.postMessage('iframe-loaded', '*');
+    });
+  </script>
+  
+  <!-- Add the chat bridge script -->
+  <script>
+    // Ensure we're in iframe context before loading the bridge script
+    if (window !== window.parent) {
+      console.log("In iframe context, loading bridge script");
+      
+      // Dynamically create the script element
+      const script = document.createElement('script');
+      script.src = "/chat-iframe-bridge.js";
+      script.async = true;
+      document.body.appendChild(script);
+    } else {
+      console.log("Not in iframe context, bridge script not loaded");
+    }
+  </script>
+</body>
+</html>

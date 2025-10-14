@@ -1,0 +1,107 @@
+.App {
+  /* Removed text-align: center to fix layout issues */
+  text-align: left; /* Explicitly set left alignment */
+  background-color: white; /* Ensure white background */
+}
+
+/* Safari mobile specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari */
+  .App {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* Ensure app container uses left alignment and prevents overflow */
+.app-container {
+  text-align: left;
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* src/styles/walkthrough.css */
+.walkthrough-tooltip {
+  animation: fadeIn 0.3s ease-in-out;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.walkthrough-tooltip::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: white;
+  transform: rotate(45deg);
+}
+
+.walkthrough-tooltip[data-position="top"]::after {
+  bottom: -6px;
+  left: 50%;
+  margin-left: -6px;
+}
+
+.walkthrough-tooltip[data-position="bottom"]::after {
+  top: -6px;
+  left: 50%;
+  margin-left: -6px;
+}
+
+.walkthrough-tooltip[data-position="left"]::after {
+  right: -6px;
+  top: 50%;
+  margin-top: -6px;
+}
+
+.walkthrough-tooltip[data-position="right"]::after {
+  left: -6px;
+  top: 50%;
+  margin-top: -6px;
+} 

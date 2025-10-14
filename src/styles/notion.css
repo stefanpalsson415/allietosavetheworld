@@ -1,0 +1,256 @@
+/* src/styles/notion.css */
+/* Notion-inspired styles for the application */
+
+:root {
+  /* Color variables */
+  --notion-bg: #F7F7F7;
+  --notion-sidebar-bg: #F5F5F5;
+  --notion-text-primary: #2F3437;
+  --notion-text-secondary: #6B6E70;
+  --notion-border: #E5E7EB;
+  --notion-accent: #0F62FE;
+  --notion-accent-hover: #0050D9;
+  
+  /* Spacing variables */
+  --notion-gutter: 24px;
+  --notion-block-spacing: 16px;
+  --notion-card-padding: 16px;
+}
+
+/* Global adjustments */
+.notion-enabled {
+  background-color: var(--notion-bg);
+  color: var(--notion-text-primary);
+}
+
+.notion-enabled h1 {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 24px;
+}
+
+.notion-enabled h2 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 20px;
+}
+
+.notion-enabled h3 {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-bottom: 16px;
+}
+
+.notion-enabled p {
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* Remove border shadows */
+.notion-enabled .shadow-sm,
+.notion-enabled .shadow,
+.notion-enabled .shadow-md,
+.notion-enabled .shadow-lg,
+.notion-enabled .shadow-xl {
+  box-shadow: none !important;
+}
+
+/* Progress bars */
+.notion-progress-bar {
+  height: 8px;
+  background-color: #F0F0F0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.notion-progress-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Subtle buttons */
+.notion-button-subtle {
+  background: transparent;
+  color: var(--notion-text-secondary);
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.notion-button-subtle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Inputs */
+.notion-input {
+  border: 1px solid var(--notion-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.notion-input:focus {
+  border-color: var(--notion-accent);
+  outline: none;
+}
+
+/* Code blocks */
+.notion-code {
+  font-family: monospace;
+  background: #F5F5F5;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+/* Links */
+.notion-link {
+  color: var(--notion-accent);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.notion-link:hover {
+  text-decoration-color: var(--notion-accent);
+}
+
+/* Rich text container */
+.notion-text-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Command palette input focus */
+.notion-command-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Command palette results */
+.notion-command-results {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Command palette result item */
+.notion-command-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.1s ease;
+}
+
+.notion-command-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Sidebar navigation item */
+.notion-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 4px;
+  transition: background-color 0.1s ease;
+  color: var(--notion-text-secondary);
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+
+.notion-nav-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.notion-nav-item.active {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--notion-text-primary);
+  font-weight: 500;
+}
+
+.notion-nav-item-icon {
+  margin-right: 8px;
+  opacity: 0.7;
+}
+
+/* Add spacing between blocks */
+.notion-block + .notion-block {
+  margin-top: var(--notion-block-spacing);
+}
+
+/* Checkbox styling */
+.notion-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--notion-border);
+  border-radius: 3px;
+  margin-right: 8px;
+  position: relative;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.notion-checkbox:checked {
+  background-color: var(--notion-accent);
+  border-color: var(--notion-accent);
+}
+
+.notion-checkbox:checked::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 5px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Page header */
+.notion-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+}
+
+.notion-page-title {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Card hover animation */
+.notion-card-hover {
+  transition: border-color 0.2s ease;
+}
+
+.notion-card-hover:hover {
+  border-color: #BBBEC3;
+}
+
+/* Divider */
+.notion-divider {
+  height: 1px;
+  background-color: var(--notion-border);
+  margin: 24px 0;
+}
+
+/* Allie Chat Integration - Simplified */
+/* Note: Most styles are now injected directly by the chat panel script */
+
+/* Basic style for when chat is open - our script handles the rest */
+.chat-open {
+  overflow-x: hidden;
+}

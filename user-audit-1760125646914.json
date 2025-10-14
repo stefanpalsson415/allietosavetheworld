@@ -1,0 +1,1025 @@
+{
+  "timestamp": "2025-10-10T19:47:25.850Z",
+  "auth": {
+    "total": 7,
+    "byProvider": {
+      "password": 4,
+      "google": 0,
+      "phone": 0,
+      "other": 3
+    },
+    "users": [
+      {
+        "uid": "27wTLiCuvfXkQtgR93qJTs0lmWA2",
+        "email": "neven.cvetkovic@gmail.com",
+        "authMethod": "password",
+        "emailVerified": false,
+        "createdAt": "Fri, 03 Oct 2025 07:47:39 GMT",
+        "lastSignIn": "Fri, 03 Oct 2025 07:47:39 GMT",
+        "disabled": false
+      },
+      {
+        "uid": "M424l8lIxWMI12N0XSz6I8HJRnD2",
+        "email": "test@parentload.com",
+        "authMethod": "password",
+        "emailVerified": false,
+        "createdAt": "Fri, 10 Oct 2025 15:40:51 GMT",
+        "lastSignIn": "Fri, 10 Oct 2025 16:09:31 GMT",
+        "disabled": false
+      },
+      {
+        "uid": "i43Gajsm9AVvkioCHjzI3GgkwC42",
+        "email": "stefan@checkallie.com",
+        "authMethod": "password",
+        "emailVerified": false,
+        "createdAt": "Sat, 27 Sep 2025 08:09:07 GMT",
+        "lastSignIn": "Sat, 27 Sep 2025 08:09:07 GMT",
+        "disabled": false
+      },
+      {
+        "uid": "otp_spalsson_gmail_com",
+        "authMethod": "other",
+        "emailVerified": false,
+        "createdAt": "Mon, 29 Sep 2025 10:58:39 GMT",
+        "lastSignIn": "Fri, 10 Oct 2025 11:18:53 GMT",
+        "disabled": false
+      },
+      {
+        "uid": "otp_stefan_checkallie_com",
+        "authMethod": "other",
+        "emailVerified": false,
+        "createdAt": "Sun, 28 Sep 2025 10:39:22 GMT",
+        "lastSignIn": "Sun, 28 Sep 2025 10:39:22 GMT",
+        "disabled": false
+      },
+      {
+        "uid": "otp_stefan_vekta_work",
+        "authMethod": "other",
+        "emailVerified": false,
+        "createdAt": "Sat, 27 Sep 2025 10:34:05 GMT",
+        "lastSignIn": "Sun, 28 Sep 2025 09:49:12 GMT",
+        "disabled": false
+      },
+      {
+        "uid": "zJ70Yc4bgkea71ztUneHfjyOuYk2",
+        "email": "spalsson@gmail.com",
+        "authMethod": "password",
+        "emailVerified": false,
+        "createdAt": "Sat, 05 Jul 2025 11:07:44 GMT",
+        "lastSignIn": "Sat, 05 Jul 2025 11:07:44 GMT",
+        "disabled": false
+      }
+    ]
+  },
+  "firestore": {
+    "users": {
+      "total": 6,
+      "withFamilyId": 4,
+      "withoutFamilyId": 2,
+      "documents": [
+        {
+          "email": "M424l8lIxWMI12N0XSz6I8HJRnD2",
+          "familyId": "GSS0anumpNttjBwtctwD",
+          "authMethod": "password",
+          "hasPassword": false,
+          "displayName": "Stefan Test",
+          "createdAt": "2025-10-10T16:06:17.238Z"
+        },
+        {
+          "email": "lillian-mcq5374e2bkcnx9z1lo",
+          "familyId": null,
+          "authMethod": "unknown",
+          "hasPassword": false,
+          "displayName": null,
+          "createdAt": null
+        },
+        {
+          "email": "otp_spalsson_gmail_com",
+          "familyId": "mcq5374e2bkcnx9z1lo",
+          "authMethod": "unknown",
+          "hasPassword": false,
+          "displayName": null,
+          "createdAt": null
+        },
+        {
+          "email": "otp_stefan_checkallie_com",
+          "familyId": "mg1zp0tac3hn3lzz239",
+          "authMethod": "unknown",
+          "hasPassword": false,
+          "displayName": null,
+          "createdAt": null
+        },
+        {
+          "email": "otp_stefan_vekta_work",
+          "familyId": "mg0i5bdp7iivujvkak9",
+          "authMethod": "unknown",
+          "hasPassword": false,
+          "displayName": null,
+          "createdAt": null
+        },
+        {
+          "email": "zJ70Yc4bgkea71ztUneHfjyOuYk2",
+          "familyId": null,
+          "authMethod": "unknown",
+          "hasPassword": false,
+          "displayName": null,
+          "createdAt": null
+        }
+      ]
+    },
+    "families": {
+      "total": 12,
+      "withMembers": 11,
+      "orphaned": 8,
+      "documents": [
+        {
+          "familyId": "GSS0anumpNttjBwtctwD",
+          "familyName": "Test Family",
+          "memberCount": 0,
+          "memberIds": [
+            "M424l8lIxWMI12N0XSz6I8HJRnD2",
+            "test-parent-2-1760112377304",
+            "test-child-1-1760112377304",
+            "test-child-2-1760112377304",
+            "test-child-3-1760112377304"
+          ],
+          "primaryEmail": "test@parentload.com",
+          "createdAt": "2025-10-10T16:06:17.501Z",
+          "members": {
+            "M424l8lIxWMI12N0XSz6I8HJRnD2": {
+              "name": "Stefan Test",
+              "email": "test@parentload.com",
+              "role": "parent",
+              "age": 38,
+              "completed": true,
+              "profilePicture": null,
+              "userId": "M424l8lIxWMI12N0XSz6I8HJRnD2",
+              "id": "M424l8lIxWMI12N0XSz6I8HJRnD2"
+            },
+            "test-parent-2-1760112377304": {
+              "name": "Kimberly Test",
+              "email": "kimberly.test@parentload.com",
+              "role": "parent",
+              "age": 36,
+              "completed": false,
+              "profilePicture": null,
+              "userId": "test-parent-2-1760112377304",
+              "id": "test-parent-2-1760112377304"
+            },
+            "test-child-1-1760112377304": {
+              "name": "Lillian Test",
+              "email": null,
+              "role": "child",
+              "age": 12,
+              "completed": false,
+              "profilePicture": null,
+              "userId": "test-child-1-1760112377304",
+              "id": "test-child-1-1760112377304"
+            },
+            "test-child-2-1760112377304": {
+              "name": "Tegner Test",
+              "email": null,
+              "role": "child",
+              "age": 9,
+              "completed": false,
+              "profilePicture": null,
+              "userId": "test-child-2-1760112377304",
+              "id": "test-child-2-1760112377304"
+            },
+            "test-child-3-1760112377304": {
+              "name": "Oly Test",
+              "email": null,
+              "role": "child",
+              "age": 6,
+              "completed": false,
+              "profilePicture": null,
+              "userId": "test-child-3-1760112377304",
+              "id": "test-child-3-1760112377304"
+            }
+          }
+        },
+        {
+          "familyId": "mcq5374e2bkcnx9z1lo",
+          "familyName": "Palsson",
+          "memberCount": 5,
+          "memberIds": [
+            "zJ70Yc4bgkea71ztUneHfjyOuYk2",
+            "G4BOHma0eWM1UxIGaEQ5z6wlCJo1"
+          ],
+          "primaryEmail": "spalsson@gmail.com",
+          "createdAt": "2025-07-05T11:07:45.999Z",
+          "members": [
+            {
+              "profilePicture": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2FzJ70Yc4bgkea71ztUneHfjyOuYk2_1751716584214.jpg?alt=media&token=fedac275-28da-4bd6-b8e7-c9d2060f0de8",
+              "phoneVerified": true,
+              "completed": true,
+              "roleType": "One parent",
+              "id": "zJ70Yc4bgkea71ztUneHfjyOuYk2",
+              "name": "Stefan",
+              "weeklyCompleted": [],
+              "settings": {
+                "showTaskSequencesTab": false,
+                "showSiblingDynamicsTab": false,
+                "showHabitHelperTab": false,
+                "showGiftWishesTab": false,
+                "showRelationshipTab": false,
+                "showWardrobeTab": false,
+                "showKnowledgeGraphTab": false,
+                "showFamilyTreeTab": false
+              },
+              "role": "parent",
+              "completedDate": "2025-07-05",
+              "profilePictureUrl": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2FzJ70Yc4bgkea71ztUneHfjyOuYk2_1751716584214.jpg?alt=media&token=fedac275-28da-4bd6-b8e7-c9d2060f0de8",
+              "email": "spalsson@gmail.com",
+              "phoneNumber": "+46731536304",
+              "surveys": {
+                "initial": {
+                  "responses": {},
+                  "completedAt": "2025-07-05T13:05:36.624Z",
+                  "completed": true
+                }
+              }
+            },
+            {
+              "completed": true,
+              "role": "parent",
+              "phoneVerified": false,
+              "name": "Kimberly",
+              "surveys": {
+                "initial": {
+                  "completed": true,
+                  "completedAt": "2025-07-05T13:09:43.953Z",
+                  "responses": {}
+                }
+              },
+              "id": "G4BOHma0eWM1UxIGaEQ5z6wlCJo1",
+              "completedDate": "2025-07-05",
+              "phoneNumber": null,
+              "email": "kimberly+spalsson@gmail.com",
+              "profilePicture": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2FG4BOHma0eWM1UxIGaEQ5z6wlCJo1_1751716594434.jpg?alt=media&token=eb6798f0-cd8e-439e-b6ed-d1d652217ae9",
+              "weeklyCompleted": [],
+              "roleType": "The other parent",
+              "profilePictureUrl": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2FG4BOHma0eWM1UxIGaEQ5z6wlCJo1_1751716594434.jpg?alt=media&token=eb6798f0-cd8e-439e-b6ed-d1d652217ae9",
+              "settings": {
+                "showHabitHelperTab": false,
+                "showWardrobeTab": false,
+                "showFamilyTreeTab": false,
+                "showTaskSequencesTab": false,
+                "showRelationshipTab": false,
+                "showSiblingDynamicsTab": false,
+                "showGiftWishesTab": false
+              }
+            },
+            {
+              "profilePicture": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2Flillian-mcq5374e2bkcnx9z1lo_1756048567483.JPG?alt=media&token=67dc7c57-bbbe-49e9-a295-101d158e35aa",
+              "surveys": {
+                "initial": {
+                  "completedAt": "2025-07-05T12:52:19.507Z",
+                  "responses": {},
+                  "completed": true
+                }
+              },
+              "age": "14",
+              "name": "Lillian",
+              "weeklyCompleted": [],
+              "profilePictureUrl": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2Flillian-mcq5374e2bkcnx9z1lo_1756048567483.JPG?alt=media&token=67dc7c57-bbbe-49e9-a295-101d158e35aa",
+              "role": "child",
+              "completedDate": "2025-07-05",
+              "completed": true,
+              "id": "lillian-mcq5374e2bkcnx9z1lo"
+            },
+            {
+              "profilePicture": null,
+              "id": "oly-mcq5374e2bkcnx9z1lo",
+              "age": "11",
+              "role": "child",
+              "surveys": {
+                "initial": {
+                  "responses": {},
+                  "completedAt": "2025-07-05T13:13:38.121Z",
+                  "completed": true
+                }
+              },
+              "completedDate": "2025-07-05",
+              "name": "Oly",
+              "completed": true,
+              "weeklyCompleted": []
+            },
+            {
+              "profilePicture": null,
+              "id": "tegner-mcq5374e2bkcnx9z1lo",
+              "age": "7",
+              "completed": true,
+              "role": "child",
+              "name": "Tegner",
+              "weeklyCompleted": [],
+              "surveys": {
+                "initial": {
+                  "completed": true,
+                  "completedAt": "2025-07-05T12:16:15.026Z",
+                  "responses": {}
+                }
+              },
+              "completedDate": "2025-07-05"
+            }
+          ]
+        },
+        {
+          "familyId": "mcrwbgcdo2m33cevcj",
+          "familyName": "Sellers",
+          "memberCount": 3,
+          "memberIds": [
+            "xtan7ZxEAteqLN0bV7RhfepSHxv2",
+            "22uFwqeYCJfEIygbWyq5LCDPc563"
+          ],
+          "primaryEmail": "palsson@vekta.work",
+          "createdAt": "2025-07-06T16:37:47.005Z",
+          "members": [
+            {
+              "phoneVerified": true,
+              "completedDate": null,
+              "profilePicture": null,
+              "roleType": "One parent",
+              "name": "Kim",
+              "completed": false,
+              "phoneNumber": "0731536304",
+              "weeklyCompleted": [],
+              "email": "palsson@vekta.work",
+              "id": "xtan7ZxEAteqLN0bV7RhfepSHxv2",
+              "role": "parent",
+              "surveys": {
+                "initial": {
+                  "responseCount": 2,
+                  "lastUpdated": "2025-07-06T16:38:37.305Z"
+                }
+              }
+            },
+            {
+              "weeklyCompleted": [],
+              "roleType": "The other parent",
+              "id": "22uFwqeYCJfEIygbWyq5LCDPc563",
+              "completed": false,
+              "completedDate": null,
+              "email": "debbie+palsson@vekta.work",
+              "role": "parent",
+              "phoneNumber": null,
+              "profilePicture": null,
+              "name": "Debbie",
+              "phoneVerified": false
+            },
+            {
+              "completed": false,
+              "profilePicture": null,
+              "role": "child",
+              "age": "12",
+              "id": "eric-mcrwbgcdo2m33cevcj",
+              "name": "Eric",
+              "weeklyCompleted": [],
+              "completedDate": null
+            }
+          ]
+        },
+        {
+          "familyId": "mfqkso8rz9cczqygwz",
+          "familyName": "Poop",
+          "memberCount": 3,
+          "memberIds": [
+            "3EVyy40fCFYBjabud9QibJmvlht1"
+          ],
+          "primaryEmail": "spalsson@tana.inc",
+          "createdAt": "2025-09-19T08:26:35.835Z",
+          "members": [
+            {
+              "phoneVerified": true,
+              "profilePicture": null,
+              "completedDate": null,
+              "email": "spalsson@tana.inc",
+              "name": "fart",
+              "phoneNumber": "731536304",
+              "completed": false,
+              "weeklyCompleted": [],
+              "role": "parent",
+              "roleType": "One parent",
+              "id": "3EVyy40fCFYBjabud9QibJmvlht1"
+            },
+            {
+              "role": "parent",
+              "roleType": "The other parent",
+              "id": "the other parent-mfqkso8rz9cczqygwz",
+              "completedDate": null,
+              "profilePicture": null,
+              "completed": false,
+              "phoneVerified": false,
+              "name": "sdfsd",
+              "email": "spalsson@tana.inc",
+              "phoneNumber": null,
+              "weeklyCompleted": []
+            },
+            {
+              "weeklyCompleted": [],
+              "age": "4",
+              "id": "fsdfa-mfqkso8rz9cczqygwz",
+              "completedDate": null,
+              "profilePicture": null,
+              "name": "fsdfa",
+              "completed": false,
+              "role": "child"
+            }
+          ]
+        },
+        {
+          "familyId": "mg0i5bdp7iivujvkak9",
+          "familyName": "Sellers",
+          "memberCount": 2,
+          "memberIds": [
+            "jfBho5hDC0cWmNhNvomehZTMYob2"
+          ],
+          "primaryEmail": "stefan@vekta.work",
+          "createdAt": "2025-09-26T07:10:08.605Z",
+          "members": [
+            {
+              "email": "stefan@vekta.work",
+              "phoneNumber": "731536304",
+              "name": "First",
+              "roleType": "One parent",
+              "role": "parent",
+              "completed": false,
+              "profilePicture": null,
+              "weeklyCompleted": [],
+              "id": "jfBho5hDC0cWmNhNvomehZTMYob2",
+              "phoneVerified": true,
+              "completedDate": null
+            },
+            {
+              "weeklyCompleted": [],
+              "completed": false,
+              "completedDate": null,
+              "age": "7",
+              "profilePicture": null,
+              "id": "kim-mg0i5bdp7iivujvkak9",
+              "role": "child",
+              "name": "Kim"
+            }
+          ]
+        },
+        {
+          "familyId": "mg0ito4vultt773e8a",
+          "familyName": "Sellers",
+          "memberCount": 3,
+          "memberIds": [
+            "VKhJsMWvQwWgM0EIhz6eOgdWaCS2"
+          ],
+          "primaryEmail": "stefan@vekta.work",
+          "createdAt": "2025-09-26T07:29:04.880Z",
+          "members": [
+            {
+              "completedDate": null,
+              "profilePicture": null,
+              "roleType": "One parent",
+              "completed": false,
+              "email": "stefan@vekta.work",
+              "phoneVerified": true,
+              "phoneNumber": "731536304",
+              "name": "Kim",
+              "id": "VKhJsMWvQwWgM0EIhz6eOgdWaCS2",
+              "role": "parent",
+              "weeklyCompleted": []
+            },
+            {
+              "age": "11",
+              "role": "child",
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "id": "eric-mg0ito4vultt773e8a",
+              "profilePicture": null,
+              "completed": false,
+              "name": "Eric"
+            },
+            {
+              "profilePicture": null,
+              "role": "child",
+              "name": "kimberly",
+              "age": "14",
+              "completed": false,
+              "weeklyCompleted": [],
+              "completedDate": null,
+              "id": "kimberly-mg0ito4vultt773e8a"
+            }
+          ]
+        },
+        {
+          "familyId": "mg0jhrocur13worpchm",
+          "familyName": "Sellers",
+          "memberCount": 3,
+          "memberIds": [
+            "6vkMpKsKvtdWCozd8F3N9VwFxW13"
+          ],
+          "primaryEmail": "stefan@vekta.work",
+          "createdAt": "2025-09-26T07:47:49.212Z",
+          "members": [
+            {
+              "phoneVerified": true,
+              "role": "parent",
+              "email": "stefan@vekta.work",
+              "name": "Kim",
+              "completedDate": null,
+              "completed": false,
+              "roleType": "One parent",
+              "phoneNumber": "731536304",
+              "profilePicture": null,
+              "weeklyCompleted": [],
+              "id": "6vkMpKsKvtdWCozd8F3N9VwFxW13"
+            },
+            {
+              "weeklyCompleted": [],
+              "id": "eric-mg0jhrocur13worpchm",
+              "profilePicture": null,
+              "completedDate": null,
+              "role": "child",
+              "name": "Eric",
+              "age": "12",
+              "completed": false
+            },
+            {
+              "completed": false,
+              "profilePicture": null,
+              "name": "Kimberly",
+              "completedDate": null,
+              "role": "child",
+              "id": "kimberly-mg0jhrocur13worpchm",
+              "age": "15",
+              "weeklyCompleted": []
+            }
+          ]
+        },
+        {
+          "familyId": "mg0n4yjboj19mm2c1o",
+          "familyName": "Palsson",
+          "memberCount": 4,
+          "memberIds": [
+            "6oluWpQsGSOTkHUnVq2mKtcLN2J2"
+          ],
+          "primaryEmail": "kimberly@thesuccessstudio.com",
+          "createdAt": "2025-09-26T09:29:50.039Z",
+          "members": [
+            {
+              "name": "Kimberly",
+              "phoneNumber": "761181815",
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "id": "6oluWpQsGSOTkHUnVq2mKtcLN2J2",
+              "completed": false,
+              "role": "parent",
+              "phoneVerified": true,
+              "roleType": "One parent",
+              "email": "kimberly@thesuccessstudio.com",
+              "profilePicture": null
+            },
+            {
+              "weeklyCompleted": [],
+              "role": "child",
+              "age": "14",
+              "profilePicture": null,
+              "id": "lillian-mg0n4yjboj19mm2c1o",
+              "completed": false,
+              "name": "Lillian",
+              "completedDate": null
+            },
+            {
+              "completed": false,
+              "id": "oly-mg0n4yjboj19mm2c1o",
+              "name": "Oly",
+              "age": "12",
+              "profilePicture": null,
+              "role": "child",
+              "completedDate": null,
+              "weeklyCompleted": []
+            },
+            {
+              "completed": false,
+              "role": "child",
+              "profilePicture": null,
+              "completedDate": null,
+              "age": "8",
+              "weeklyCompleted": [],
+              "id": "tegner-mg0n4yjboj19mm2c1o",
+              "name": "Tegner"
+            }
+          ]
+        },
+        {
+          "familyId": "mg0s1qlj0mhm7uvf521b",
+          "familyName": "Sellers",
+          "memberCount": 3,
+          "memberIds": [
+            "0GdGGXhQKwR9KhKCOOucsnR47qX2"
+          ],
+          "primaryEmail": "stefan@vekta.work",
+          "createdAt": "2025-09-26T11:47:17.863Z",
+          "members": [
+            {
+              "email": "stefan@vekta.work",
+              "role": "parent",
+              "phoneNumber": "731536304",
+              "id": "0GdGGXhQKwR9KhKCOOucsnR47qX2",
+              "completedDate": null,
+              "phoneVerified": true,
+              "name": "Debbie",
+              "completed": false,
+              "roleType": "One parent",
+              "profilePicture": null,
+              "weeklyCompleted": []
+            },
+            {
+              "profilePicture": null,
+              "name": "Eric",
+              "completed": false,
+              "age": "13",
+              "id": "eric-mg0s1qlj0mhm7uvf521b",
+              "completedDate": null,
+              "role": "child",
+              "weeklyCompleted": []
+            },
+            {
+              "id": "kimberly-mg0s1qlj0mhm7uvf521b",
+              "role": "child",
+              "name": "Kimberly",
+              "profilePicture": null,
+              "completed": false,
+              "age": "11",
+              "weeklyCompleted": [],
+              "completedDate": null
+            }
+          ]
+        },
+        {
+          "familyId": "mg0sagdpt3nrg4r1ye",
+          "familyName": "Sellers",
+          "memberCount": 4,
+          "memberIds": [
+            "AnRYw5mcutPnS6gPykclyfY41Bn2"
+          ],
+          "primaryEmail": "stefan@vekta.work",
+          "createdAt": "2025-09-26T11:54:04.526Z",
+          "members": [
+            {
+              "phoneNumber": "731536304",
+              "completedDate": null,
+              "name": "Kim",
+              "profilePicture": null,
+              "weeklyCompleted": [],
+              "completed": false,
+              "email": "stefan@vekta.work",
+              "roleType": "One parent",
+              "phoneVerified": true,
+              "id": "AnRYw5mcutPnS6gPykclyfY41Bn2",
+              "role": "parent"
+            },
+            {
+              "completed": false,
+              "name": "Debbie",
+              "profilePicture": null,
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "phoneVerified": false,
+              "email": null,
+              "roleType": "The other parent",
+              "id": "the other parent-mg0sagdpt3nrg4r1ye",
+              "phoneNumber": null,
+              "role": "parent"
+            },
+            {
+              "age": "11",
+              "role": "child",
+              "name": "Eric",
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "completed": false,
+              "id": "eric-mg0sagdpt3nrg4r1ye",
+              "profilePicture": null
+            },
+            {
+              "role": "child",
+              "profilePicture": null,
+              "completedDate": null,
+              "age": "13",
+              "name": "Kim",
+              "id": "kim-mg0sagdpt3nrg4r1ye",
+              "weeklyCompleted": [],
+              "completed": false
+            }
+          ]
+        },
+        {
+          "familyId": "mg1zp0tac3hn3lzz239",
+          "familyName": "Sellers",
+          "memberCount": 4,
+          "memberIds": [
+            "i43Gajsm9AVvkioCHjzI3GgkwC42",
+            "the other parent-mg1zp0tac3hn3lzz239",
+            "eric-mg1zp0tac3hn3lzz239",
+            "kimberly-mg1zp0tac3hn3lzz239"
+          ],
+          "primaryEmail": "stefan@checkallie.com",
+          "createdAt": "2025-09-27T08:09:07.678Z",
+          "members": [
+            {
+              "weeklyCompleted": [],
+              "email": "stefan@checkallie.com",
+              "completed": false,
+              "phoneNumber": null,
+              "settings": {
+                "showGiftWishesTab": false,
+                "showSiblingDynamicsTab": false,
+                "showTaskSequencesTab": false,
+                "showRelationshipTab": false,
+                "showFamilyTreeTab": false,
+                "showHabitHelperTab": false,
+                "showKnowledgeGraphTab": true,
+                "showWardrobeTab": false
+              },
+              "role": "parent",
+              "roleType": "One parent",
+              "name": "Kim",
+              "id": "i43Gajsm9AVvkioCHjzI3GgkwC42",
+              "completedDate": null,
+              "profilePicture": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2Fi43Gajsm9AVvkioCHjzI3GgkwC42_1758960913307.jpg?alt=media&token=22acaf8b-b7e6-4c45-8214-330ac1954dd2",
+              "surveys": {
+                "initial": {
+                  "responseCount": 23,
+                  "lastUpdated": "2025-09-28T10:33:45.107Z"
+                }
+              },
+              "phoneVerified": false,
+              "profilePictureUrl": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2Fi43Gajsm9AVvkioCHjzI3GgkwC42_1758960913307.jpg?alt=media&token=22acaf8b-b7e6-4c45-8214-330ac1954dd2"
+            },
+            {
+              "role": "parent",
+              "roleType": "The other parent",
+              "completedDate": null,
+              "email": null,
+              "profilePicture": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2Fthe%20other%20parent-mg1zp0tac3hn3lzz239_1759055987732.jpg?alt=media&token=f314c40f-9c29-4b1d-b74a-0ef5b423c213",
+              "weeklyCompleted": [],
+              "name": "Debbie",
+              "surveys": {
+                "initial": {
+                  "lastUpdated": "2025-09-27T12:28:50.063Z",
+                  "responseCount": 12
+                }
+              },
+              "profilePictureUrl": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2Fthe%20other%20parent-mg1zp0tac3hn3lzz239_1759055987732.jpg?alt=media&token=f314c40f-9c29-4b1d-b74a-0ef5b423c213",
+              "phoneNumber": null,
+              "completed": false,
+              "phoneVerified": false,
+              "id": "the other parent-mg1zp0tac3hn3lzz239"
+            },
+            {
+              "age": "11",
+              "surveys": {
+                "initial": {
+                  "completed": true,
+                  "completedAt": "2025-09-28T10:41:07.582Z",
+                  "responses": {}
+                }
+              },
+              "weeklyCompleted": [],
+              "completed": true,
+              "completedDate": "2025-09-28",
+              "id": "eric-mg1zp0tac3hn3lzz239",
+              "name": "Eric",
+              "profilePictureUrl": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2Feric-mg1zp0tac3hn3lzz239_1759055893455.jpg?alt=media&token=cc794e02-f03c-4872-87d1-e006b4f99e8d",
+              "role": "child",
+              "profilePicture": "https://firebasestorage.googleapis.com/v0/b/parentload-ba995.firebasestorage.app/o/profile-pictures%2Feric-mg1zp0tac3hn3lzz239_1759055893455.jpg?alt=media&token=cc794e02-f03c-4872-87d1-e006b4f99e8d"
+            },
+            {
+              "completedDate": "2025-09-27",
+              "profilePicture": null,
+              "name": "Kimberly",
+              "weeklyCompleted": [],
+              "age": "13",
+              "id": "kimberly-mg1zp0tac3hn3lzz239",
+              "role": "child",
+              "completed": true,
+              "surveys": {
+                "initial": {
+                  "completedAt": "2025-09-27T12:37:36.117Z",
+                  "completed": true,
+                  "responses": {}
+                }
+              }
+            }
+          ]
+        },
+        {
+          "familyId": "mgajkj5z9usn7t3r99u",
+          "familyName": "Cvetkovic",
+          "memberCount": 5,
+          "memberIds": [
+            "27wTLiCuvfXkQtgR93qJTs0lmWA2",
+            "the other parent-mgajkj5z9usn7t3r99u",
+            "mira-mgajkj5z9usn7t3r99u",
+            "vera-mgajkj5z9usn7t3r99u",
+            "dana-mgajkj5z9usn7t3r99u"
+          ],
+          "primaryEmail": "neven.cvetkovic@gmail.com",
+          "createdAt": "2025-10-03T07:47:39.911Z",
+          "members": [
+            {
+              "id": "27wTLiCuvfXkQtgR93qJTs0lmWA2",
+              "name": "Neven",
+              "role": "parent",
+              "roleType": "One parent",
+              "email": "neven.cvetkovic@gmail.com",
+              "phoneNumber": "725403366",
+              "phoneVerified": true,
+              "completed": false,
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "profilePicture": null
+            },
+            {
+              "id": "the other parent-mgajkj5z9usn7t3r99u",
+              "name": "Kristin",
+              "role": "parent",
+              "roleType": "The other parent",
+              "email": "kristin.cvetkovic@gmail.com",
+              "phoneNumber": null,
+              "phoneVerified": false,
+              "completed": false,
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "profilePicture": null
+            },
+            {
+              "id": "mira-mgajkj5z9usn7t3r99u",
+              "name": "Mira",
+              "role": "child",
+              "age": "13",
+              "completed": false,
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "profilePicture": null
+            },
+            {
+              "id": "vera-mgajkj5z9usn7t3r99u",
+              "name": "Vera",
+              "role": "child",
+              "age": "11",
+              "completed": false,
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "profilePicture": null
+            },
+            {
+              "id": "dana-mgajkj5z9usn7t3r99u",
+              "name": "Dana",
+              "role": "child",
+              "age": "9",
+              "completed": false,
+              "completedDate": null,
+              "weeklyCompleted": [],
+              "profilePicture": null
+            }
+          ]
+        }
+      ]
+    },
+    "leads": {
+      "exists": false,
+      "total": 0,
+      "documents": []
+    }
+  },
+  "gaps": {
+    "authOnlyUsers": [
+      {
+        "email": "neven.cvetkovic@gmail.com",
+        "uid": "27wTLiCuvfXkQtgR93qJTs0lmWA2",
+        "authMethod": "password"
+      },
+      {
+        "email": "test@parentload.com",
+        "uid": "M424l8lIxWMI12N0XSz6I8HJRnD2",
+        "authMethod": "password"
+      },
+      {
+        "email": "stefan@checkallie.com",
+        "uid": "i43Gajsm9AVvkioCHjzI3GgkwC42",
+        "authMethod": "password"
+      },
+      {
+        "email": "spalsson@gmail.com",
+        "uid": "zJ70Yc4bgkea71ztUneHfjyOuYk2",
+        "authMethod": "password"
+      }
+    ],
+    "firestoreOnlyUsers": [
+      {
+        "email": "M424l8lIxWMI12N0XSz6I8HJRnD2",
+        "familyId": "GSS0anumpNttjBwtctwD"
+      },
+      {
+        "email": "lillian-mcq5374e2bkcnx9z1lo",
+        "familyId": null
+      },
+      {
+        "email": "otp_spalsson_gmail_com",
+        "familyId": "mcq5374e2bkcnx9z1lo"
+      },
+      {
+        "email": "otp_stefan_checkallie_com",
+        "familyId": "mg1zp0tac3hn3lzz239"
+      },
+      {
+        "email": "otp_stefan_vekta_work",
+        "familyId": "mg0i5bdp7iivujvkak9"
+      },
+      {
+        "email": "zJ70Yc4bgkea71ztUneHfjyOuYk2",
+        "familyId": null
+      }
+    ],
+    "usersWithoutFamily": [
+      {
+        "email": "lillian-mcq5374e2bkcnx9z1lo",
+        "authMethod": "unknown"
+      },
+      {
+        "email": "zJ70Yc4bgkea71ztUneHfjyOuYk2",
+        "authMethod": "unknown"
+      }
+    ],
+    "familiesWithoutUsers": [
+      {
+        "familyId": "mcrwbgcdo2m33cevcj",
+        "familyName": "Sellers",
+        "parentEmails": [
+          "palsson@vekta.work",
+          "debbie+palsson@vekta.work"
+        ]
+      },
+      {
+        "familyId": "mfqkso8rz9cczqygwz",
+        "familyName": "Poop",
+        "parentEmails": [
+          "spalsson@tana.inc",
+          "spalsson@tana.inc"
+        ]
+      },
+      {
+        "familyId": "mg0i5bdp7iivujvkak9",
+        "familyName": "Sellers",
+        "parentEmails": [
+          "stefan@vekta.work"
+        ]
+      },
+      {
+        "familyId": "mg0ito4vultt773e8a",
+        "familyName": "Sellers",
+        "parentEmails": [
+          "stefan@vekta.work"
+        ]
+      },
+      {
+        "familyId": "mg0jhrocur13worpchm",
+        "familyName": "Sellers",
+        "parentEmails": [
+          "stefan@vekta.work"
+        ]
+      },
+      {
+        "familyId": "mg0n4yjboj19mm2c1o",
+        "familyName": "Palsson",
+        "parentEmails": [
+          "kimberly@thesuccessstudio.com"
+        ]
+      },
+      {
+        "familyId": "mg0s1qlj0mhm7uvf521b",
+        "familyName": "Sellers",
+        "parentEmails": [
+          "stefan@vekta.work"
+        ]
+      },
+      {
+        "familyId": "mg0sagdpt3nrg4r1ye",
+        "familyName": "Sellers",
+        "parentEmails": [
+          "stefan@vekta.work"
+        ]
+      }
+    ],
+    "missingConnections": []
+  },
+  "summary": {
+    "completeUsers": 0,
+    "incompleteUsers": 6,
+    "recommendations": [
+      "⚠️  4 users have login credentials but no Firestore metadata - they likely bypassed onboarding",
+      "⚠️  2 users have no familyId - they cannot access family features",
+      "⚠️  8 families have no parent users - orphaned family data",
+      "ℹ️  No leads collection found - need to create system for blog/quiz email collection",
+      "🔴 CRITICAL: Zero complete users found - all users have setup issues"
+    ]
+  }
+}

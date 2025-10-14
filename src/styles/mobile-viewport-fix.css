@@ -1,0 +1,69 @@
+/* Mobile Viewport Height Fix */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific fixes */
+  .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
+
+  html {
+    height: -webkit-fill-available;
+    background-color: white;
+  }
+
+  /* Fix Safari gradient rendering issues */
+  .bg-gradient-to-br,
+  .bg-gradient-to-r {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* Fix for mobile browsers with dynamic viewport */
+.mobile-full-height {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: 100dvh; /* Dynamic viewport height */
+}
+
+/* Prevent white screen on load */
+body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* Fix for mobile safe areas */
+@supports (padding: env(safe-area-inset-top)) {
+  .mobile-safe-padding {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Ensure content is always visible */
+#root {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile-specific overrides */
+@media (max-width: 768px) and (pointer: coarse) {
+  /* Real mobile device detection */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Prevent overflow issues */
+  html, body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fix position fixed issues on mobile */
+  .fixed {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}

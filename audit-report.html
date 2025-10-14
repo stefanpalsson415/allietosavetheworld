@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firestore Collections Audit Report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        .success {
+            color: #27ae60;
+        }
+        .warning {
+            color: #e67e22;
+        }
+        .error {
+            color: #c0392b;
+        }
+        .empty {
+            color: #95a5a6;
+            font-style: italic;
+        }
+        .highlight {
+            background-color: #ffffcc;
+        }
+        .duplicate {
+            background-color: #ffe6e6;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 7px;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1;
+            color: #fff;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 10px;
+            margin-right: 5px;
+        }
+        .badge-primary { background-color: #3498db; }
+        .badge-success { background-color: #2ecc71; }
+        .badge-warning { background-color: #f1c40f; }
+        .badge-danger { background-color: #e74c3c; }
+        .badge-info { background-color: #3498db; }
+        .recommendation {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+            background-color: #ebf5fb;
+        }
+        .actions {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .hidden {
+            display: none;
+        }
+        #loading {
+            text-align: center;
+            margin: 50px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Firestore Collections Audit Report</h1>
+    
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Analyzing Firestore collections...</p>
+    </div>
+    
+    <div id="results" class="hidden">
+        <div class="section">
+            <h2>Summary</h2>
+            <div id="summary">
+                <p>Loading summary...</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Provider Collections</h2>
+            <div id="collections-summary"></div>
+            <div id="collections-details"></div>
+        </div>
+        
+        <div class="section">
+            <h2>Duplicate Providers</h2>
+            <div id="duplicates">
+                <p>Loading duplicate analysis...</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>UI Provider Analysis</h2>
+            <div id="ui-providers">
+                <p>Loading UI provider analysis...</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Recommendations</h2>
+            <div id="recommendations">
+                <p>Generating recommendations...</p>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button id="create-test-provider-button">Create Test Provider</button>
+            <button id="generate-migration-button">Generate Migration Plan</button>
+            <button id="rerun-audit-button">Re-run Audit</button>
+        </div>
+    </div>
+    
+    <div id="create-test-form" class="section hidden">
+        <h2>Create Test Provider</h2>
+        <p>Select a collection to create a test provider in:</p>
+        <div>
+            <label>
+                <input type="radio" name="collection" value="providers" checked> providers
+            </label>
+            <label>
+                <input type="radio" name="collection" value="familyProviders"> familyProviders
+            </label>
+            <label>
+                <input type="radio" name="collection" value="healthcareProviders"> healthcareProviders
+            </label>
+        </div>
+        <div class="actions">
+            <button id="create-provider-submit">Create Provider</button>
+            <button id="cancel-create-provider">Cancel</button>
+        </div>
+        <div id="create-result" class="hidden"></div>
+    </div>
+    
+    <div id="migration-plan" class="section hidden">
+        <h2>Migration Plan</h2>
+        <div id="migration-content">
+            <p>Generating migration plan...</p>
+        </div>
+        <div class="actions">
+            <button id="close-migration-button">Close</button>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { db } from './src/services/firebase.js';
+        import { 
+            collection, 
+            getDocs,
+            query,
+            where,
+            orderBy,
+            addDoc
+        } from 'firebase/firestore';
+        
+        // Get DOM elements
+        const loadingElement = document.getElementById('loading');
+        const resultsElement = document.getElementById('results');
+        const summaryElement = document.getElementById('summary');
+        const collectionsSum = document.getElementById('collections-summary');
+        const collectionsDet = document.getElementById('collections-details');
+        const duplicatesElement = document.getElementById('duplicates');
+        const uiProvidersElement = document.getElementById('ui-providers');
+        const recommendationsElement = document.getElementById('recommendations');
+        
+        // Get action buttons
+        const createTestBtn = document.getElementById('create-test-provider-button');
+        const migrationBtn = document.getElementById('generate-migration-button');
+        const rerunBtn = document.getElementById('rerun-audit-button');
+        
+        // Test Provider Form
+        const createForm = document.getElementById('create-test-form');
+        const createSubmit = document.getElementById('create-provider-submit');
+        const cancelCreate = document.getElementById('cancel-create-provider');
+        const createResult = document.getElementById('create-result');
+        
+        // Migration Plan
+        const migrationPlan = document.getElementById('migration-plan');
+        const migrationContent = document.getElementById('migration-content');
+        const closeMigration = document.getElementById('close-migration-button');
+        
+        // Audit results storage
+        let auditResults = null;
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            runAudit();
+            
+            // Event listeners
+            createTestBtn.addEventListener('click', showCreateForm);
+            migrationBtn.addEventListener('click', showMigrationPlan);
+            rerunBtn.addEventListener('click', runAudit);
+            
+            createSubmit.addEventListener('click', createTestProvider);
+            cancelCreate.addEventListener('click', hideCreateForm);
+            
+            closeMigration.addEventListener('click', () => {
+                migrationPlan.classList.add('hidden');
+            });
+        });
+        
+        // Run the audit
+        async function runAudit() {
+            // Show loading
+            loadingElement.classList.remove('hidden');
+            resultsElement.classList.add('hidden');
+            createForm.classList.add('hidden');
+            migrationPlan.classList.add('hidden');
+            
+            try {
+                // Get results from audit
+                auditResults = await auditProviderCollections();
+                
+                // Render results
+                renderResults();
+                
+                // Hide loading, show results
+                loadingElement.classList.add('hidden');
+                resultsElement.classList.remove('hidden');
+            } catch (error) {
+                console.error("Error running audit:", error);
+                
+                // Show error in summary
+                summaryElement.innerHTML = `
+                    <div class="error">
+                        <h3>Error running audit</h3>
+                        <p>${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+                
+                // Hide loading, show results
+                loadingElement.classList.add('hidden');
+                resultsElement.classList.remove('hidden');
+            }
+        }
+        
+        // Check all provider-related collections for duplicates
+        async function auditProviderCollections() {
+            try {
+                console.log("🔍 Starting provider collections audit...");
+                
+                // Define the collections to check
+                const collectionsToCheck = ['providers', 'familyProviders', 'healthcareProviders'];
+                
+                // Get a family ID from localStorage or use a default
+                const familyId = localStorage.getItem('selectedFamilyId') || 
+                                localStorage.getItem('currentFamilyId') || 
+                                'm93tlovs6ty9sg8k0c8'; // Fallback ID
+                
+                console.log(`Using family ID: ${familyId}`);
+                
+                const results = {
+                    timestamp: new Date().toISOString(),
+                    familyId,
+                    collections: {}
+                };
+                
+                // Check each collection
+                for (const collectionName of collectionsToCheck) {
+                    try {
+                        console.log(`Checking collection: ${collectionName}`);
+                        
+                        // Query the collection
+                        const providersQuery = query(
+                            collection(db, collectionName),
+                            where("familyId", "==", familyId),
+                            orderBy("createdAt", "desc")
+                        );
+                        
+                        const snapshot = await getDocs(providersQuery);
+                        const providers = [];
+                        
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            providers.push({
+                                id: doc.id,
+                                name: data.name,
+                                type: data.type || "unknown",
+                                specialty: data.specialty || "",
+                                email: data.email || "",
+                                phone: data.phone || "",
+                                createdAt: data.createdAt ? 
+                                    (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : 
+                                    new Date(data.createdAt).toISOString()) : "unknown"
+                            });
+                        });
+                        
+                        console.log(`Found ${providers.length} providers in "${collectionName}" collection`);
+                        results.collections[collectionName] = providers;
+                    } catch (error) {
+                        console.error(`Error checking collection "${collectionName}":`, error);
+                        results.collections[collectionName] = { error: error.message };
+                    }
+                }
+                
+                // Check for duplicates across collections
+                results.duplicates = findDuplicateProviders(results.collections);
+                
+                // Check UI providers
+                if (window.allieKnowledgeGraph) {
+                    const knowledgeGraphProviders = window.allieKnowledgeGraph.familyProviders || [];
+                    
+                    results.uiProviders = {
+                        count: knowledgeGraphProviders.length,
+                        providers: knowledgeGraphProviders.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            type: p.type || "unknown",
+                            source: p._source || "unknown"
+                        }))
+                    };
+                }
+                
+                // Generate recommendations
+                results.recommendations = generateRecommendations(results);
+                
+                return results;
+            } catch (error) {
+                console.error("Error in audit:", error);
+                throw error;
+            }
+        }
+        
+        // Helper function to find duplicate providers across collections
+        function findDuplicateProviders(collections) {
+            const duplicates = [];
+            const providerNames = {};
+            
+            // Check each collection
+            for (const collectionName of Object.keys(collections)) {
+                if (!Array.isArray(collections[collectionName])) continue;
+                
+                // Check each provider in the collection
+                collections[collectionName].forEach(provider => {
+                    const name = provider.name;
+                    
+                    if (!name) return;
+                    
+                    if (!providerNames[name]) {
+                        providerNames[name] = [];
+                    }
+                    
+                    providerNames[name].push({
+                        collection: collectionName,
+                        id: provider.id,
+                        type: provider.type,
+                        specialty: provider.specialty
+                    });
+                });
+            }
+            
+            // Find duplicates (providers in multiple collections)
+            Object.keys(providerNames).forEach(name => {
+                if (providerNames[name].length > 1) {
+                    duplicates.push({
+                        name,
+                        instances: providerNames[name]
+                    });
+                }
+            });
+            
+            return duplicates;
+        }
+        
+        // Generate recommendations based on audit results
+        function generateRecommendations(results) {
+            const recommendations = [];
+            
+            // Check if we have providers in multiple collections
+            const collectionsWithProviders = Object.keys(results.collections)
+                .filter(name => Array.isArray(results.collections[name]) && results.collections[name].length > 0);
+            
+            if (collectionsWithProviders.length > 1) {
+                recommendations.push({
+                    issue: "providers_in_multiple_collections",
+                    description: `Found providers in multiple collections: ${collectionsWithProviders.join(', ')}`,
+                    solution: "Consolidate all providers into a single 'providers' collection",
+                    severity: "high"
+                });
+            }
+            
+            // If we have duplicates, recommend deduplication
+            if (results.duplicates && results.duplicates.length > 0) {
+                recommendations.push({
+                    issue: "duplicate_providers",
+                    description: `Found ${results.duplicates.length} providers with the same name in multiple collections`,
+                    solution: "Consolidate duplicate providers into a single collection and remove duplicates",
+                    severity: "high"
+                });
+            }
+            
+            // If UI providers don't match database, recommend fixing
+            if (results.uiProviders) {
+                const uiCount = results.uiProviders.count;
+                let dbCount = 0;
+                
+                // Count all database providers
+                Object.keys(results.collections).forEach(collection => {
+                    if (Array.isArray(results.collections[collection])) {
+                        dbCount += results.collections[collection].length;
+                    }
+                });
+                
+                // Check if UI and database provider counts match
+                if (uiCount !== dbCount) {
+                    recommendations.push({
+                        issue: "ui_database_mismatch",
+                        description: `UI shows ${uiCount} providers, but database has ${dbCount} total providers`,
+                        solution: "Update UI to correctly show all providers from the database",
+                        severity: "medium"
+                    });
+                }
+            }
+            
+            return recommendations;
+        }
+        
+        // Render the audit results to the page
+        function renderResults() {
+            // Render summary
+            summaryElement.innerHTML = `
+                <p>Audit completed at <strong>${new Date().toLocaleString()}</strong></p>
+                <p>Using family ID: <strong>${auditResults.familyId}</strong></p>
+                <p>Found providers in the following collections:</p>
+                <ul>
+                    ${Object.keys(auditResults.collections).map(collection => {
+                        const providers = auditResults.collections[collection];
+                        return `<li>${collection}: <strong>${Array.isArray(providers) ? providers.length : 'Error'}</strong> providers</li>`;
+                    }).join('')}
+                </ul>
+            `;
+            
+            // Render collections summary
+            collectionsSum.innerHTML = `
+                <div class="collections-grid">
+                    ${Object.keys(auditResults.collections).map(collection => {
+                        const providers = auditResults.collections[collection];
+                        if (!Array.isArray(providers)) {
+                            return `
+                                <div class="error">
+                                    <h3>${collection}</h3>
+                                    <p>Error: ${providers.error}</p>
+                                </div>
+                            `;
+                        }
+                        
+                        return `
+                            <div>
+                                <h3>${collection} <span class="badge badge-info">${providers.length}</span></h3>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            // Render collection details
+            collectionsDet.innerHTML = Object.keys(auditResults.collections).map(collection => {
+                const providers = auditResults.collections[collection];
+                if (!Array.isArray(providers)) {
+                    return '';
+                }
+                
+                if (providers.length === 0) {
+                    return `
+                        <div>
+                            <h3>${collection}</h3>
+                            <p class="empty">No providers found in this collection</p>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div>
+                        <h3>${collection}</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Specialty</th>
+                                    <th>Contact</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${providers.map(provider => `
+                                    <tr>
+                                        <td>${provider.name}</td>
+                                        <td>${provider.type}</td>
+                                        <td>${provider.specialty || '-'}</td>
+                                        <td>${provider.email || provider.phone ? `${provider.email || ''} ${provider.phone || ''}` : '-'}</td>
+                                        <td>${provider.createdAt !== 'unknown' ? new Date(provider.createdAt).toLocaleString() : 'unknown'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }).join('<hr>');
+            
+            // Render duplicates
+            if (auditResults.duplicates && auditResults.duplicates.length > 0) {
+                duplicatesElement.innerHTML = `
+                    <p class="warning">Found ${auditResults.duplicates.length} provider(s) with the same name in multiple collections:</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Provider Name</th>
+                                <th>Collections</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${auditResults.duplicates.map(duplicate => `
+                                <tr class="duplicate">
+                                    <td>${duplicate.name}</td>
+                                    <td>${duplicate.instances.map(i => i.collection).join(', ')}</td>
+                                    <td>
+                                        ${duplicate.instances.map(instance => `
+                                            <div>
+                                                <strong>${instance.collection}:</strong> ${instance.id} (${instance.type}${instance.specialty ? `, ${instance.specialty}` : ''})
+                                            </div>
+                                        `).join('')}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                duplicatesElement.innerHTML = `
+                    <p class="success">No duplicate providers found across collections.</p>
+                `;
+            }
+            
+            // Render UI providers
+            if (auditResults.uiProviders) {
+                const uiProviders = auditResults.uiProviders;
+                
+                if (uiProviders.count === 0) {
+                    uiProvidersElement.innerHTML = `
+                        <p class="warning">No providers are currently shown in the UI.</p>
+                    `;
+                } else {
+                    uiProvidersElement.innerHTML = `
+                        <p>UI is currently showing ${uiProviders.count} providers:</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Source</th>
+                                    <th>ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${uiProviders.providers.map(provider => `
+                                    <tr>
+                                        <td>${provider.name}</td>
+                                        <td>${provider.type}</td>
+                                        <td>${provider.source}</td>
+                                        <td>${provider.id}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+            } else {
+                uiProvidersElement.innerHTML = `
+                    <p class="warning">Could not access UI provider information (window.allieKnowledgeGraph not found).</p>
+                `;
+            }
+            
+            // Render recommendations
+            if (auditResults.recommendations && auditResults.recommendations.length > 0) {
+                recommendationsElement.innerHTML = `
+                    <p>Based on the audit results, here are the recommended actions:</p>
+                    ${auditResults.recommendations.map(rec => `
+                        <div class="recommendation">
+                            <h3>
+                                <span class="badge badge-${rec.severity === 'high' ? 'danger' : (rec.severity === 'medium' ? 'warning' : 'info')}">
+                                    ${rec.severity}
+                                </span>
+                                ${rec.issue.replace(/_/g, ' ')}
+                            </h3>
+                            <p><strong>Issue:</strong> ${rec.description}</p>
+                            <p><strong>Solution:</strong> ${rec.solution}</p>
+                        </div>
+                    `).join('')}
+                `;
+            } else {
+                recommendationsElement.innerHTML = `
+                    <p class="success">No issues found that require action.</p>
+                `;
+            }
+        }
+        
+        // Show the create provider form
+        function showCreateForm() {
+            createForm.classList.remove('hidden');
+            createResult.classList.add('hidden');
+        }
+        
+        // Hide the create provider form
+        function hideCreateForm() {
+            createForm.classList.add('hidden');
+        }
+        
+        // Create a test provider
+        async function createTestProvider() {
+            // Get selected collection
+            const collection = document.querySelector('input[name="collection"]:checked').value;
+            
+            createResult.innerHTML = `
+                <div class="spinner"></div>
+                <p>Creating test provider in '${collection}'...</p>
+            `;
+            createResult.classList.remove('hidden');
+            
+            try {
+                // Get a family ID from localStorage or use a default
+                const familyId = localStorage.getItem('selectedFamilyId') || 
+                                localStorage.getItem('currentFamilyId') || 
+                                'm93tlovs6ty9sg8k0c8'; // Fallback ID
+                
+                // Create a test provider with timestamp for uniqueness
+                const timestamp = new Date().toISOString();
+                const testProvider = {
+                    name: `Test Provider in ${collection} (${timestamp.substring(11, 19)})`,
+                    type: "test",
+                    specialty: "Test Provider",
+                    email: "test@example.com",
+                    phone: "555-TEST",
+                    notes: `Test provider created in ${collection} at ${timestamp}`,
+                    familyId: familyId,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    source: "test_script"
+                };
+                
+                // Add to the specified collection
+                const providersRef = collection(db, collection);
+                const docRef = await addDoc(providersRef, testProvider);
+                
+                console.log(`✅ Created test provider in '${collection}' with ID: ${docRef.id}`);
+                
+                // Force UI refresh
+                window.dispatchEvent(new CustomEvent('provider-added'));
+                window.dispatchEvent(new CustomEvent('force-data-refresh'));
+                
+                // Show success message
+                createResult.innerHTML = `
+                    <div class="success">
+                        <p>✅ Successfully created test provider "${testProvider.name}" in '${collection}' collection</p>
+                        <p>Provider ID: ${docRef.id}</p>
+                    </div>
+                    <button id="rerun-after-create" class="badge-success">Re-run Audit</button>
+                `;
+                
+                // Add event listener for re-run button
+                document.getElementById('rerun-after-create').addEventListener('click', () => {
+                    hideCreateForm();
+                    runAudit();
+                });
+            } catch (error) {
+                console.error(`Error creating test provider in '${collection}':`, error);
+                
+                // Show error message
+                createResult.innerHTML = `
+                    <div class="error">
+                        <p>❌ Error creating test provider: ${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            }
+        }
+        
+        // Show the migration plan
+        function showMigrationPlan() {
+            // Get collections with providers
+            const collectionsWithProviders = Object.keys(auditResults.collections)
+                .filter(name => Array.isArray(auditResults.collections[name]) && auditResults.collections[name].length > 0);
+            
+            if (collectionsWithProviders.length <= 1) {
+                migrationContent.innerHTML = `
+                    <p class="warning">No migration needed - all providers are in a single collection.</p>
+                `;
+                migrationPlan.classList.remove('hidden');
+                return;
+            }
+            
+            // Create migration plan
+            const plan = {
+                sourceCollections: collectionsWithProviders.filter(c => c !== 'providers'),
+                targetCollection: 'providers',
+                steps: [
+                    {
+                        step: 1,
+                        description: 'Backup all provider data',
+                        code: `// Export data from all collections\nconst allProviders = {};\n\nfor (const collection of ${JSON.stringify(collectionsWithProviders)}) {\n  const snapshot = await getDocs(collection(db, collection));\n  allProviders[collection] = [];\n  \n  snapshot.forEach(doc => {\n    allProviders[collection].push({\n      id: doc.id,\n      ...doc.data()\n    });\n  });\n}\n\n// Save to localStorage or export as JSON\nlocalStorage.setItem('provider_backup', JSON.stringify(allProviders));`
+                    },
+                    {
+                        step: 2,
+                        description: 'Merge providers into a single collection',
+                        code: `// Migrate providers to the target collection\nfor (const collection of ${JSON.stringify(collectionsWithProviders.filter(c => c !== 'providers'))}) {\n  const snapshot = await getDocs(collection(db, collection));\n  \n  // Process each document\n  for (const doc of snapshot.docs) {\n    const data = doc.data();\n    \n    // Check if this provider already exists in target collection\n    const existingQuery = query(\n      collection(db, 'providers'),\n      where('name', '==', data.name)\n    );\n    const existingSnapshot = await getDocs(existingQuery);\n    \n    if (existingSnapshot.empty) {\n      // Add to target collection\n      await addDoc(collection(db, 'providers'), {\n        ...data,\n        sourceCollection: collection,\n        migratedAt: new Date()\n      });\n    }\n  }\n}`
+                    },
+                    {
+                        step: 3,
+                        description: 'Update application code',
+                        details: 'Update all service files to use the "providers" collection consistently:\n\n- ProviderService.js\n- IntentActionService.js\n- ClaudeService.js\n- Any other services that interact with providers'
+                    },
+                    {
+                        step: 4,
+                        description: 'Verify migration',
+                        code: `// Check if all providers migrated correctly\nconst verifyMigration = async () => {\n  // Count providers in source collections\n  let sourceProviders = 0;\n  for (const collection of ${JSON.stringify(collectionsWithProviders.filter(c => c !== 'providers'))}) {\n    const snapshot = await getDocs(collection(db, collection));\n    sourceProviders += snapshot.size;\n  }\n  \n  // Count providers in target collection\n  const targetSnapshot = await getDocs(collection(db, 'providers'));\n  const targetProviders = targetSnapshot.size;\n  \n  console.log(\`Source collections: \${sourceProviders} providers\`);\n  console.log(\`Target collection: \${targetProviders} providers\`);\n  \n  return {\n    sourceCount: sourceProviders,\n    targetCount: targetProviders,\n    verified: targetProviders >= sourceProviders\n  };\n};`
+                    },
+                    {
+                        step: 5,
+                        description: 'Archive or remove source collections',
+                        code: `// Only run this after verifying migration was successful!\n\n// Option 1: Rename collections (archive)\n// This requires Firebase Admin SDK on the server\n\n// Option 2: Delete data from source collections\nfor (const collection of ${JSON.stringify(collectionsWithProviders.filter(c => c !== 'providers'))}) {\n  const snapshot = await getDocs(collection(db, collection));\n  \n  for (const doc of snapshot.docs) {\n    await deleteDoc(doc.ref);\n  }\n}`
+                    }
+                ]
+            };
+            
+            // Render the migration plan
+            migrationContent.innerHTML = `
+                <p>This migration plan will consolidate providers from ${plan.sourceCollections.length + 1} collections into a single "${plan.targetCollection}" collection.</p>
+                
+                <div>
+                    <h3>Source Collections</h3>
+                    <ul>
+                        ${plan.sourceCollections.map(c => `
+                            <li>${c} (${auditResults.collections[c].length} providers)</li>
+                        `).join('')}
+                    </ul>
+                    
+                    <h3>Target Collection</h3>
+                    <p>${plan.targetCollection} (${auditResults.collections[plan.targetCollection] ? auditResults.collections[plan.targetCollection].length : 0} providers)</p>
+                </div>
+                
+                <div>
+                    <h3>Migration Steps</h3>
+                    ${plan.steps.map(step => `
+                        <div class="recommendation">
+                            <h4>Step ${step.step}: ${step.description}</h4>
+                            ${step.details ? `<p>${step.details}</p>` : ''}
+                            ${step.code ? `<pre>${step.code}</pre>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            migrationPlan.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+{
+  "name": "task-weight-api",
+  "version": "2.0.0",
+  "description": "Comprehensive task weight calculation API with personalization and adaptation systems",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest",
+    "start:cron": "node cron.js",
+    "dev:cron": "nodemon cron.js",
+    "analyze:all": "node scripts/analyze-all-families.js",
+    "burnout:check": "node scripts/check-burnout-risks.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^11.8.0",
+    "joi": "^17.11.0",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.4",
+    "node-cron": "^3.0.2",
+    "uuid": "^9.0.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "tasks",
+    "weights",
+    "family",
+    "workload",
+    "balance",
+    "machine-learning",
+    "adaptation",
+    "personalization",
+    "burnout-prevention",
+    "cultural-context",
+    "life-stage",
+    "relationship"
+  ]
+}

@@ -1,0 +1,44 @@
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Time
+            </label>
+            <input
+              type="time"
+              step="900"
+              value={event.dateTime ? new Date(event.dateTime).toTimeString().slice(0, 5) : ''}
+              onChange={(e) => {
+                const date = new Date(event.dateTime || new Date());
+                const [hours, minutes] = e.target.value.split(':');
+                
+                // Round minutes to nearest 15 minute interval
+                const roundedMinutes = Math.round(parseInt(minutes) / 15) * 15;
+                date.setHours(hours, roundedMinutes);
+                
+                const endDate = new Date(date);
+                endDate.setMinutes(date.getMinutes() + (event.duration || 30));
+                
+                setEvent(prev => ({
+                  ...prev, 
+                  dateTime: date.toISOString(),
+                  endDateTime: endDate.toISOString(),
+                  
+                  dateObj: date,
+                  dateEndObj: endDate,
+                  
+                  start: {
+                    ...(prev.start || {}),
+                    dateTime: date.toISOString(),
+                    time: date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                  },
+                  end: {
+                    ...(prev.end || {}),
+                    dateTime: endDate.toISOString(),
+                    time: endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                  }
+                }));
+              }}
+              className="w-full border rounded-md p-2 text-sm"
+            />
+          </div>
