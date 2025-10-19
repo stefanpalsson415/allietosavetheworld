@@ -17,9 +17,10 @@ export const useChatDrawer = () => {
 export const ChatDrawerProvider = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [initialPrompt, setInitialPrompt] = useState('');
-  const [mode, setMode] = useState('chat'); // 'chat', 'family-meeting', or 'interview'
+  const [mode, setMode] = useState('chat'); // 'chat', 'family-meeting', 'interview', or 'knowledge-graph'
   const [isShowingBalanceForecast, setIsShowingBalanceForecast] = useState(false);
   const [interviewConfig, setInterviewConfig] = useState(null); // Store interview configuration
+  const [knowledgeGraphConfig, setKnowledgeGraphConfig] = useState(null); // Store knowledge graph context
 
   // Toggle drawer open/closed
   const toggleDrawer = () => {
@@ -95,6 +96,23 @@ export const ChatDrawerProvider = ({ children }) => {
     );
   };
 
+  // Open drawer in knowledge graph mode
+  const openKnowledgeGraph = (config) => {
+    console.log('Opening knowledge graph insights in chat drawer:', config);
+    setMode('knowledge-graph');
+    setKnowledgeGraphConfig(config);
+    setIsOpen(true);
+    setIsShowingBalanceForecast(false);
+    setInterviewConfig(null);
+
+    // Dispatch event to notify chat components
+    window.dispatchEvent(
+      new CustomEvent('allie-knowledge-graph', {
+        detail: config
+      })
+    );
+  };
+
   // Context value
   const value = {
     isOpen,
@@ -102,12 +120,14 @@ export const ChatDrawerProvider = ({ children }) => {
     mode,
     isShowingBalanceForecast,
     interviewConfig,
+    knowledgeGraphConfig,
     toggleDrawer,
     openDrawer,
     closeDrawer,
     openDrawerWithPrompt,
     openFamilyMeeting,
     openInterview,
+    openKnowledgeGraph,
     resetToChat
   };
 

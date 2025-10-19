@@ -17,6 +17,7 @@ import MessageRouter from '../../../services/MessageRouter';
 import IntentActionService from '../../../services/IntentActionService';
 import quantumKG from '../../../services/QuantumKnowledgeGraph'; // Singleton instance
 import neutralVoice from '../../../services/NeutralVoiceService'; // Singleton instance
+import knowledgeGraphService from '../../../services/KnowledgeGraphService'; // Neo4j-based Knowledge Graph
 
 /**
  * AllieConversationEngine
@@ -31,9 +32,10 @@ class AllieConversationEngine {
       ...config
     };
 
-    // Initialize services (both are singleton instances)
+    // Initialize services (all are singleton instances)
     this.neutralVoiceService = neutralVoice;
     this.quantumKG = quantumKG;
+    this.knowledgeGraphService = knowledgeGraphService;
   }
 
   /**
@@ -60,6 +62,27 @@ class AllieConversationEngine {
         interviewInsights = await this.quantumKG.getInterviewInsights(familyId);
       } catch (error) {
         console.warn('Could not load interview insights for context:', error);
+      }
+    }
+
+    // Load Knowledge Graph insights from Neo4j
+    let knowledgeGraphInsights = null;
+    if (familyId) {
+      try {
+        // Fetch all KG data types in parallel for performance
+        const [invisibleLabor, graphData, predictiveInsights] = await Promise.all([
+          this.knowledgeGraphService.getInvisibleLaborAnalysis(familyId).catch(e => null),
+          this.knowledgeGraphService.getGraphData(familyId).catch(e => null),
+          this.knowledgeGraphService.getPredictiveInsights(familyId, 7).catch(e => null)
+        ]);
+
+        knowledgeGraphInsights = {
+          invisibleLabor,
+          graphData,
+          predictiveInsights
+        };
+      } catch (error) {
+        console.warn('Could not load Knowledge Graph insights:', error);
       }
     }
 
@@ -103,6 +126,31 @@ class AllieConversationEngine {
           // Include person-specific insights for current user
           userSpecificInsights: selectedUser && interviewInsights.interviewInsights ?
             this.extractUserInsights(interviewInsights.interviewInsights, selectedUser.name) : null
+        }
+      }),
+
+      // Knowledge Graph insights (if available) - REAL-TIME NEO4J DATA
+      ...(knowledgeGraphInsights && {
+        knowledgeGraph: {
+          // Invisible labor analysis (who notices, coordinates, monitors tasks)
+          invisibleLabor: knowledgeGraphInsights.invisibleLabor ? {
+            anticipation: knowledgeGraphInsights.invisibleLabor.anticipation,
+            monitoring: knowledgeGraphInsights.invisibleLabor.monitoring,
+            coordination: knowledgeGraphInsights.invisibleLabor.coordination
+          } : null,
+
+          // Graph structure (nodes, edges, relationships)
+          graphData: knowledgeGraphInsights.graphData ? {
+            nodeCount: knowledgeGraphInsights.graphData.nodes?.length || 0,
+            edgeCount: knowledgeGraphInsights.graphData.edges?.length || 0
+          } : null,
+
+          // Predictive insights (upcoming conflicts, burnout risks)
+          predictiveInsights: knowledgeGraphInsights.predictiveInsights ? {
+            upcomingConflicts: knowledgeGraphInsights.predictiveInsights.upcomingConflicts,
+            burnoutRisks: knowledgeGraphInsights.predictiveInsights.burnoutRisks,
+            recommendations: knowledgeGraphInsights.predictiveInsights.recommendations
+          } : null
         }
       }),
 

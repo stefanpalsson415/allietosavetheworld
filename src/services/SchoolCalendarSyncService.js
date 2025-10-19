@@ -94,9 +94,9 @@ class SchoolCalendarSyncService {
    */
   async fetchICalFeed(url) {
     try {
-      // Use a CORS proxy for development, or backend proxy for production
+      // Use a CORS proxy for development, or backend proxy for production (updated Oct 19, 2025)
       const proxyUrl = process.env.NODE_ENV === 'production'
-        ? `${process.env.REACT_APP_API_URL || 'https://allie-claude-api-4eckwlczwa-uc.a.run.app'}/api/proxy-ical?url=${encodeURIComponent(url)}`
+        ? `${process.env.REACT_APP_API_URL || 'https://allie-claude-api-363935868004.us-central1.run.app'}/api/proxy-ical?url=${encodeURIComponent(url)}`
         : url; // In dev, try direct access (may fail due to CORS)
 
       console.log(`📅 Fetching iCal feed from: ${url}`);

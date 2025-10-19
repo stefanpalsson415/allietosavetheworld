@@ -2019,15 +2019,15 @@ exports.verifyInvestorPassword = functions
 
       try {
         const { password } = req.body;
-        
+
         // Store password securely as environment variable or hardcoded for now
         const INVESTOR_PASSWORD = functions.config().investor?.password || 'allieinvestor';
-        
+
         // Verify password
         if (password === INVESTOR_PASSWORD) {
           // Generate a simple session token (in production, use JWT or similar)
           const sessionToken = Buffer.from(Date.now().toString()).toString('base64');
-          
+
           res.json({
             success: true,
             sessionToken: sessionToken
@@ -2049,3 +2049,47 @@ exports.verifyInvestorPassword = functions
       }
     });
   });
+
+// ============================================================================
+// KNOWLEDGE GRAPH - REAL-TIME NEO4J SYNC
+// ============================================================================
+
+/**
+ * Real-time Firestore → Neo4j synchronization for Knowledge Graph
+ *
+ * Automatically syncs data when families use the app:
+ * - Family members → Person nodes
+ * - Tasks → Task nodes with CREATED_BY relationships
+ * - Events → Event nodes with ORGANIZES relationships
+ * - Chores → Cognitive load updates
+ * - Fair Play responses → Responsibility nodes with OWNS relationships
+ *
+ * Production-scale: Triggers fire on every Firestore write
+ */
+
+const neo4jSyncModule = require('./neo4j-sync');
+
+// Sync family members → Person nodes + relationships
+exports.syncFamilyToNeo4j = functions.firestore
+  .document('families/{familyId}')
+  .onWrite(neo4jSyncModule.onFamilyWrite);
+
+// Sync tasks → Task nodes + CREATED_BY relationships
+exports.syncTaskToNeo4j = functions.firestore
+  .document('kanbanTasks/{taskId}')
+  .onWrite(neo4jSyncModule.onTaskWrite);
+
+// Sync events → Event nodes + ORGANIZES relationships
+exports.syncEventToNeo4j = functions.firestore
+  .document('events/{eventId}')
+  .onWrite(neo4jSyncModule.onEventWrite);
+
+// Sync chores → Cognitive load updates
+exports.syncChoreToNeo4j = functions.firestore
+  .document('choreInstances/{choreId}')
+  .onCreate(neo4jSyncModule.onChoreCreate);
+
+// Sync Fair Play responses → Responsibility nodes
+exports.syncFairPlayToNeo4j = functions.firestore
+  .document('fairPlayResponses/{responseId}')
+  .onCreate(neo4jSyncModule.onFairPlayResponseCreate);

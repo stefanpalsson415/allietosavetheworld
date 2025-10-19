@@ -21,8 +21,10 @@ import RelationshipTab from './tabs/RelationshipTab';
 import ChildrenTrackingTab from './tabs/ChildrenTrackingTab';
 import TaskSequencesTab from './tabs/TaskSequencesTab';
 import NotionCalendarTab from './tabs/NotionCalendarTab';
-import KnowledgeTab from './tabs/KnowledgeTab';
-import PowerfulKnowledgeGraphTab from './tabs/PowerfulKnowledgeGraphTab';
+// Old knowledge graph tabs - replaced with new Knowledge Graph system
+// import KnowledgeTab from './tabs/KnowledgeTab';
+// import PowerfulKnowledgeGraphTab from './tabs/PowerfulKnowledgeGraphTab';
+import KnowledgeGraphHub from '../knowledgeGraph/KnowledgeGraphHub';
 import AllieChatTab from './tabs/AllieChatTab';
 import KidsSectionAdminTab from './tabs/ChoreAndRewardAdminTab';  // Note: file name unchanged, component renamed
 // Import chore-related tabs
@@ -185,9 +187,11 @@ const NotionDashboard = () => {
       case 'documents':
         return <FamilyDocumentHub />;
       case 'knowledge':
-        return <KnowledgeTab />;
+        // New Knowledge Graph with D3.js visualization + chat interface
+        return <KnowledgeGraphHub />;
       case 'powerfulKnowledgeGraph':
-        return <PowerfulKnowledgeGraphTab />;
+        // Redirect to new knowledge graph
+        return <KnowledgeGraphHub />;
       case 'co-ownership':
       case 'coownership':
         return <CoOwnershipDashboard />;

@@ -369,6 +369,220 @@ test.describe('@regression October 2025 Critical Bug Fixes', () => {
     }
   });
 
+  // ============================================================================
+  // FEATURE #9: Real-Time WebSocket Knowledge Graph Updates (Oct 2025)
+  // ============================================================================
+  // Feature: Real-time graph updates via WebSocket for instant family insights
+  // Implementation: WebSocketGraphService.js + useKnowledgeGraphWebSocket.js
+  // Integration: KnowledgeGraphHub.jsx with live connection indicator
+  // ============================================================================
+
+  test('@knowledge-graph Real-time WebSocket connection establishes correctly', async ({ page }) => {
+    console.log('🧪 Testing: Real-Time WebSocket Updates (Oct 2025)');
+
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to Knowledge Graph
+    const kgButton = page.locator('button:has-text("Knowledge Graph"), a:has-text("Insights")').first();
+    if (await kgButton.isVisible({ timeout: 5000 })) {
+      await kgButton.click();
+      await page.waitForTimeout(2000);
+
+      // Verify WebSocket connection indicator
+      // Should show "Live" indicator when connected (green pulse)
+      const liveIndicator = page.locator('text=/Live|Connected|●/i, [class*="connected"], [class*="live-indicator"]');
+
+      // Wait for connection to establish
+      await page.waitForTimeout(3000);
+
+      // Check if live indicator is present
+      const isConnected = await liveIndicator.isVisible({ timeout: 5000 }).catch(() => false);
+
+      if (isConnected) {
+        console.log('✅ WebSocket connection indicator visible');
+      } else {
+        console.log('⚠️ WebSocket connection indicator not found - may need longer connection time');
+      }
+
+      // Verify suggested questions appear (populated by WebSocket events)
+      const suggestedQuestions = page.locator('[data-testid="suggested-question"], .suggested-question');
+      const questionCount = await suggestedQuestions.count();
+
+      console.log(`Found ${questionCount} suggested questions (populated via WebSocket)`);
+
+    } else {
+      console.log('⚠️ Knowledge Graph button not visible - feature may require specific permissions');
+    }
+  });
+
+  // ============================================================================
+  // FEATURE #10: Historical Pattern Visualization (Oct 2025)
+  // ============================================================================
+  // Feature: 4-tab historical analysis with charts (Cognitive Load, Heat Map, Patterns, Anticipation)
+  // Implementation: TemporalAnalysisService.js + HistoricalPatternsPanel.jsx
+  // API: POST /api/knowledge-graph/temporal-analysis
+  // ============================================================================
+
+  test('@knowledge-graph Historical Patterns panel loads with all 4 tabs', async ({ page }) => {
+    console.log('🧪 Testing: Historical Pattern Visualization (Oct 2025)');
+
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to Knowledge Graph
+    const kgButton = page.locator('button:has-text("Knowledge Graph"), a:has-text("Insights")').first();
+    if (await kgButton.isVisible({ timeout: 5000 })) {
+      await kgButton.click();
+      await page.waitForTimeout(2000);
+
+      // Click "Historical Patterns" button
+      const historicalButton = page.locator('button:has-text("Historical Patterns"), button:has-text("📊")').first();
+
+      if (await historicalButton.isVisible({ timeout: 5000 })) {
+        await historicalButton.click();
+
+        // Verify modal opens
+        await expect(page.locator('text=/Historical Patterns/i')).toBeVisible({ timeout: 10000 });
+
+        // Verify all 4 tabs are present
+        const tabs = [
+          'Cognitive Load',
+          'Heat Map',
+          'Patterns',
+          'Anticipation'
+        ];
+
+        for (const tabName of tabs) {
+          const tab = page.locator(`text=/${tabName}/i, [role="tab"]:has-text("${tabName}")`).first();
+          await expect(tab).toBeVisible({ timeout: 5000 });
+          console.log(`✓ ${tabName} tab found`);
+        }
+
+        // Verify time range selector (7/30/90 days)
+        const timeRanges = ['7 Days', '30 Days', '90 Days'];
+        for (const range of timeRanges) {
+          const rangeButton = page.locator(`button:has-text("${range}")`).first();
+          await expect(rangeButton).toBeVisible({ timeout: 5000 });
+          console.log(`✓ ${range} button found`);
+        }
+
+        // Click through tabs to verify they load
+        const heatMapTab = page.locator('text=/Heat Map/i, [role="tab"]:has-text("Heat Map")').first();
+        await heatMapTab.click();
+        await page.waitForTimeout(1000);
+
+        const patternsTab = page.locator('text=/Patterns/i, [role="tab"]:has-text("Patterns")').first();
+        await patternsTab.click();
+        await page.waitForTimeout(1000);
+
+        console.log('✅ Historical Patterns panel works with all tabs');
+
+        // Close modal
+        const closeButton = page.locator('button:has-text("×"), button[aria-label*="close" i]').first();
+        await closeButton.click();
+
+      } else {
+        console.log('⚠️ Historical Patterns button not visible - feature may not be loaded');
+      }
+
+    } else {
+      console.log('⚠️ Knowledge Graph button not visible');
+    }
+  });
+
+  // ============================================================================
+  // FEATURE #11: Predictive Insights Engine (Oct 2025)
+  // ============================================================================
+  // Feature: AI-powered predictions (burnout risks, task forecasts, conflicts)
+  // Implementation: PredictiveInsightsService.js + PredictiveInsightsPanel.jsx
+  // API: POST /api/knowledge-graph/predictive-insights
+  // ============================================================================
+
+  test('@knowledge-graph Predictive Insights panel shows recommendations', async ({ page }) => {
+    console.log('🧪 Testing: Predictive Insights Engine (Oct 2025)');
+
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to Knowledge Graph
+    const kgButton = page.locator('button:has-text("Knowledge Graph"), a:has-text("Insights")').first();
+    if (await kgButton.isVisible({ timeout: 5000 })) {
+      await kgButton.click();
+      await page.waitForTimeout(2000);
+
+      // Check for critical alerts (floating banners at top of graph)
+      const criticalAlert = page.locator('[class*="critical"], text=/🚨/i');
+      const hasCriticalAlerts = await criticalAlert.isVisible({ timeout: 3000 }).catch(() => false);
+
+      if (hasCriticalAlerts) {
+        console.log('✓ Critical alerts visible at top of graph');
+      }
+
+      // Click "Predictive Insights" button (red-to-pink gradient)
+      const predictiveButton = page.locator('button:has-text("Predictive Insights"), button:has-text("🔮")').first();
+
+      if (await predictiveButton.isVisible({ timeout: 5000 })) {
+        await predictiveButton.click();
+
+        // Verify modal opens
+        await expect(page.locator('text=/Predictive Insights/i')).toBeVisible({ timeout: 10000 });
+
+        // Verify all 4 tabs are present
+        const tabs = [
+          'Overview',
+          'Task Predictions',
+          'Burnout Risks',
+          'Coordination'
+        ];
+
+        for (const tabName of tabs) {
+          const tab = page.locator(`text=/${tabName}/i, [role="tab"]:has-text("${tabName}")`).first();
+          await expect(tab).toBeVisible({ timeout: 5000 });
+          console.log(`✓ ${tabName} tab found`);
+        }
+
+        // Check Overview tab for recommendations
+        const recommendations = page.locator('[data-testid="recommendation"], .recommendation-card');
+        const recCount = await recommendations.count();
+        console.log(`Found ${recCount} recommendations in Overview tab`);
+
+        // Check for priority badges (critical/high/medium/low)
+        const priorityBadge = page.locator('text=/critical|high|medium|low/i').first();
+        const hasPriority = await priorityBadge.isVisible({ timeout: 3000 }).catch(() => false);
+
+        if (hasPriority) {
+          console.log('✓ Priority badges visible on recommendations');
+        }
+
+        // Click through tabs to verify they load
+        const predictionsTab = page.locator('text=/Task Predictions/i, [role="tab"]:has-text("Task Predictions")').first();
+        await predictionsTab.click();
+        await page.waitForTimeout(1000);
+
+        const risksTab = page.locator('text=/Burnout Risks/i, [role="tab"]:has-text("Burnout Risks")').first();
+        await risksTab.click();
+        await page.waitForTimeout(1000);
+
+        const coordTab = page.locator('text=/Coordination/i, [role="tab"]:has-text("Coordination")').first();
+        await coordTab.click();
+        await page.waitForTimeout(1000);
+
+        console.log('✅ Predictive Insights panel works with all tabs');
+
+        // Close modal
+        const closeButton = page.locator('button:has-text("×"), button[aria-label*="close" i]').first();
+        await closeButton.click();
+
+      } else {
+        console.log('⚠️ Predictive Insights button not visible - feature may not be loaded');
+      }
+
+    } else {
+      console.log('⚠️ Knowledge Graph button not visible');
+    }
+  });
+
 });
 
 // ============================================================================

@@ -196,25 +196,26 @@ const KidsSectionAdminTab = () => {
       try {
         if (familyId && childrenOnly.length > 0) {
           const balances = {};
-          
-          // Get balance for each child
+
+          // Get balance for each child (auto-initializes if doesn't exist)
           for (const child of childrenOnly) {
             try {
-              const balance = await BucksService.getBalance(child.id);
-              balances[child.id] = balance.currentBalance || 0;
+              // Use getChildBalance which auto-initializes if balance doesn't exist
+              const balance = await BucksService.getChildBalance(familyId, child.id);
+              balances[child.id] = balance;
             } catch (error) {
               console.error(`Error getting balance for child ${child.id}:`, error);
               balances[child.id] = 0;
             }
           }
-          
+
           setChildBalances(balances);
         }
       } catch (error) {
         console.error("Error loading child balances:", error);
       }
     };
-    
+
     loadBalances();
   }, [familyId, childrenOnly]);
   

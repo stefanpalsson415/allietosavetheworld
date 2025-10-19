@@ -97,6 +97,7 @@ const EmailOptIn = lazy(() => import('./components/marketing/EmailOptIn'));
 const ClaudeDebugger = lazy(() => import('./components/debug/ClaudeDebugger'));
 const FamilyAllieDrive = lazy(() => import('./components/document/FamilyAllieDrive'));
 const AIDebugPanel = lazy(() => import('./components/debug/AIDebugPanel'));
+const KnowledgeGraphHub = lazy(() => import('./components/knowledgeGraph/KnowledgeGraphHub'));
 
 // Lazy load components that aren't needed immediately
 const ResponsiveChatWrapper = lazy(() => import('./components/chat/ResponsiveChatWrapper'));
@@ -462,7 +463,14 @@ function AppRoutes() {
             )}
           </Suspense>
         } />
-        
+
+        {/* Knowledge Graph route */}
+        <Route path="/knowledge-graph" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <KnowledgeGraphHub />
+          </Suspense>
+        } />
+
         {/* Family meeting route */}
         <Route path="/family-meeting" element={
           <Suspense fallback={<LoadingScreen />}>

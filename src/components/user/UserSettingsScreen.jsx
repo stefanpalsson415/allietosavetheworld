@@ -1302,6 +1302,35 @@ const UserSettingsScreen = ({ onClose }) => {
                             ></label>
                           </div>
                         </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-sm">Co-Ownership</div>
+                            <div className="text-xs text-gray-500">Show co-ownership tab in navigation</div>
+                          </div>
+                          <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input
+                              type="checkbox"
+                              name="showCoOwnershipTab"
+                              id="showCoOwnershipTab"
+                              defaultChecked={selectedUser?.settings?.showCoOwnershipTab === true}
+                              onChange={(e) => {
+                                updateMemberProfile(selectedUser.id, {
+                                  settings: {
+                                    ...selectedUser.settings,
+                                    showCoOwnershipTab: e.target.checked
+                                  }
+                                });
+                                localStorage.setItem('showCoOwnershipTab', e.target.checked ? 'true' : 'false');
+                              }}
+                              className="checked:bg-black outline-none focus:outline-none right-4 checked:right-0 duration-200 ease-in absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                            />
+                            <label
+                              htmlFor="showCoOwnershipTab"
+                              className="block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                            ></label>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

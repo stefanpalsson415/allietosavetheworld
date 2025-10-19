@@ -151,7 +151,7 @@ const NotionLayoutInner = ({ children, title }) => {
     { name: 'Family Calendar', icon: <Calendar size={18} />, path: '/dashboard?tab=calendar' },
     { name: 'Document Hub', icon: <FolderOpen size={18} />, path: '/dashboard?tab=documents' },
     { name: 'Knowledge Graph', icon: <Layers size={18} />, path: '/dashboard?tab=knowledge', requiresData: true, visibilityKey: 'showKnowledgeGraphTab' },
-    { name: 'Co-Ownership', icon: <Users size={18} />, path: '/dashboard?tab=coownership', requiresData: true },
+    { name: 'Co-Ownership', icon: <Users size={18} />, path: '/dashboard?tab=coownership', requiresData: true, visibilityKey: 'showCoOwnershipTab' },
     { name: 'Allie Chat', icon: <Mail size={18} />, path: '/dashboard?tab=chat' },
     // Parent-only admin panel
     {

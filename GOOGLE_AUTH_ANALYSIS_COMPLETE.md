@@ -40,7 +40,7 @@ This creates a **race condition** where neither system fully completes the authe
 - **Validation**: Required, must not be empty
 - **Update**: Header changes to "The [FamilyName] Family"
 
-### Step 3: Parent Setup
+2### Step 3: Parent Setup
 - **Purpose**: Collect parent information
 - **Data Collected**:
   ```javascript

@@ -1,11 +1,11 @@
 // Sales-specific Claude service that uses the public sales endpoint
 class SalesClaudeService {
   constructor() {
-    // Use the NEW backend URL
-    this.backendUrl = process.env.REACT_APP_BACKEND_URL || 
-                      (window.location.hostname === 'localhost' 
-                        ? 'http://localhost:3002' 
-                        : 'https://allie-claude-api-4eckwlczwa-uc.a.run.app');
+    // Use the NEW backend URL (updated Oct 19, 2025)
+    this.backendUrl = process.env.REACT_APP_BACKEND_URL ||
+                      (window.location.hostname === 'localhost'
+                        ? 'http://localhost:3002'
+                        : 'https://allie-claude-api-363935868004.us-central1.run.app');
   }
 
   async generateResponse(messages, context = {}, options = {}) {

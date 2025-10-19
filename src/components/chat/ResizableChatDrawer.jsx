@@ -7,6 +7,7 @@ import AllieChat from './refactored/AllieChat';
 import ThreadPanel from './ThreadPanel';
 import EnhancedFamilyMeeting from '../meeting/EnhancedFamilyMeeting';
 import InterviewChat from '../interview/InterviewChat';
+// InsightChatDrawer removed - Knowledge Graph now uses main Allie chat
 import interviewOrchestrator from '../../services/InterviewOrchestrator';
 import { MessageSquare, PlusCircle, MoreHorizontal, X, Users, Brain } from 'lucide-react';
 import messageService from '../../services/MessageService';
@@ -17,7 +18,7 @@ const MAX_WIDTH = 800; // Maximum width in pixels
 const DEFAULT_WIDTH = 400; // Default width
 
 const ResizableChatDrawer = () => {
-  const { isOpen, closeDrawer, mode, resetToChat, interviewConfig } = useChatDrawer();
+  const { isOpen, closeDrawer, mode, resetToChat, interviewConfig, knowledgeGraphConfig } = useChatDrawer();
   const { familyMembers, selectedUser: contextSelectedUser } = useFamily();
   const drawerRef = useRef(null);
   const location = useLocation();

@@ -107,6 +107,16 @@ app.get('/health', (req, res) => {
 // Mount SMS webhook routes
 app.use(smsWebhook);
 
+// Mount Knowledge Graph API routes (enabled with Neo4j Aura)
+try {
+  const knowledgeGraphRoutes = require('./routes/knowledge-graph');
+  app.use('/api/knowledge-graph', knowledgeGraphRoutes);
+  console.log('✅ Knowledge Graph API routes enabled - Connected to Neo4j Aura');
+} catch (error) {
+  console.error('⚠️ Knowledge Graph routes not available:', error.message);
+  console.error('   Check that ./routes/knowledge-graph.js exists and services are properly configured');
+}
+
 // Production API Keys - Read from environment variables for security
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || process.env.ANTHROPIC_API_KEY;
 const SALES_API_KEY = process.env.SALES_API_KEY || process.env.ANTHROPIC_SALES_API_KEY;
@@ -764,11 +774,37 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
+
+// Create HTTP server (required for Socket.io)
+const http = require('http');
+const server = http.createServer(app);
+
+// Initialize Socket.io for real-time graph updates
+const { Server } = require('socket.io');
+const io = new Server(server, {
+  cors: corsOptions,
+  path: '/socket.io/',
+  transports: ['websocket', 'polling']
+});
+
+// Initialize WebSocket Knowledge Graph Service (if available)
+try {
+  // Dynamic import for ES6 module
+  import('./services/graph/WebSocketGraphService.js').then(module => {
+    const webSocketGraphService = module.default;
+    webSocketGraphService.initialize(io);
+    console.log('✅ WebSocket Knowledge Graph service initialized');
+  });
+} catch (error) {
+  console.log('⚠️  WebSocket Graph service not available:', error.message);
+}
+
+server.listen(PORT, () => {
   console.log(`🚀 Production Claude Proxy Server`);
   console.log(`📍 Running on port ${PORT}`);
   console.log(`✅ Internal API key configured (Opus 4.1 support)`);
   console.log(`✅ Sales API key configured (Sonnet 3.5 support)`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'production'}`);
   console.log(`📅 Started at: ${new Date().toISOString()}`);
+  console.log(`🔌 WebSocket server ready for real-time updates`);
 });

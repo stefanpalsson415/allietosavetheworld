@@ -16,7 +16,7 @@ if (!admin.apps.length) {
       admin.initializeApp({
         projectId: 'parentload-ba995',
         storageBucket: 'parentload-ba995.appspot.com',
-        credential: process.env.GOOGLE_APPLICATION_CREDENTIALS 
+        credential: process.env.GOOGLE_APPLICATION_CREDENTIALS
           ? admin.credential.applicationDefault()
           : admin.credential.cert({
               projectId: 'parentload-ba995',
@@ -28,7 +28,7 @@ if (!admin.apps.length) {
     }
   } catch (error) {
     console.error('Failed to initialize Firebase Admin:', error);
-    
+
     // Fallback: Initialize with just project ID
     try {
       admin.initializeApp({
@@ -41,4 +41,8 @@ if (!admin.apps.length) {
   }
 }
 
+// Export for CommonJS (most server files)
 module.exports = admin;
+
+// Also export Firestore instance for convenience
+module.exports.db = admin.firestore();

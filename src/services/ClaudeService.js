@@ -5,10 +5,10 @@ import neutralVoiceService from './NeutralVoiceService';
 
 class ClaudeService {
   constructor() {
-    // Set backend URL from config with fallback - NEW PRODUCTION URL
+    // Set backend URL from config with fallback - UPDATED PRODUCTION URL (Oct 19, 2025)
     const backendUrl = config?.backend?.claudeUrl || (
       process.env.NODE_ENV === 'production'
-        ? 'https://allie-claude-api-4eckwlczwa-uc.a.run.app/api/claude'
+        ? 'https://allie-claude-api-363935868004.us-central1.run.app/api/claude'
         : 'http://localhost:3002/api/claude'
     );
     this.proxyUrl = backendUrl;
@@ -354,6 +354,45 @@ class ClaudeService {
         // Silently fail if profile service is not available
         console.log('Enhanced profiles not loaded for context');
       }
+
+      contextString += `\n=== KNOWLEDGE GRAPH CAPABILITIES ===
+
+You have access to the family's Knowledge Graph via Neo4j, which provides real-time insights about:
+
+1. **Invisible Labor Analysis** - Who notices tasks that need doing, who coordinates family activities, who monitors ongoing situations
+   - Use when users ask: "Who does more?", "Who notices things?", "Why am I so overwhelmed?"
+   - Data includes: anticipation patterns, monitoring burden, coordination bottlenecks
+
+2. **Cognitive Load Distribution** - Who's carrying the mental load in different areas
+   - Use when users ask: "Who's most stressed?", "Who should I delegate to?", "Am I doing too much?"
+   - Data includes: task cognitive load, responsibility ownership, burnout risks
+
+3. **Task Creation Patterns** - When are tasks created, by whom, in what categories
+   - Use when users ask: "When do we create most tasks?", "What patterns do we have?", "Why are mornings chaotic?"
+   - Data includes: temporal patterns, category distribution, creation frequency
+
+4. **Coordination Bottlenecks** - Who everyone relies on, who's the information hub
+   - Use when users ask: "Who's the bottleneck?", "Why does everything go through me?", "Who knows what's happening?"
+   - Data includes: relationship centrality, information flow, dependency patterns
+
+5. **Predictive Insights** - Upcoming conflicts, burnout risks, recommended interventions
+   - Use proactively when you notice high cognitive load or imbalance patterns
+   - Data includes: conflict predictions, burnout alerts, recommended habit changes
+
+**When to Use Knowledge Graph Data:**
+- User asks about workload distribution or balance
+- User asks about family patterns or "who does what"
+- User expresses feeling overwhelmed or asks for help delegating
+- User wants to understand invisible labor or mental load
+- You notice high cognitive load in the context data
+
+**How to Present Knowledge Graph Insights:**
+- Use neutral, system-focused language (avoid blame)
+- Focus on patterns and data, not judgment
+- Offer actionable recommendations based on insights
+- Example: "The Knowledge Graph shows Sarah creates 78% of tasks, which may contribute to feeling overwhelmed. Let's explore delegation strategies."
+
+\n`;
 
       contextString += '\nImportant: Tailor your responses to be appropriate for the current user. If talking to a child, use simpler language. Be aware of each family member\'s preferences and personality.\n';
 
