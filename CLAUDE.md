@@ -63,7 +63,21 @@ curl -X POST https://allie-claude-api-363935868004.us-central1.run.app/api/claud
 
 ## 🔑 Features
 
-### Knowledge Graph (Oct 18)
+### Knowledge Graph Integration (Oct 18-19) ✅ **ALL GAPS FIXED - LIVE IN PRODUCTION**
+
+**Deployment:** October 19, 2025 - All 5 critical integration gaps resolved
+
+**Gap Fixes Deployed:**
+1. ✅ **Allie Chat Connected to Neo4j** - `AllieConversationEngine.jsx` now imports `KnowledgeGraphService` and loads Neo4j insights in `buildContext()`
+2. ✅ **EnhancedKnowledgeGraphService Deleted** - Removed 49KB unused service
+3. ✅ **System Prompt Updated** - `ClaudeService.js` includes KG capabilities section with when/how to use
+4. ✅ **Cross-Tab Access Works** - Users can ask "Who does more?" from ANY tab (Calendar, Tasks, Home)
+5. ✅ **Test Coverage Complete** - 40+ tests (unit, integration, E2E)
+
+**Dual-System Architecture (Intentional):**
+- **NEW System:** `KnowledgeGraphService.js` → Neo4j Aura → Backend API (7 imports)
+- **LEGACY System:** `QuantumKnowledgeGraph.js` → Firestore queries (26 imports) - Gradual migration planned over 6-12 months
+
 **Pattern:** `KnowledgeGraphHub` → `openKnowledgeGraph()` → `InsightChatDrawer` (same as interview/meeting tabs)
 
 **Real-Time Sync (Oct 19):** ✅ **PRODUCTION READY**
@@ -91,6 +105,21 @@ FOREACH (_ IN CASE WHEN p IS NOT NULL THEN [1] ELSE [] END |
 ```
 
 **Data Model:** `Person` → `Task`, `Person` → `Responsibility`, `Person` → `Event`
+
+**How Allie Uses Knowledge Graph Data:**
+When users ask questions from ANY tab (Calendar, Tasks, Home, etc.), `AllieConversationEngine.buildContext()` automatically loads:
+- **Invisible Labor Analysis:** Who notices tasks, coordinates activities, monitors situations (anticipation, monitoring, coordination)
+- **Graph Data:** Node count, edge count, relationship structure
+- **Predictive Insights:** Upcoming conflicts, burnout risks, recommendations
+
+**Example User Flow:**
+1. User on Calendar tab → Opens Allie chat
+2. User: "Who's creating all these events?"
+3. Allie loads context including KG data: `knowledgeGraphInsights.invisibleLabor`
+4. Allie: "The Knowledge Graph shows Sarah created 78% of events this month, with most activity on Sunday evenings..."
+5. Data-driven, specific, actionable - **WITHOUT switching tabs**
+
+**System Prompt Section:** `ClaudeService.js:358-395` includes KG capabilities with when/how to use examples
 
 ### Multi-Person Interviews
 **3 Phases:** Visual selection (keyboard 1-5) → Smart persistence (40% fewer prompts) → Voice enrollment (auto-detect 70%+ confidence)
