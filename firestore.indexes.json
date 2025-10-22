@@ -1,7 +1,21 @@
 {
   "indexes": [
     {
-      "collectionGroup": "choreTemplates",
+      "collectionGroup": "blogPosts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "published",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "publishedDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bucksTransactions",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -9,12 +23,214 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "isArchived",
+          "fieldPath": "childId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "title",
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bucksTransactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bucksTransactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bucksTransactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "chatMessages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "chatMessages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "threadId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "chats",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "assignedToIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "assignedToIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sequence",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "assignedToIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -49,108 +265,6 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "completedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "choreInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "completedAt",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "choreInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "childId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "choreInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "childId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "templateId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "choreInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "childId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "choreInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "childId",
           "order": "ASCENDING"
         },
@@ -179,6 +293,32 @@
         {
           "fieldPath": "status",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "templateId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -209,282 +349,6 @@
       ]
     },
     {
-      "collectionGroup": "rewardTemplates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "isActive",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "category",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "rewardTemplates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "isActive",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "price",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "rewardInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "childId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "requestedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "rewardInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "requestedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "rewardInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "childId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "requestedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "rewardInstances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "approvalStatus.status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "requestedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "surveyResponses",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "completedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "bucksTransactions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "childId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "bucksTransactions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "type",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "bucksTransactions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "childId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "type",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "familyDocuments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "uploadedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "familyContacts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "name",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "familyELOHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "familyELOHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "category",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "surveyResponses",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "completedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "surveyTaskCorrelations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "choreInstances",
       "queryScope": "COLLECTION",
       "fields": [
@@ -499,7 +363,7 @@
       ]
     },
     {
-      "collectionGroup": "surveyResponses",
+      "collectionGroup": "choreInstances",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -507,22 +371,144 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completedAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completedAt",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "events",
+      "collectionGroup": "choreInstances",
       "queryScope": "COLLECTION",
       "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timeOfDay",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreSchedules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "choreTemplates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isArchived",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "title",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "djSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
         {
           "fieldPath": "userId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "dateTime",
+          "fieldPath": "startTime",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "documents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "uploadedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "emailInbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "receivedAt",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -549,12 +535,8 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "startTime",
-          "order": "DESCENDING"
+          "order": "ASCENDING"
         }
       ]
     },
@@ -577,7 +559,7 @@
       ]
     },
     {
-      "collectionGroup": "kanbanTasks",
+      "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -589,13 +571,27 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "updatedAt",
+          "fieldPath": "startTime",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "kanbanTasks",
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateTime",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "familyContacts",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -603,66 +599,8 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "updatedAt",
-          "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "status",
+          "fieldPath": "name",
           "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "kanbanTasks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "updatedAt",
-          "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "choreSchedules",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "childId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "isActive",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "emailInbox",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "receivedAt",
-          "order": "DESCENDING"
         }
       ]
     },
@@ -675,17 +613,13 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "reviewed",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "uploadedAt",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "smsInbox",
+      "collectionGroup": "familyELOHistory",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -693,17 +627,39 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "receivedAt",
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "questionEffectiveness",
+      "collectionGroup": "familyELOHistory",
       "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "habitCelebrations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "viewed",
           "order": "ASCENDING"
         },
         {
@@ -713,29 +669,7 @@
       ]
     },
     {
-      "collectionGroup": "djSessions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "startTime",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "completed",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "djSessions",
+      "collectionGroup": "interviews",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -743,31 +677,17 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "userId",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "startTime",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "practiceHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "habitId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
+          "fieldPath": "completedAt",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "djSessions",
+      "collectionGroup": "kanbanTasks",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -775,27 +695,13 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "practiceHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "userId",
+          "fieldPath": "status",
           "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "sessionDate",
-          "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "liveSessions",
+      "collectionGroup": "kanbanTasks",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -803,13 +709,17 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "startedAt",
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "chatMessages",
+      "collectionGroup": "kanbanTasks",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -817,13 +727,17 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
+          "fieldPath": "updatedAt",
           "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "chatMessages",
+      "collectionGroup": "kanbanTasks",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -831,43 +745,11 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "threadId",
-          "order": "ASCENDING"
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
         },
         {
-          "fieldPath": "timestamp",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "chatMessages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "threadId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "read",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
+          "fieldPath": "status",
           "order": "DESCENDING"
         }
       ]
@@ -891,7 +773,93 @@
       ]
     },
     {
-      "collectionGroup": "tasks",
+      "collectionGroup": "processed_emails",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "processedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "rewardInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "approvalStatus.status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "requestedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "rewardInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "requestedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "rewardInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "requestedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "rewardInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "requestedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "rewardInstances",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -903,45 +871,13 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "dueDate",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "tasks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "assignedTo",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "reasoning_chains",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
+          "fieldPath": "requestedAt",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "audit_logs",
+      "collectionGroup": "rewardTemplates",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -949,13 +885,13 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
+          "fieldPath": "bucksPrice",
+          "order": "ASCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "lists",
+      "collectionGroup": "rewardTemplates",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -963,13 +899,17 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "updatedAt",
-          "order": "DESCENDING"
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "bucksPrice",
+          "order": "ASCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "sent_emails",
+      "collectionGroup": "rewardTemplates",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -977,54 +917,66 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "sentAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "sent_sms",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "sentAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "scheduled_reminders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "taskId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "reminderTime",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "places",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
+          "fieldPath": "isActive",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "category",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "rewardTemplates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "bucksPrice",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "rewardTemplates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "price",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "siblingAppreciation",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -1042,82 +994,80 @@
         },
         {
           "fieldPath": "createdAt",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "blogPosts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "published",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "publishedDate",
-          "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "__name__",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "blogPosts",
+      "collectionGroup": "smsInbox",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "category",
+          "fieldPath": "familyId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "published",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "publishedDate",
+          "fieldPath": "receivedAt",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "blogPosts",
+      "collectionGroup": "surveyResponses",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "featured",
+          "fieldPath": "familyId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "published",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "publishedDate",
+          "fieldPath": "completedAt",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "blogPosts",
+      "collectionGroup": "surveyResponses",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "published",
+          "fieldPath": "familyId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "tags",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "surveyResponses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
         },
         {
-          "fieldPath": "publishedDate",
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "surveyTaskCorrelations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
           "order": "DESCENDING"
         }
       ]
