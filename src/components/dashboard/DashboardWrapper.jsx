@@ -13,6 +13,16 @@ const DashboardWrapper = () => {
   const [error, setError] = useState(null);
   const [hasInitialized, setHasInitialized] = useState(false);
 
+  // CRITICAL FIX: Aggressively set loading to false once family data is available
+  // This prevents the infinite loading screen issue
+  useEffect(() => {
+    if (currentUser && familyId && familyMembers && familyMembers.length > 0) {
+      console.log('✅ DashboardWrapper: Essential data available - ending loading state');
+      setLoading(false);
+      setHasInitialized(true);
+    }
+  }, [currentUser, familyId, familyMembers]);
+
   useEffect(() => {
     const initializeDashboard = async () => {
       try {
@@ -29,7 +39,7 @@ const DashboardWrapper = () => {
         if (familyId && familyMembers && familyMembers.length > 0) {
           console.log('DashboardWrapper: Family data already available');
           setHasInitialized(true);
-          setLoading(false);
+          // Don't set loading here - the dedicated useEffect above handles it
           return;
         }
 
@@ -132,12 +142,14 @@ const DashboardWrapper = () => {
     );
   }
 
-  // Only render dashboard when we have all required data
-  if (!familyId || !selectedUser) {
-    console.log('DashboardWrapper: Missing required data', { familyId, selectedUser });
+  // CRITICAL FIX: Don't block rendering on selectedUser - let NotionDashboard handle it
+  // This prevents infinite loading when user selection is async
+  if (!familyId) {
+    console.log('DashboardWrapper: Missing familyId');
     return <LoadingScreen />;
   }
 
+  // Render dashboard even if selectedUser isn't set yet - NotionDashboard will handle auto-selection
   return <NotionDashboard />;
 };
 
