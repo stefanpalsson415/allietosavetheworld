@@ -100,7 +100,7 @@ const daysSince = (dateString) => {
 // Removed custom avatar helpers - using shared UserAvatar component if needed
 
 // Helper function to calculate total habit completions from both old and new systems
-const calculateTotalCompletions = (userId, completedHabitInstances, habits2Completions, habits2FullData = []) => {
+const calculateTotalCompletions = (userId, completedHabitInstances, habits2Completions, habits2FullData = [], allLoadedHabits = []) => {
   // Count from OLD system (completionInstances)
   const oldSystemCompletions = Object.values(completedHabitInstances)
     .filter(instances => instances.some(instance => instance.userId === userId))
@@ -119,13 +119,27 @@ const calculateTotalCompletions = (userId, completedHabitInstances, habits2Compl
     }
   });
 
+  // Count from HabitCyclesService system (habits with completionCount field)
+  let cyclesSystemCompletions = 0;
+  allLoadedHabits.forEach(habit => {
+    // Check if this habit belongs to the user
+    // habit.userId is like 'stefan_palsson_agent', userId parameter is the family member's id
+    if (habit.userId === userId || habit.createdBy === userId) {
+      // If habit has completionCount field, use it
+      if (habit.completionCount && typeof habit.completionCount === 'number') {
+        cyclesSystemCompletions = Math.max(cyclesSystemCompletions, habit.completionCount);
+      }
+    }
+  });
+
   console.log(`User ${userId} completions:`, {
     oldSystem: oldSystemCompletions,
     newSystem: newSystemCompletions,
-    total: oldSystemCompletions + newSystemCompletions
+    cyclesSystem: cyclesSystemCompletions,
+    total: oldSystemCompletions + newSystemCompletions + cyclesSystemCompletions
   });
 
-  return oldSystemCompletions + newSystemCompletions;
+  return oldSystemCompletions + newSystemCompletions + cyclesSystemCompletions;
 };
 
 const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting, onSwitchTab }) => {
@@ -160,6 +174,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting, onSwitchTab }) =>
 
   // Main states
   const [habits, setHabits] = useState([]);
+  const [allParentHabits, setAllParentHabits] = useState([]); // Store all parents' habits for completion tracking
   const [loading, setLoading] = useState(true);
   const [celebrations, setCelebrations] = useState([]);
   const [showAllieCoaching, setShowAllieCoaching] = useState(false);
@@ -405,10 +420,18 @@ const loadData = async () => {
         
         // Also load habits from HabitCyclesService
         const habitsFromService = await HabitCyclesService.getHabits(familyId, currentWeek.toString());
-        
-        // Filter habits from service for the current user
-        const userHabitsFromService = habitsFromService.filter(habit => 
-          habit.assignedTo === (selectedUser?.roleType || selectedUser?.role) || 
+
+        // Store ALL parent habits for completion tracking (before filtering)
+        const parentHabits = habitsFromService.filter(habit =>
+          habit.assignedTo === 'papa' ||
+          habit.assignedTo === 'mama' ||
+          habit.role === 'parent'
+        );
+        setAllParentHabits(parentHabits);
+
+        // Filter habits from service for the current user (for display)
+        const userHabitsFromService = habitsFromService.filter(habit =>
+          habit.assignedTo === (selectedUser?.roleType || selectedUser?.role) ||
           habit.assignedToName === selectedUser?.name ||
           habit.assignedTo === "Everyone"
         );
@@ -673,7 +696,23 @@ if (hasEnoughHabits) {
   useEffect(() => {
     loadData();
   }, [familyId, currentWeek, selectedUser]);
-  
+
+  // CRITICAL FIX: Ensure loading is set to false once essential data is available
+  // This prevents the infinite loading screen issue
+  useEffect(() => {
+    // If we have familyMembers and memberProgress data, we can show the UI
+    // Don't wait for ALL data to load - show what we have
+    if (familyMembers && familyMembers.length > 0 && memberProgress && Object.keys(memberProgress).length > 0) {
+      // Set a small timeout to ensure React has rendered the data
+      const timeout = setTimeout(() => {
+        setLoading(false);
+        console.log('✅ Loading complete - showing UI with available data');
+      }, 100);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [familyMembers, memberProgress]);
+
   // Load all family survey responses with member metadata
   useEffect(() => {
     const loadAllSurveyResponses = async () => {
@@ -1313,33 +1352,40 @@ const findExistingDueDateEvent = async () => {
 // For parents, check if they've completed habits requirement and surveys
 if (member.role === 'parent') {
   // Check for ANY of these indicators that survey is completed (using OR instead of AND)
-  const surveyFullyCompleted = 
-    memberData.completedSurvey === true || 
+  const surveyFullyCompleted =
+    memberData.completedSurvey === true ||
     member.weeklyCompleted?.[currentWeek-1]?.completed === true ||
     (member.status && member.status.toLowerCase().includes("survey done"));
-  
+
   // Always check for habit completions
   const parentHabits = Object.values(completedHabitInstances)
-    .filter(instances => instances.some(instance => 
+    .filter(instances => instances.some(instance =>
       instance.userId === member.id));
-  
+
   const hasCompletedHabits = parentHabits.some(instances => instances.length >= 5);
-  
+
   if (surveyFullyCompleted) {
     // If survey is completed by ANY measure, set to step 3 (meeting phase)
     memberData.step = 3;
     memberData.completedSurvey = true;
-    
+
+  } else if (memberData.step >= 2) {
+    // If Firestore already has step 2 or higher, trust that (admin/demo data)
+    // Don't downgrade based on habit checks
+    if (member.id === selectedUser?.id) {
+      setCanTakeSurvey(true);
+    }
+
   } else if (hasCompletedHabits) {
     // If not fully completed but has enough habit completions, enable survey
     memberData.step = 2; // Ready for survey
-    
-    // Force canTakeSurvey to true for this case - this ensures partially 
+
+    // Force canTakeSurvey to true for this case - this ensures partially
     // completed surveys can be resumed
     if (member.id === selectedUser?.id) {
       setCanTakeSurvey(true);
     }
-    
+
   } else {
     memberData.step = 1; // Still doing habits
   }
@@ -2394,24 +2440,9 @@ if (isRefresh) {
         createCelebration("Not Ready Yet", false, "Complete a habit at least 5 times to unlock the survey.");
       }
     } else {
-      // For children: They can take the survey if ANY of these are true:
-      // 1. Cycle is in step 2+
-      // 2. Any parent has reached step 2+
-      // 3. canTakeSurvey is true (which can be set by other conditions)
-      const anyParentCompleted = familyMembers
-        .filter(m => m.role === 'parent')
-        .some(parent => {
-          const progress = memberProgress[parent.id] || {};
-          return progress.step >= 2 || 
-                 progress.completedSurvey || 
-                 parent.weeklyCompleted?.[currentWeek-1]?.completed;
-        });
-      
-      if (cycleStep >= 2 || anyParentCompleted || canTakeSurvey) {
-        onStartWeeklyCheckIn();
-      } else {
-        createCelebration("Not Ready Yet", false, "Parents need to complete their habits first.");
-      }
+      // For children: They can ALWAYS take the survey - they start at step 2
+      // No need to wait for parents to complete habits
+      onStartWeeklyCheckIn();
     }
   };
   
@@ -2569,7 +2600,8 @@ if (isRefresh) {
                     parent.id,
                     completedHabitInstances,
                     habits2Completions,
-                    habits2FullData
+                    habits2FullData,
+                    allParentHabits
                   );
 
                   return (
@@ -2606,7 +2638,8 @@ if (isRefresh) {
                     selectedUser.id,
                     completedHabitInstances,
                     habits2Completions,
-                    habits2FullData
+                    habits2FullData,
+                    allParentHabits
                   );
 
                   if (userCompletions >= 5) {
@@ -2623,7 +2656,8 @@ if (isRefresh) {
                   selectedUser.id,
                   completedHabitInstances,
                   habits2Completions,
-                  habits2FullData
+                  habits2FullData,
+                  allParentHabits
                 );
 
                 const progressPercent = Math.min((userCompletions / 5) * 100, 100);
@@ -2936,8 +2970,47 @@ if (isRefresh) {
                 // Count weighted responses by category
                 if (isValidCategory && answer && answer !== 'N/A' && answer !== 'NA' && answer !== 'Not applicable') {
                   // Normalize answer format
-                  const normalizedAnswer = answer.toString().toLowerCase().trim();
-                  
+                  let normalizedAnswer = answer.toString().toLowerCase().trim();
+
+                  // MEMBER ID MAPPING: Convert member IDs to mama/papa roles
+                  // Survey responses may contain member IDs like "kimberly_palsson_agent" instead of "mama"
+                  // We need to map these to roles based on familyMembers data
+                  if (familyMembers && familyMembers.length > 0) {
+                    // Try to find a matching family member by userId
+                    const matchingMember = familyMembers.find(member =>
+                      member.userId && normalizedAnswer.includes(member.userId.toLowerCase())
+                    );
+
+                    if (matchingMember) {
+                      // Found a member match - convert to mama/papa based on role
+                      const role = matchingMember.role?.toLowerCase() || '';
+                      const name = matchingMember.name?.toLowerCase() || '';
+
+                      // Determine mama/papa based on role and name
+                      // First parent alphabetically becomes "mama", second becomes "papa"
+                      const parents = familyMembers.filter(m => m.role === 'parent' || m.isParent);
+                      if (parents.length >= 2) {
+                        const sortedParents = [...parents].sort((a, b) =>
+                          (a.name || '').localeCompare(b.name || '')
+                        );
+
+                        if (matchingMember.userId === sortedParents[0].userId) {
+                          normalizedAnswer = 'mama';
+                        } else if (matchingMember.userId === sortedParents[1].userId) {
+                          normalizedAnswer = 'papa';
+                        }
+                      } else if (role === 'parent' || matchingMember.isParent) {
+                        // Only one parent, default to mama
+                        normalizedAnswer = 'mama';
+                      }
+
+                      // Log only first 3 mappings to avoid console spam
+                      if (Object.keys(responsesToUse).indexOf(questionId) < 3) {
+                        console.log(`Mapped member ID "${answer}" to role "${normalizedAnswer}" for ${matchingMember.name}`);
+                      }
+                    }
+                  }
+
                   if (normalizedAnswer === 'mama' || normalizedAnswer === 'mother' || normalizedAnswer === 'mom') {
                     categoryData[category].mama += weight;
                   } else if (normalizedAnswer === 'papa' || normalizedAnswer === 'father' || normalizedAnswer === 'dad') {
@@ -2946,7 +3019,10 @@ if (isRefresh) {
                     // Treat "Draw" as "Both equally" - split 50/50
                     categoryData[category].both += weight;
                   } else {
-                    console.log('Unrecognized answer format:', answer, 'for question:', cleanQuestionId);
+                    // Log only first 3 unrecognized answers to avoid console spam
+                    if (Object.keys(responsesToUse).indexOf(questionId) < 3) {
+                      console.log('Unrecognized answer format:', answer, 'for question:', cleanQuestionId);
+                    }
                   }
                   categoryData[category].total += weight;
                 } else {
