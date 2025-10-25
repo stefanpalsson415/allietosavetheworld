@@ -856,26 +856,10 @@ const isValidImageUrl = (url) => {
       
       // Clear the progress flag since we've completed the survey
       localStorage.removeItem(`surveyInProgress_${selectedUser.id}`);
-      
-      // Navigate to loading screen
-      console.log("Navigating to loading screen");
-      navigate('/loading');
-      
-      // Check if all family members have completed their surveys
-      const allCompleted = familyMembers.every(member => 
-        member.completed || member.id === selectedUser.id
-      );
-      
-      // Wait briefly before navigating to the final destination
-      setTimeout(() => {
-        if (allCompleted) {
-          console.log("All family members completed surveys, going to dashboard");
-          navigate('/dashboard');
-        } else {
-          console.log("Some family members still need to complete surveys, going to family selection");
-          navigate('/login', { state: { showCompletionScreen: true } });
-        }
-      }, 2000);
+
+      // Navigate directly to dashboard - kids don't need to worry about other family members
+      console.log("✅ Kid survey completed successfully - navigating to dashboard");
+      navigate('/dashboard');
     } catch (error) {
       console.error(`Error completing ${surveyType} survey:`, error);
       alert('There was an error saving your responses. Please try again.');

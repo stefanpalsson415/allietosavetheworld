@@ -664,15 +664,13 @@ const SurveyScreen = ({ mode = 'initial' }) => {
   const mamaUser = parent2;
   const papaUser = parent1;
   
-  // Only load fresh family data if we don't have any members yet
+  // Force load fresh family data on mount to ensure profile pictures are loaded
   useEffect(() => {
-    // Skip if we already have family members with profile pictures
-    const hasProfilePictures = familyMembers.some(m => m.profilePicture || m.profilePictureUrl);
-    if (!hasProfilePictures && loadFreshFamilyData) {
-      console.log('No profile pictures found - fetching fresh family data...');
-      loadFreshFamilyData();
+    if (loadFreshFamilyData && familyId) {
+      console.log('Survey screen mounting - forcing fresh family data load to get profile pictures...');
+      loadFreshFamilyData(true); // Pass true to force reload even if data exists
     }
-  }, []); // Empty deps - only run once on mount
+  }, [familyId]); // Run when familyId is available
 
   
   // Get children from family members for sibling context
@@ -680,13 +678,18 @@ const SurveyScreen = ({ mode = 'initial' }) => {
   
   // Debug logging to see what fields are available
   useEffect(() => {
-    if (papaUser) {
-      console.log('Papa user found:', papaUser.name);
-      console.log('Papa profilePicture:', papaUser.profilePicture);
-      console.log('Papa profilePictureUrl:', papaUser.profilePictureUrl);
-      console.log('Papa full object:', papaUser);
+    if (papaUser && mamaUser) {
+      console.log('=== Parent Avatar Debug ===');
+      console.log('Papa user:', papaUser.name);
+      console.log('  - profilePicture:', papaUser.profilePicture);
+      console.log('  - profilePictureUrl:', papaUser.profilePictureUrl);
+      console.log('Mama user:', mamaUser.name);
+      console.log('  - profilePicture:', mamaUser.profilePicture);
+      console.log('  - profilePictureUrl:', mamaUser.profilePictureUrl);
+      console.log('Total family members:', familyMembers.length);
+      console.log('=========================');
     }
-  }, [papaUser]);
+  }, [papaUser, mamaUser, familyMembers]);
   
   // Set up keyboard shortcuts with debouncing
   useEffect(() => {
