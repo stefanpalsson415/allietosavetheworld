@@ -15,18 +15,18 @@ jest.mock('../firebase', () => ({
   db: {}
 }));
 
-// Mock ELO Rating Service
+// Mock ELO Rating Service (singleton instance)
 jest.mock('../ELORatingService', () => ({
-  default: jest.fn().mockImplementation(() => ({
+  default: {
     calculateELORatings: jest.fn()
-  }))
+  }
 }));
 
-// Mock Harmony Detective Agent
-jest.mock('../AllieHarmonyDetectiveAgent', () => ({
-  default: jest.fn().mockImplementation(() => ({
+// Mock Harmony Detective Agent (singleton instance)
+jest.mock('../agents/AllieHarmonyDetectiveAgent', () => ({
+  default: {
     analyzeHarmony: jest.fn()
-  }))
+  }
 }));
 
 // Mock KnowledgeGraphService

@@ -13,8 +13,8 @@
  */
 
 import knowledgeGraphService from './KnowledgeGraphService';
-import ELORatingService from './ELORatingService';
-import { AllieHarmonyDetectiveAgent } from './agents/AllieHarmonyDetectiveAgent';
+import eloRatingService from './ELORatingService'; // Singleton instance
+import allieHarmonyDetective from './agents/AllieHarmonyDetectiveAgent'; // Singleton instance
 import HabitCyclesService from './HabitCyclesService';
 import { db } from './firebase';
 import {
@@ -33,8 +33,8 @@ import {
 
 class FamilyBalanceScoreService {
   constructor() {
-    this.eloService = new ELORatingService();
-    this.harmonyAgent = new AllieHarmonyDetectiveAgent();
+    this.eloService = eloRatingService; // Use singleton instance
+    this.harmonyAgent = allieHarmonyDetective; // Use singleton instance
 
     // Weights for each component (must sum to 1.0)
     this.WEIGHTS = {

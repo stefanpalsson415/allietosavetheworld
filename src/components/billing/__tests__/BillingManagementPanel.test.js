@@ -15,14 +15,14 @@ import familyBalanceScoreService from '../../../services/FamilyBalanceScoreServi
 jest.mock('../../../contexts/FamilyContext');
 jest.mock('../../../services/FamilyBalanceScoreService');
 jest.mock('../../../services/ELORatingService', () => ({
-  default: jest.fn().mockImplementation(() => ({
+  default: {
     calculateELORatings: jest.fn()
-  }))
+  }
 }));
-jest.mock('../../../services/AllieHarmonyDetectiveAgent', () => ({
-  default: jest.fn().mockImplementation(() => ({
+jest.mock('../../../services/agents/AllieHarmonyDetectiveAgent', () => ({
+  default: {
     analyzeHarmony: jest.fn()
-  }))
+  }
 }));
 
 // Mock Stripe
