@@ -1893,6 +1893,8 @@ npm run test:regression
 
 ## 🆕 Recent Fixes (Oct 2025)
 
+**FamilyBalanceScoreService Singleton Pattern (Oct 25):** ✅ **CRITICAL** - Use singleton instances instead of constructors | **Why:** `ELORatingService` and `AllieHarmonyDetectiveAgent` export singleton instances (`export default new Service()`), not classes | **Impact:** Production error: `TypeError: i.A is not a constructor` when FamilyBalanceScoreService tried `new ELORatingService()` | **Fix:** Changed imports from class constructors to singleton instances: `import eloRatingService from './ELORatingService'` (lowercase), use directly without `new` keyword | **Pattern:** Services that export singletons must be used as instances, not instantiated | **Files:** `FamilyBalanceScoreService.js:16-17,36-37`, all test mocks updated to singleton pattern | **Deployed:** `b1e95c1`
+
 **EventDrawer Consistency Across Tabs (Oct 25):** ✅ **UX FIX** - Made event editing consistent across all tabs | **Why:** Different tabs had different event click behaviors - Home tab opened EventDrawer (correct), Balance & Habits "Change Date" opened Allie chat (wrong), Family Calendar opened Allie chat (wrong) | **Impact:** Inconsistent UX confused users - same action (clicking event) did different things in different places | **Fix:** Updated `TasksTab.jsx` to open EventDrawer for "Change Date" button (added import line 29, state lines 188-190, modified handler lines 2553-2575, added component lines 3409-3421), simplified `Calendar.js` handleEventClick to use EventDrawer instead of Allie chat (lines 51-57) | **Result:** All event clicks now consistently open EventDrawer with proper edit functionality | **Files:** `TasksTab.jsx:29,188-190,2553-2575,3409-3421`, `calendar-v2/views/Calendar.js:51-57`
 
 **Dashboard Post-Survey Infinite Loading (Oct 24):** ✅ **CRITICAL** - Removed Suspense wrapper from `/dashboard` route | **Why:** Suspense fallback was blocking render while lazy components imported | **Impact:** After completing survey, navigating to dashboard showed "Loading..." indefinitely | **Fix:** Removed Suspense wrapper in `App.js:458-467`, let DashboardWrapper handle its own loading | **Files:** `App.js:458-467`
@@ -2213,4 +2215,4 @@ const event = {
 **Always:** Fix root cause, try/catch, follow patterns, test production, update tests, clean AI responses, verify env vars
 
 ---
-*Updated: 2025-10-25 | v14.0 - Revolutionary Usage-Based Pricing System LIVE! (Family Balance Score, Metered Billing, Celebration System, 250+ Tests)*
+*Updated: 2025-10-25 | v14.0.1 - Revolutionary Usage-Based Pricing System LIVE! (Critical singleton fix deployed)*
