@@ -64,6 +64,7 @@ const AllieChatController = ({
   const [extractedEntities, setExtractedEntities] = useState(null);
   const [conversationContext, setConversationContext] = useState([]);
   const [promptChips, setPromptChips] = useState([]);
+  const [selectedChipIndex, setSelectedChipIndex] = useState(null); // Track which question was selected
   const [isDragging, setIsDragging] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
   const [showMultimodalExtractor, setShowMultimodalExtractor] = useState(false);
@@ -416,16 +417,24 @@ const AllieChatController = ({
    */
   useEffect(() => {
     const handleNewPrompt = (event) => {
-      if (event.detail && event.detail.prompt) {
-        console.log('📅 Calendar prompt received:', event.detail.prompt);
+      if (event.detail) {
+        console.log('📅 External prompt received:', event.detail);
 
-        // Set the input to the prompt
-        setInput(event.detail.prompt);
+        // Handle suggested questions (e.g., from Knowledge Graph buttons)
+        if (event.detail.suggestedQuestions && Array.isArray(event.detail.suggestedQuestions)) {
+          console.log('💡 Setting suggested questions:', event.detail.suggestedQuestions);
+          setPromptChips(event.detail.suggestedQuestions);
+        }
 
-        // If it's an event creation, we can auto-send the message
-        if (event.detail.options?.eventCreation || event.detail.options?.eventEdit) {
-          // Auto-send the message to create event form
-          handleSendRef.current();
+        // Set input if prompt provided
+        if (event.detail.prompt) {
+          setInput(event.detail.prompt);
+
+          // If it's an event creation or auto-submit request, auto-send the message
+          if (event.detail.options?.eventCreation || event.detail.options?.eventEdit || event.detail.autoSubmit) {
+            // Auto-send the message
+            handleSendRef.current();
+          }
         }
       }
     };
@@ -435,7 +444,7 @@ const AllieChatController = ({
     return () => {
       window.removeEventListener('allie-new-prompt', handleNewPrompt);
     };
-  }, [setInput]);
+  }, [setInput, setPromptChips]);
 
   /**
    * Listen for notification clicks to navigate to threads
@@ -565,7 +574,11 @@ const AllieChatController = ({
     setIsOpen(!isOpen);
   }, [isOpen]);
 
-  const handleUsePrompt = useCallback((promptText, memberId) => {
+  const handleUsePrompt = useCallback((promptText, memberId, chipIndex) => {
+    // Mark this question as selected
+    if (chipIndex !== undefined) {
+      setSelectedChipIndex(chipIndex);
+    }
     setInput(promptText);
     // Auto-send after brief delay
     setTimeout(() => handleSend(promptText), 100);
@@ -663,6 +676,7 @@ const AllieChatController = ({
     extractedEntities,
     conversationContext,
     promptChips,
+    selectedChipIndex,
     showMultimodalExtractor,
     isDragging,
     canUseChat,
@@ -748,6 +762,7 @@ const AllieChatController = ({
     extractedEntities,
     conversationContext,
     promptChips,
+    selectedChipIndex,
     showMultimodalExtractor,
     isDragging,
     canUseChat,

@@ -26,12 +26,13 @@
     "firebase-functions": "^4.9.0",
     "neo4j-driver": "^5.28.2",
     "sib-api-v3-sdk": "^8.5.0",
+    "stripe": "^19.1.0",
     "twilio": "^5.7.2"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.0",
     "firebase-functions-test": "^3.1.0",
-    "jest": "^29.7.0",
-    "@types/jest": "^29.5.0"
+    "jest": "^29.7.0"
   },
   "private": true
 }

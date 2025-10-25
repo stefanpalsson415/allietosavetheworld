@@ -76,6 +76,16 @@ class EventStore {
       try {
         if (eventData.dateObj instanceof Date && !isNaN(eventData.dateObj.getTime())) {
           startDate = new Date(eventData.dateObj);
+        } else if (eventData.startTime) {
+          // Check startTime field (Firestore Timestamp from demo data / CalendarServiceV2)
+          // Firestore Timestamps have toDate() method or can be a Date object
+          if (typeof eventData.startTime.toDate === 'function') {
+            startDate = eventData.startTime.toDate();
+          } else if (eventData.startTime instanceof Date) {
+            startDate = new Date(eventData.startTime);
+          } else {
+            startDate = new Date(eventData.startTime);
+          }
         } else if (eventData.startDate) {
           // Check startDate field (used by UnifiedInbox)
           startDate = new Date(eventData.startDate);
@@ -96,6 +106,15 @@ class EventStore {
       try {
         if (eventData.dateEndObj instanceof Date && !isNaN(eventData.dateEndObj.getTime())) {
           endDate = new Date(eventData.dateEndObj);
+        } else if (eventData.endTime) {
+          // Check endTime field (Firestore Timestamp from demo data / CalendarServiceV2)
+          if (typeof eventData.endTime.toDate === 'function') {
+            endDate = eventData.endTime.toDate();
+          } else if (eventData.endTime instanceof Date) {
+            endDate = new Date(eventData.endTime);
+          } else {
+            endDate = new Date(eventData.endTime);
+          }
         } else if (eventData.endDate) {
           // Check endDate field (used by UnifiedInbox)
           endDate = new Date(eventData.endDate);

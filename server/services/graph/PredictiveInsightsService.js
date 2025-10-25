@@ -20,7 +20,7 @@ class PredictiveInsightsService {
    * Returns predictions for next 7 days with confidence scores
    */
   async predictTaskCreation(familyId, daysAhead = 7) {
-    const session = neo4jService.getSession();
+    const session = await neo4jService.getSession();
 
     try {
       // Analyze task creation patterns from last 30 days
@@ -106,7 +106,7 @@ class PredictiveInsightsService {
    * Identifies situations where multiple people might create conflicting tasks
    */
   async detectCoordinationConflicts(familyId) {
-    const session = neo4jService.getSession();
+    const session = await neo4jService.getSession();
 
     try {
       // Find tasks with multiple people involved in different phases
@@ -160,7 +160,7 @@ class PredictiveInsightsService {
    * Predicts who will notice and create tasks based on historical patterns
    */
   async forecastAnticipationBurden(familyId, daysAhead = 7) {
-    const session = neo4jService.getSession();
+    const session = await neo4jService.getSession();
 
     try {
       // Analyze task creation by person over last 30 days
@@ -211,7 +211,7 @@ class PredictiveInsightsService {
    * Returns individuals at risk of burnout
    */
   async assessBurnoutRisk(familyId) {
-    const session = neo4jService.getSession();
+    const session = await neo4jService.getSession();
 
     try {
       // Analyze cognitive load trends over last 14 days
@@ -234,9 +234,9 @@ class PredictiveInsightsService {
       `, { familyId });
 
       const riskAssessments = result.records.map(record => {
-        const avgDaily = record.get('avgDaily');
-        const maxDaily = record.get('maxDaily');
-        const dailyCounts = record.get('dailyTaskCounts');
+        const avgDaily = Number(record.get('avgDaily'));
+        const maxDaily = Number(record.get('maxDaily'));
+        const dailyCounts = record.get('dailyTaskCounts').map(c => Number(c));
 
         // Calculate trend (increasing/decreasing)
         const trend = this._calculateTrend(dailyCounts);

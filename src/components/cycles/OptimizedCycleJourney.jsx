@@ -206,33 +206,46 @@ const OptimizedCycleJourney = ({
   const canTakeStep = useMemo(() => {
     return (stepNumber) => {
       if (!currentUser) return false;
-      
+
       // For relationship cycles, only parents can participate
-      if (cycleType === 'relationship' && 
+      if (cycleType === 'relationship' &&
           (!currentUser.role || currentUser.role !== 'parent')) {
         return false;
       }
-      
+
       // Get current user's progress
       const userProgress = memberProgress[currentUser.id] || {};
-      
+
       // Check if the current user has completed this specific step
-      const hasCompletedThisStep = stepNumber === 2 && 
-        (userProgress.completedSurvey || 
+      const hasCompletedThisStep = stepNumber === 2 &&
+        (userProgress.completedSurvey ||
          currentUser.weeklyCompleted?.[currentCycle-1]?.completed ||
          userProgress.step > 2);
-      
+
       if (hasCompletedThisStep) {
         return false; // Step already completed
       }
-      
+
       // Step 1 is always available unless completed
       if (stepNumber === 1) {
         return !completedSteps.includes(1);
       }
-      
+
+      // SPECIAL CASE: Children start at step 2 (survey), so they should always be able to take it
+      if (stepNumber === 2 && cycleType === 'family' && currentUser.role === 'child') {
+        // Children can take survey if they haven't completed it yet
+        return !hasCompletedThisStep;
+      }
+
+      // SPECIAL CASE: Parents can take survey (step 2) if THEY individually have reached step 2
+      // even if the family-wide step 1 isn't complete (e.g., other parent hasn't finished habits)
+      if (stepNumber === 2 && cycleType === 'family' && currentUser.role === 'parent') {
+        // Check if THIS parent has personally reached step 2 (completed habits)
+        return userProgress.step >= 2 && !hasCompletedThisStep;
+      }
+
       // Other steps require previous step completion
-      return completedSteps.includes(stepNumber - 1) && 
+      return completedSteps.includes(stepNumber - 1) &&
              !completedSteps.includes(stepNumber);
     };
   }, [currentUser, cycleType, memberProgress, currentCycle, completedSteps]);

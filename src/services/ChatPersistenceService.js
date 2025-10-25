@@ -97,7 +97,7 @@ async saveMessage(message) {
       timestamp: message.timestamp || new Date().toISOString(),
       // Threading support - CRITICAL for thread panel
       // NEVER set threadId for Allie messages unless they are actual thread replies
-      threadId: (message.sender === 'allie' && !message.parentMessageId) ? null : 
+      threadId: (message.sender === 'allie' && !message.parentMessageId) ? null :
                 (message.parentMessageId ? (message.threadId || messageId) : message.threadId || null),
       parentMessageId: message.parentMessageId || null,
       replyCount: message.replyCount || 0,
@@ -111,6 +111,13 @@ async saveMessage(message) {
       // Add message hash for deduplication if needed
       messageHash: this.generateMessageHash(message)
     };
+
+    // Filter out undefined values to prevent Firebase errors
+    Object.keys(enhancedMessage).forEach(key => {
+      if (enhancedMessage[key] === undefined) {
+        delete enhancedMessage[key];
+      }
+    });
     
     // Save to Firestore with retry logic
     let docRef = null;

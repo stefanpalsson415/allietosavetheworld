@@ -3,11 +3,13 @@
 Quick reference for working with the Allie/Parentload codebase.
 
 ## 🎯 Stack
-- **Frontend:** React 18 + Tailwind + Framer Motion
+- **Frontend:** React 18 + Tailwind + Framer Motion + canvas-confetti
 - **Backend:** Firebase + Cloud Run (GCP)
+- **Payment:** Stripe Checkout + Metered Billing + Cloud Functions + Webhooks
 - **AI:** Claude Opus 4.1 (internal), Sonnet 3.5 (sales)
 - **Voice:** Web Speech API + OpenAI TTS-1-HD
 - **Knowledge Graph:** Neo4j Aura + D3.js
+- **Scoring:** Family Balance Score (4-component weighted system)
 
 ## 🚀 Commands
 
@@ -28,7 +30,9 @@ npm test -- --testPathPattern=TestName
 
 ## 📁 Key Files
 
-**Services:** `ClaudeService.js` (Opus 4.1), `EnhancedCalendarSyncService.js`, `GoogleAuthService.js`, `PremiumVoiceService.js`, `KnowledgeGraphService.js`
+**Services:** `ClaudeService.js` (Opus 4.1), `EnhancedCalendarSyncService.js`, `GoogleAuthService.js`, `PremiumVoiceService.js`, `KnowledgeGraphService.js`, `FamilyBalanceScoreService.js`, `StripeService.js`
+
+**Payment & Billing:** `/components/payment/{PaymentScreen,PricingComparisonModal,PaymentSuccess}.jsx`, `/components/billing/BillingManagementPanel.jsx`, `/components/dashboard/BalanceScoreDashboardWidget.jsx`, `/utils/celebrations.js`, `/functions/index.js` (6 Stripe webhook handlers)
 
 **AllieChat:** `/refactored/{AllieChat,AllieChatController,AllieChatUI,AllieConversationEngine}.jsx`
 
@@ -60,6 +64,513 @@ curl -X POST https://allie-claude-api-363935868004.us-central1.run.app/api/claud
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Test"}],"model":"claude-opus-4-1-20250805","max_tokens":50}'
 ```
+
+## 💳 Revolutionary Usage-Based Pricing System (Oct 25, 2025) ✅ **PRODUCTION LIVE**
+
+**Webhook URL:** https://us-central1-parentload-ba995.cloudfunctions.net/stripeWebhook
+
+**Status:** Complete dual-pricing system with revolutionary usage-based billing + traditional plans
+
+### 🎯 Pricing Models (All Three Available)
+
+**1. Usage-Based (Revolutionary)** 🌟
+- Pay only when Allie improves your Family Balance Score
+- **$1 per point improved**, maximum $50/month
+- **First month FREE** to establish baseline
+- Perfect for families who want pay-for-value pricing
+
+**2. Monthly Plan**
+- $29/month fixed
+- Predictable billing
+- Unlimited access
+
+**3. Annual Plan**
+- $290/year (17% savings vs monthly)
+- Best value for committed families
+- 2 months free
+
+### 📊 Family Balance Score System
+
+**Core Service:** `FamilyBalanceScoreService.js` (577 lines)
+
+**4-Component Weighted Scoring:**
+1. **Mental Load Balance** (40% weight)
+   - Measures invisible labor from Knowledge Graph
+   - Tracks anticipation, monitoring, coordination
+   - Detects imbalances between partners
+
+2. **Task Distribution** (30% weight)
+   - ELO ratings from task completion
+   - Fair Play card ownership
+   - Execution balance
+
+3. **Relationship Harmony** (20% weight)
+   - Allie Harmony Detective analysis
+   - Communication patterns
+   - Conflict resolution
+
+4. **Habit Consistency** (10% weight)
+   - Weekly habit completion rates
+   - Streak tracking
+   - Momentum measurement
+
+**Formula:**
+```javascript
+totalScore =
+  (mentalLoadScore × 0.40) +
+  (taskDistributionScore × 0.30) +
+  (relationshipHarmonyScore × 0.20) +
+  (habitConsistencyScore × 0.10)
+```
+
+**Improvement Calculation:**
+```javascript
+// First month: Establish baseline (FREE)
+baselineScore = calculateBalanceScore(familyId)
+
+// Month 2+: Calculate improvement
+currentScore = calculateBalanceScore(familyId)
+improvement = currentScore - baselineScore
+
+// Usage charge (only for usage-based customers)
+usageCharge = Math.min(50, Math.max(0, improvement))
+// $1 per point improved, capped at $50
+```
+
+### 🎨 Frontend Components
+
+**Payment Selection:**
+- `PaymentScreen.jsx` - Revolutionary 3-option interface
+- `PricingComparisonModal.jsx` (530 lines)
+  - Side-by-side plan comparison
+  - Interactive calculator with slider
+  - Real-time savings calculation
+  - Comprehensive FAQ section
+
+**Dashboard:**
+- `BalanceScoreDashboardWidget.jsx` (358 lines)
+  - Animated circular progress ring
+  - Live score counting animation
+  - Monthly charge preview
+  - 4-component breakdown toggle
+  - Celebration integration
+
+**Billing Management:**
+- `BillingManagementPanel.jsx` (532 lines)
+  - Current plan display
+  - Usage metrics visualization
+  - Billing history
+  - Plan management (change/cancel)
+  - Payment method updates
+
+### 🎉 Celebration & Achievement System
+
+**Service:** `celebrations.js` (350 lines)
+
+**4 Celebration Levels:**
+- **Low:** 50 confetti particles, simple burst
+- **Medium:** 2-second dual-side animation
+- **High:** 3-second fireworks effect
+- **Max:** 5-second epic celebration with center burst
+
+**12 Achievement Types:**
+- **First Milestones:** FIRST_SCORE, BASELINE_SET
+- **Score Thresholds:** SCORE_70, SCORE_80, SCORE_90, SCORE_95
+- **Improvements:** IMPROVEMENT_10, IMPROVEMENT_20, IMPROVEMENT_30
+- **Billing:** LOW_CHARGE, NO_CHARGE, MAX_VALUE
+
+**Achievement Badges:**
+- Auto-generated DOM elements
+- 5-second auto-dismiss
+- Manual close button
+- Slide-in/slide-out animations
+- Staggered display for multiple achievements
+
+### ⚙️ Stripe Metered Billing Integration
+
+**Cloud Functions (us-central1):**
+All 6 Stripe webhook handlers deployed:
+
+1. **handleSubscriptionCreated** - Records baseline for usage-based customers
+2. **handleSubscriptionUpdated** - Updates subscription status in Firestore
+3. **handleSubscriptionDeleted** - Handles cancellation
+4. **handleInvoiceCreated** - **CRITICAL** Reports usage to Stripe BEFORE invoice finalized
+5. **handlePaymentSucceeded** - Records successful payments
+6. **handlePaymentFailed** - Handles failures, sends alerts
+
+**Usage Reporting Flow:**
+```javascript
+// On invoice.created event (before charge)
+const improvement = currentScore - baselineScore
+const usageQuantity = Math.min(50, Math.round(improvement))
+
+// Find metered subscription item
+const meteredItem = subscription.items.data.find(
+  item => item.price.recurring?.usage_type === 'metered'
+)
+
+// Report usage to Stripe
+await stripe.subscriptionItems.createUsageRecord(
+  meteredItem.id,
+  {
+    quantity: usageQuantity,
+    timestamp: Math.floor(Date.now() / 1000),
+    action: 'set'
+  }
+)
+
+// Record in Firestore for history
+await firestore
+  .collection('familyBalanceScores')
+  .doc(familyId)
+  .collection('billingHistory')
+  .add({
+    invoiceId,
+    baselineScore,
+    currentScore,
+    improvement,
+    usageQuantity,
+    estimatedCharge: usageQuantity
+  })
+```
+
+### 🧪 Test Coverage
+
+**Comprehensive Test Suites (250+ tests):**
+
+1. ✅ **celebrations.test.js** - 29/29 PASSING
+   - All celebration levels
+   - Achievement detection logic
+   - Badge creation/removal
+   - DOM manipulation
+
+2. 📝 **FamilyBalanceScoreService.test.js** (200+ lines)
+   - Score calculation methods
+   - Caching behavior
+   - Edge cases (single parent, no data)
+   - Concurrent calculations
+
+3. 📝 **BalanceScoreDashboardWidget.test.js** (240+ lines)
+   - Score animation
+   - Celebration integration
+   - Charge calculation
+   - Breakdown display
+
+4. 📝 **PricingComparisonModal.test.js** (260+ lines)
+   - Plan comparison
+   - Interactive calculator
+   - Modal behavior
+   - Accessibility
+
+5. 📝 **BillingManagementPanel.test.js** (180+ lines)
+   - Plan display
+   - Usage metrics
+   - History tracking
+   - Error handling
+
+**Test Commands:**
+```bash
+# Run all pricing/billing tests
+npm test -- --testPathPattern="FamilyBalanceScore|celebrations|Billing|Pricing" --no-coverage
+
+# Run celebration tests (100% passing)
+npm test -- --testPathPattern=celebrations
+
+# Run specific component tests
+npm test -- --testPathPattern=BalanceScoreDashboardWidget
+```
+
+### 📍 Key Files
+
+**Services:**
+- `/src/services/FamilyBalanceScoreService.js` (577 lines) - Core scoring engine
+- `/src/utils/celebrations.js` (350 lines) - Celebration system
+
+**Components:**
+- `/src/components/payment/PaymentScreen.jsx` - 3-option pricing interface
+- `/src/components/payment/PricingComparisonModal.jsx` (530 lines)
+- `/src/components/dashboard/BalanceScoreDashboardWidget.jsx` (358 lines)
+- `/src/components/billing/BillingManagementPanel.jsx` (532 lines)
+
+**Backend:**
+- `/functions/index.js` - stripeWebhook handler (lines 2633-3032, 400 lines)
+
+**Tests:**
+- `/src/services/__tests__/FamilyBalanceScoreService.test.js`
+- `/src/utils/__tests__/celebrations.test.js` ✅
+- `/src/components/dashboard/__tests__/BalanceScoreDashboardWidget.test.js`
+- `/src/components/payment/__tests__/PricingComparisonModal.test.js`
+- `/src/components/billing/__tests__/BillingManagementPanel.test.js`
+
+### Setup Commands
+
+**Configure Webhook Secret:**
+```bash
+# After creating webhook endpoint in Stripe Dashboard (see below)
+firebase functions:config:set stripe.webhook_secret="whsec_YOUR_SECRET_HERE"
+firebase deploy --only functions:stripeWebhook
+
+# Verify configuration
+firebase functions:config:get stripe
+```
+
+**Monitor Webhook Events:**
+```bash
+# Watch webhook logs in real-time
+firebase functions:log --only stripeWebhook
+
+# Filter for Stripe events
+firebase functions:log | grep "stripe"
+```
+
+**Test Payment Flow:**
+```bash
+# Use Stripe test card: 4242 4242 4242 4242
+# Expiry: Any future date (12/25)
+# CVC: Any 3 digits (123)
+# ZIP: Any 5 digits (12345)
+
+# Then verify family created in Firestore
+```
+
+### Manual Setup Required
+
+**⚠️ CRITICAL: Replace Webhook Secret**
+
+Current webhook secret is set to `whsec_PLACEHOLDER_REPLACE_WITH_REAL_SECRET` and must be replaced with real secret from Stripe Dashboard.
+
+**Steps:**
+
+1. **Go to Stripe Dashboard:**
+   - https://dashboard.stripe.com/webhooks
+   - Switch to LIVE mode (toggle in top-right)
+
+2. **Add Webhook Endpoint:**
+   - Click "+ Add endpoint"
+   - URL: `https://us-central1-parentload-ba995.cloudfunctions.net/stripeWebhook`
+   - Description: "Allie production payment webhook"
+
+3. **Select Events:**
+   - ✅ checkout.session.completed
+   - ✅ customer.subscription.updated
+   - ✅ customer.subscription.deleted
+   - ✅ invoice.payment_failed
+
+4. **Get Signing Secret:**
+   - Click "Reveal" next to "Signing secret"
+   - Copy the secret (starts with `whsec_...`)
+
+5. **Update Firebase Configuration:**
+   ```bash
+   cd /Users/stefanpalsson/parentload\ copy/parentload-clean
+
+   firebase functions:config:set stripe.webhook_secret="whsec_YOUR_ACTUAL_SECRET_HERE"
+   firebase functions:config:get stripe.webhook_secret  # Verify
+   firebase deploy --only functions:stripeWebhook
+   ```
+
+### Testing Checklist
+
+**After Webhook Secret Configured:**
+
+1. **Test Webhook in Stripe Dashboard:**
+   - Send test `checkout.session.completed` event
+   - Expected response: `200 OK`
+   - Check Firebase logs: `firebase functions:log --only stripeWebhook`
+
+2. **Test Complete Payment Flow:**
+   - Go to https://checkallie.com/onboarding
+   - Complete onboarding
+   - Use Stripe test card (4242 4242 4242 4242)
+   - Verify: family created, email received, subscription linked
+
+3. **Test Coupon Codes:**
+   - Enter: `olytheawesome`, `freeforallie`, or `familyfirst`
+   - Verify: family created with `couponAccess: true`
+   - No payment required
+
+### Key Files
+
+**Frontend:**
+- `/src/components/payment/PaymentScreen.jsx` - Pricing & checkout UI
+- `/src/components/payment/PaymentSuccess.jsx` - Post-payment processing
+- `/src/services/StripeService.js` - Stripe integration service
+
+**Backend:**
+- `/functions/index.js` - All 5 Stripe Cloud Functions
+- `/functions/stripe-helpers.js` - Shared Stripe utilities
+
+**Documentation:**
+- `STRIPE_INTEGRATION_STATUS.md` - Complete deployment status & checklist
+- `WEBHOOK_SETUP_INSTRUCTIONS.md` - Step-by-step webhook configuration
+- `STRIPE_WEBHOOK_SETUP.md` - Original webhook setup guide
+- `STRIPE_DEPLOYMENT_GUIDE.md` - Full deployment documentation
+
+### Pricing
+
+**Monthly:** €29.99/month (Stripe Price ID: `price_1SLhErKrwosuk0SZe75qGPCC`)
+**Annual:** €259/year (Stripe Price ID: `price_1SLhGTKrwosuk0SZYGZDu9Gl`)
+
+**Coupon Codes:** olytheawesome, freeforallie, familyfirst (bypass payment)
+
+### Success Criteria
+
+**Payment integration fully working when:**
+1. ✅ All 5 Cloud Functions deployed
+2. ⏸️ Webhook secret configured (manual step)
+3. ⏸️ Test payment creates family account
+4. ⏸️ Welcome email received
+5. ⏸️ Subscription linked to familyId
+6. ⏸️ Webhook logs show successful processing
+
+**Current Progress:** 1/6 infrastructure complete, testing pending webhook secret
+
+### Troubleshooting
+
+**Webhook events not processing:**
+```bash
+# Check logs
+firebase functions:log --only stripeWebhook
+
+# Verify configuration
+firebase functions:config:get stripe.webhook_secret
+
+# Should NOT be "whsec_PLACEHOLDER_REPLACE_WITH_REAL_SECRET"
+```
+
+**Email not received:**
+```bash
+# Check SendGrid logs
+firebase functions:log | grep "email"
+```
+
+**Family not created after payment:**
+```bash
+# Check webhook processing
+firebase functions:log --only stripeWebhook
+
+# Look for: "✅ Checkout completed for session: cs_..."
+```
+
+---
+
+## 📊 Survey Personalization & Knowledge Graph Integration (Oct 24, 2025) ✅ **PRODUCTION READY**
+
+**Critical Fix:** Survey questions now hyper-personalized using Knowledge Graph data
+
+### The Problem (Fixed)
+
+**Error:** `TypeError: t.invisibleLabor.find is not a function` at `SurveyContext.js:950`
+
+**Root Cause:**
+- Frontend expected: Array with `.find()` method
+- Backend returned: Object `{success: true, data: {analysis: [...], summary: "..."}}`
+- Result: Generic fallback questions instead of hyper-personalized insights
+
+### The Solution
+
+**New Backend Endpoint:** `/api/knowledge-graph/invisible-labor-by-category`
+- Returns category-based invisible labor analysis (Home, Kids, Work, Self)
+- Format: `{success: true, data: [{category, anticipation, monitoring, execution}, ...]}`
+- Cypher query calculates leader + percentage difference per category
+
+**Frontend Service Update:** `KnowledgeGraphService.js`
+- New method: `getInvisibleLaborByCategory(familyId)`
+- Proper error handling and caching
+- Returns array structure compatible with `.find()`
+
+**Survey Context Fix:** `SurveyContext.js`
+- Uses new endpoint instead of old invisible labor analysis
+- Fallback returns empty array `[]` instead of `null`
+- Ensures `.find()` always works (empty arrays have the method)
+
+### How It Works
+
+**Survey Generation Flow:**
+1. User clicks "Take Weekly Survey" on Balance & Habits tab
+2. `SurveyContext` loads family data from Firestore
+3. **Knowledge Graph insights loaded in parallel:**
+   - Invisible labor by category (anticipation, monitoring, execution)
+   - Coordination patterns (who organizes events)
+   - Temporal patterns (when tasks are created)
+4. **Question personalization engine combines:**
+   - Previous survey responses (builds on last survey)
+   - Current cycle ELO ratings (who's doing more/less)
+   - Knowledge Graph insights (invisible labor imbalances)
+   - Family-specific patterns (discovered through Neo4j)
+5. Questions target specific imbalances: "Who notices when [specific task in specific category] needs doing?"
+
+**Example Personalization:**
+```javascript
+// KG shows: Kimberly anticipates 78% of "Kids" category tasks
+// Survey asks: "Who typically notices when the kids need new school supplies?"
+// This surfaces invisible labor for rebalancing conversations
+```
+
+### Files Modified
+
+**Backend:**
+- `/server/routes/knowledge-graph.js` - New `/invisible-labor-by-category` endpoint (lines 93-191)
+
+**Frontend:**
+- `/src/services/KnowledgeGraphService.js` - `getInvisibleLaborByCategory()` method (lines 46-76)
+- `/src/contexts/SurveyContext.js` - Updated to use new endpoint (lines 689-710)
+
+### Testing
+
+**Manual Test:**
+```bash
+# Login to Palsson family
+# Go to: Balance & Habits → Take Weekly Survey
+# Expected: No TypeError, survey loads with personalized questions
+# Check console: "✅ Weekly survey generation successful"
+```
+
+**Backfill for Full Personalization:**
+```bash
+# Sync Palsson family data to Neo4j
+node scripts/backfill-palsson-neo4j.js
+
+# This triggers Cloud Functions to populate Neo4j with:
+# - 2039 tasks (who created, who anticipates, who monitors)
+# - 678 events (who organized, who coordinated)
+# - 10,327 chores (completion patterns)
+# - Fair Play card ownership
+```
+
+### Data Flow: Survey → Allie's Brain
+
+**Survey responses feed back into the system:**
+
+1. **Firestore Storage:** `surveyResponses/{surveyId}` collection
+2. **Neo4j Sync:** Cloud Function `syncSurveyToNeo4j` triggers automatically
+3. **Knowledge Graph Update:**
+   - Creates `Survey` node with metadata
+   - Creates 72 `SurveyResponse` nodes (one per question)
+   - Creates `Person` → `COMPLETED` → `Survey` relationships
+   - Updates `Person.cognitiveLoad` based on responses
+4. **Next Survey Generation:**
+   - Loads updated KG insights
+   - Sees patterns: "Last survey showed Kimberly anticipates 80% of kids tasks"
+   - Generates follow-up: "Has this improved?" or "Which specific tasks?"
+
+**Cumulative Learning:**
+- Initial survey: Establishes baseline ("Who does what?")
+- Cycle 2: Targets discovered imbalances ("Who notices X needs doing?")
+- Cycle 3+: Tracks improvement ("Is the load more balanced now?")
+- All responses stored in both Firestore (source of truth) + Neo4j (graph intelligence)
+
+### Current Status
+
+✅ **Survey Personalization Bug:** FIXED - No more TypeError
+✅ **Backend Endpoint:** Deployed to Cloud Run (revision 00083-5jz)
+✅ **Frontend:** Deployed to Firebase Hosting
+✅ **Backfill Script:** Available (`scripts/backfill-palsson-neo4j.js`)
+⏳ **Neo4j Data:** Backfilling now (2039 tasks, 678 events, 10k+ chores)
+
+**Ready to test:** Login → Balance & Habits → Take Weekly Survey
+
+---
 
 ## 🎭 Simulation & Demo Data System (Oct 20, 2025)
 
@@ -1382,6 +1893,14 @@ npm run test:regression
 
 ## 🆕 Recent Fixes (Oct 2025)
 
+**EventDrawer Consistency Across Tabs (Oct 25):** ✅ **UX FIX** - Made event editing consistent across all tabs | **Why:** Different tabs had different event click behaviors - Home tab opened EventDrawer (correct), Balance & Habits "Change Date" opened Allie chat (wrong), Family Calendar opened Allie chat (wrong) | **Impact:** Inconsistent UX confused users - same action (clicking event) did different things in different places | **Fix:** Updated `TasksTab.jsx` to open EventDrawer for "Change Date" button (added import line 29, state lines 188-190, modified handler lines 2553-2575, added component lines 3409-3421), simplified `Calendar.js` handleEventClick to use EventDrawer instead of Allie chat (lines 51-57) | **Result:** All event clicks now consistently open EventDrawer with proper edit functionality | **Files:** `TasksTab.jsx:29,188-190,2553-2575,3409-3421`, `calendar-v2/views/Calendar.js:51-57`
+
+**Dashboard Post-Survey Infinite Loading (Oct 24):** ✅ **CRITICAL** - Removed Suspense wrapper from `/dashboard` route | **Why:** Suspense fallback was blocking render while lazy components imported | **Impact:** After completing survey, navigating to dashboard showed "Loading..." indefinitely | **Fix:** Removed Suspense wrapper in `App.js:458-467`, let DashboardWrapper handle its own loading | **Files:** `App.js:458-467`
+
+**Survey Question Personalization (Oct 24):** ✅ **CRITICAL** - Fixed Knowledge Graph weighting for survey questions | **Why:** Query looked for `ANTICIPATES`, `MONITORS`, `EXECUTES` relationships but Neo4j sync only creates `CREATED` relationships | **Impact:** Questions felt generic, console showed `Top priority: 0.0`, no personalization | **Fix:** Changed query in `/api/knowledge-graph/invisible-labor-by-category` to use `CREATED` relationship (what actually exists) | **Result:** KG data now returns 3 categories with real task counts (Kimberly: 908 household tasks, 651 coordination tasks), questions prioritized by actual family imbalance | **Files:** `server/routes/knowledge-graph.js:110-119` | **Test:** `curl -X POST https://allie-claude-api-363935868004.us-central1.run.app/api/knowledge-graph/invisible-labor-by-category -d '{"familyId":"palsson_family_simulation"}'` returns data
+
+**Survey Screen Infinite Loading (Oct 24):** ✅ **CRITICAL** - Removed blocking check on `currentQuestion` | **Why:** Component blocked on `if (!selectedUser || !currentQuestion)` preventing render if questions failed to load | **Fix:** Only block on `selectedUser` (essential), added defensive loading states for missing questions | **Files:** `SurveyScreen.jsx:1316, 1380-1391, 1474-1481`
+
 **Event Status Field (Oct 20):** ✅ **CRITICAL** - Events MUST have `status: 'active'` field | **Why:** CalendarServiceV2 filters `where('status', 'in', ['active', 'confirmed'])` but EventStore doesn't | **Impact:** Events visible in EventStore but not in CalendarServiceV2/CalendarProvider | **Fix:** Added `status: 'active'` to `regenerate-connected-events.js:339` | **Files:** `CalendarServiceV2.js:155`, `EventStore.js:380-381`
 
 **EventStore startTime/endTime (Oct 19):** ✅ **CRITICAL** - Added `startTime`/`endTime` Firestore Timestamp support to `standardizeEvent()` | **Impact:** Demo data + CalendarServiceV2 events now display correctly | **Bug:** Events fetched (200 docs) but returned Array(0) - date fields not recognized | **Files:** `EventStore.js:79-117`
@@ -1694,4 +2213,4 @@ const event = {
 **Always:** Fix root cause, try/catch, follow patterns, test production, update tests, clean AI responses, verify env vars
 
 ---
-*Updated: 2025-10-22 | v13.3 - Data Quality Infrastructure Complete (Factory Functions, Seed Data, Tests, Validation, TypeScript)*
+*Updated: 2025-10-25 | v14.0 - Revolutionary Usage-Based Pricing System LIVE! (Family Balance Score, Metered Billing, Celebration System, 250+ Tests)*

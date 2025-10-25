@@ -104,11 +104,18 @@ safelyParseJSON(jsonString, defaultValue) {
     // Clean markdown code blocks first
     let cleanedString = jsonString;
 
-    // Remove ALL markdown code block markers (```json, ```, etc)
-    // Use multiple passes to ensure we catch everything
-    cleanedString = cleanedString.replace(/```json\s*/gi, '');
-    cleanedString = cleanedString.replace(/```javascript\s*/gi, '');
-    cleanedString = cleanedString.replace(/```\s*/g, '');
+    // More aggressive markdown cleaning
+    // First, try to extract content between code fences
+    const codeFenceMatch = cleanedString.match(/```(?:json|javascript)?\s*([\s\S]*?)```/i);
+    if (codeFenceMatch && codeFenceMatch[1]) {
+      cleanedString = codeFenceMatch[1].trim();
+    } else {
+      // Remove ALL markdown code block markers (```json, ```, etc)
+      // Use multiple passes to ensure we catch everything
+      cleanedString = cleanedString.replace(/```json\s*/gi, '');
+      cleanedString = cleanedString.replace(/```javascript\s*/gi, '');
+      cleanedString = cleanedString.replace(/```\s*/g, '');
+    }
 
     // Also remove common prefixes that Claude might add
     cleanedString = cleanedString.replace(/^Here's the JSON:?\s*/i, '');

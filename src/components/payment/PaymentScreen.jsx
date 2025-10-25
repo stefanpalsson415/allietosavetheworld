@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Check, Brain, Shield, Database, ArrowLeft } from 'lucide-react';
+import { Check, Brain, Shield, Database, ArrowLeft, Sparkles } from 'lucide-react';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import config from '../../config';
 import logger from '../../utils/logger';
+import PricingComparisonModal from './PricingComparisonModal';
+import familyBalanceScoreService from '../../services/FamilyBalanceScoreService';
 
 
 
@@ -15,6 +18,8 @@ const PaymentScreen = () => {
     const [discount, setDiscount] = useState(0);
     const [familyCreated, setFamilyCreated] = useState(false);
     const [createdFamilyId, setCreatedFamilyId] = useState(null);
+    const [showPricingModal, setShowPricingModal] = useState(false);
+    const [selectedPlanDetails, setSelectedPlanDetails] = useState(null);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -99,6 +104,8 @@ const PaymentScreen = () => {
               // Prepare family data for creation
               const familyDataForCreation = {
                 ...pendingFamilyData,
+                couponAccess: true, // Mark family as having free access via coupon
+                couponCode: couponCode.toLowerCase(), // Store which coupon was used
                 parents: pendingFamilyData.parents.map((parent, index) => {
                   // Check if this parent used Google Auth
                   if (parent.googleAuth && parent.googleAuth.authenticated) {
@@ -330,42 +337,81 @@ const PaymentScreen = () => {
         setCouponApplied(false);
       }
     };
+
+    // Handle plan selection from modal
+    const handlePlanSelection = (planDetails) => {
+      logger.info('Plan selected:', planDetails);
+      setSelectedPlanDetails(planDetails);
+      setSelectedPlan(planDetails.type); // 'usage-based', 'monthly', or 'annual'
+      setShowPricingModal(false);
+
+      // Scroll to payment details section
+      setTimeout(() => {
+        document.getElementById('payment-details-section')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100);
+    };
+
+    // Handle Stripe Checkout
+    const handleStripeCheckout = async (planType) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Determine if this is usage-based or traditional pricing
+        const isUsageBased = planType === 'usage-based';
+
+        // Get the Stripe Price ID for this plan
+        let priceId;
+        if (isUsageBased) {
+          // Usage-based will use metered billing (to be configured in Stripe)
+          priceId = config.stripe.prices.usageBased || null;
+        } else {
+          priceId = planType === 'monthly'
+            ? config.stripe.prices.monthly
+            : config.stripe.prices.annual;
+        }
+
+        logger.info('Creating Stripe checkout session:', {
+          planType,
+          priceId,
+          isUsageBased,
+          selectedPlanDetails
+        });
+
+        // Call Firebase Function to create checkout session
+        const functions = getFunctions();
+        const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
+
+        const result = await createCheckoutSession({
+          priceId,
+          familyData: pendingFamilyData,
+          metadata: {
+            pricingPlan: planType, // 'usage-based', 'monthly', or 'annual'
+            ...(isUsageBased && { usageBasedPricing: true })
+          }
+        });
+
+        logger.info('Checkout session created:', result.data);
+
+        if (result.data.success) {
+          // Redirect to Stripe Checkout
+          logger.info('Redirecting to Stripe Checkout:', result.data.url);
+          window.location.href = result.data.url;
+        } else {
+          throw new Error(result.data.error || 'Failed to create checkout session');
+        }
+      } catch (error) {
+        logger.error('Error creating checkout session:', error);
+        setError('Unable to start payment process. Please try again or contact support at stefan@checkallie.com');
+        setLoading(false);
+      }
+    };
   
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-6 relative">
-        {/* Whoops banner - positioned top-left corner */}
-        <div
-          className="fixed top-4 left-4 z-50"
-        >
-          <div
-            className="relative bg-yellow-400 px-6 py-4 rounded-2xl border-4 border-yellow-500 transform -rotate-3 hover:rotate-0 transition-transform duration-300"
-            style={{
-              boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)'
-            }}
-          >
-            <div className="text-center">
-              <p className="text-xl font-bold text-gray-800 mb-1">
-                🎉 Whoops! 🎉
-              </p>
-              <p className="text-base text-gray-700 mb-2">
-                Payments don't work yet!
-              </p>
-              <p className="text-sm text-gray-600">
-                Email me at{' '}
-                <a
-                  href="mailto:stefan@checkallie.com"
-                  className="text-blue-600 underline hover:text-blue-800 font-semibold"
-                >
-                  stefan@checkallie.com
-                </a>
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                for a code 🎫
-              </p>
-            </div>
-          </div>
-        </div>
-
         <div className="w-full max-w-4xl bg-white p-8 rounded-lg shadow">
           {/* Back button */}
           <button
@@ -392,107 +438,73 @@ const PaymentScreen = () => {
           </button>
           
           <h2 className="text-3xl font-light mb-6">Choose Your Allie Plan</h2>
-          
+
           <div className="mb-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="border rounded-lg p-6 hover:shadow-md transition-all">
-                <div className="text-center mb-4">
-                  <h3 className="text-xl font-bold">Monthly Plan</h3>
-                  <div className="text-3xl font-bold mt-2">$20<span className="text-lg font-normal text-gray-500">/month</span></div>
-                  <p className="text-sm text-gray-500 mt-1">Billed monthly</p>
-                </div>
-                
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Full access to all features</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Unlimited family members</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Weekly AI recommendations</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Email progress reports</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Cancel anytime</span>
-                  </li>
-                </ul>
-                
-                <button 
-  onClick={() => {
-    setSelectedPlan('monthly');
-    // Scroll to payment form after a short delay
-    setTimeout(() => {
-      document.getElementById('payment-details-section')?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }, 100);
-  }}
-  className={`w-full py-2 ${selectedPlan === 'monthly' ? 'bg-black text-white' : 'bg-gray-200 text-gray-800'} rounded-md hover:bg-gray-800 hover:text-white`}
->
-  Select Monthly Plan
-</button>
+            {/* Revolutionary Pricing Options */}
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-8 mb-6">
+              <div className="flex items-center justify-center mb-4">
+                <Sparkles className="text-purple-600 mr-3" size={32} />
+                <h3 className="text-2xl font-bold text-gray-800">Revolutionary Pricing Models</h3>
               </div>
-              
-              <div className="border rounded-lg p-6 hover:shadow-md transition-all relative">
-                <div className="absolute top-0 right-0 bg-green-500 text-white py-1 px-3 text-xs transform translate-y-0 rounded-b-md">
-                  BEST VALUE
+
+              <p className="text-center text-gray-700 mb-6 max-w-3xl mx-auto">
+                We're the first family management app to offer <strong>usage-based pricing</strong> where you only pay
+                when Allie measurably improves your family's balance. Or choose our traditional monthly/annual plans.
+                You decide what works best for your family.
+              </p>
+
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white rounded-lg p-4 border-2 border-purple-200 shadow-sm">
+                  <h4 className="font-bold text-purple-700 mb-2">Usage-Based</h4>
+                  <p className="text-sm text-gray-600 mb-2">Pay only for improvement</p>
+                  <div className="text-2xl font-bold text-purple-700">$1<span className="text-sm font-normal">/point</span></div>
+                  <p className="text-xs text-gray-500 mt-1">First month FREE · Max $50/month</p>
                 </div>
-                
-                <div className="text-center mb-4">
-                  <h3 className="text-xl font-bold">Annual Plan</h3>
-                  <div className="text-3xl font-bold mt-2">$180<span className="text-lg font-normal text-gray-500">/year</span></div>
-                  <p className="text-sm text-gray-500 mt-1">$15/month, billed annually</p>
+
+                <div className="bg-white rounded-lg p-4 border-2 border-blue-200 shadow-sm">
+                  <h4 className="font-bold text-blue-700 mb-2">Monthly Plan</h4>
+                  <p className="text-sm text-gray-600 mb-2">Predictable pricing</p>
+                  <div className="text-2xl font-bold text-blue-700">€29.99<span className="text-sm font-normal">/month</span></div>
+                  <p className="text-xs text-gray-500 mt-1">299 SEK · Cancel anytime</p>
                 </div>
-                
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Everything in monthly plan</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Save 25% ($60/year)</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Premium support</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">Advanced progress analytics</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <span className="text-sm">30-day money back guarantee</span>
-                  </li>
-                </ul>
-                
-                <button 
-  onClick={() => {
-    setSelectedPlan('annual');
-    // Scroll to payment form after a short delay
-    setTimeout(() => {
-      document.getElementById('payment-details-section')?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }, 100);
-  }}
-  className={`w-full py-2 ${selectedPlan === 'annual' ? 'bg-black text-white' : 'bg-gray-200 text-gray-800'} rounded-md hover:bg-gray-800 hover:text-white`}
->
-  Select Annual Plan
-</button>
+
+                <div className="bg-white rounded-lg p-4 border-2 border-green-200 shadow-sm">
+                  <h4 className="font-bold text-green-700 mb-2">Annual Plan</h4>
+                  <p className="text-sm text-gray-600 mb-2">Best value</p>
+                  <div className="text-2xl font-bold text-green-700">€259<span className="text-sm font-normal">/year</span></div>
+                  <p className="text-xs text-gray-500 mt-1">2,599 SEK · Save 28%</p>
+                </div>
               </div>
+
+              <button
+                onClick={() => setShowPricingModal(true)}
+                className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-semibold text-lg shadow-lg"
+              >
+                Compare Plans & Choose What's Right for You
+              </button>
             </div>
+
+            {/* Selected Plan Display */}
+            {selectedPlan && (
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-blue-900">Selected Plan</h4>
+                    <p className="text-blue-700">
+                      {selectedPlan === 'usage-based' && 'Usage-Based: Pay for Improvement'}
+                      {selectedPlan === 'monthly' && 'Monthly Plan: €29.99/month'}
+                      {selectedPlan === 'annual' && 'Annual Plan: €259/year (Save 28%)'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowPricingModal(true)}
+                    className="px-4 py-2 bg-white text-blue-700 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium"
+                  >
+                    Change Plan
+                  </button>
+                </div>
+              </div>
+            )}
             
             <div className="mt-6 bg-gray-100 p-6 rounded-lg">
               <h3 className="font-medium text-lg mb-3">What You're Paying For</h3>
@@ -554,6 +566,8 @@ const PaymentScreen = () => {
                       // Prepare family data for creation
                       const familyDataForCreation = {
                         ...pendingFamilyData,
+                        couponAccess: true, // Mark family as having free access via coupon
+                        couponCode: couponCode.toLowerCase(), // Store which coupon was used
                         parents: pendingFamilyData.parents.map((parent, index) => {
                           // Check if this parent used Google Auth
                           if (parent.googleAuth && parent.googleAuth.authenticated) {
@@ -630,26 +644,11 @@ const PaymentScreen = () => {
               </button>
             </div>
           ) : selectedPlan && (
-            <form onSubmit={handleSubmit} className="border-t pt-6" id="payment-details-section">
+            <div className="border-t pt-6" id="payment-details-section">
+              <h3 className="text-xl font-medium mb-4">Complete Your Purchase</h3>
 
-              <h3 className="text-xl font-medium mb-4">Payment Details</h3>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Card Information</label>
-                <div className="border rounded p-3">
-                  <input 
-                    type="text" 
-                    className="w-full" 
-                    placeholder="Card number" 
-                  />
-                  <div className="flex mt-2">
-                    <input type="text" className="w-1/2 mr-2" placeholder="MM/YY" />
-                    <input type="text" className="w-1/2" placeholder="CVC" />
-                  </div>
-                </div>
-              </div>
-                    
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Have a coupon?</label>
+                <label className="block text-sm font-medium mb-2">Have a coupon code?</label>
                 <div className="flex">
                   <input
                     type="text"
@@ -662,7 +661,7 @@ const PaymentScreen = () => {
                         applyCoupon(e);
                       }
                     }}
-                    placeholder="Enter coupon code"
+                    placeholder="Enter coupon code for free access"
                   />
                   <button
                     type="button"
@@ -674,17 +673,36 @@ const PaymentScreen = () => {
                 </div>
                 {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
               </div>
-                    
+
+              <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Secure Payment:</strong> You'll be redirected to Stripe's secure checkout page to complete your payment. All payment information is processed securely by Stripe.
+                </p>
+              </div>
+
               <button
-                type="submit"
+                onClick={() => handleStripeCheckout(selectedPlan)}
                 disabled={loading}
-                className="w-full py-3 bg-black text-white rounded-md"
+                className="w-full py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors disabled:bg-gray-400"
               >
-                {loading ? 'Processing...' : `Complete Payment - ${selectedPlan === 'monthly' ? '$20/month' : '$180/year'}`}
+                {loading ? 'Redirecting to checkout...' : `Continue to Payment - ${selectedPlan === 'monthly' ? '€29.99/month' : '€259/year'}`}
               </button>
-            </form>
+
+              <p className="text-xs text-gray-500 text-center mt-4">
+                Powered by Stripe • Secure payment processing
+              </p>
+            </div>
           )}
         </div>
+
+        {/* Pricing Comparison Modal */}
+        <PricingComparisonModal
+          isOpen={showPricingModal}
+          onClose={() => setShowPricingModal(false)}
+          onSelectPlan={handlePlanSelection}
+          familyId={null} // No familyId yet during onboarding
+          currentImprovement={null} // Will show "First month FREE" message
+        />
       </div>
     );
 };

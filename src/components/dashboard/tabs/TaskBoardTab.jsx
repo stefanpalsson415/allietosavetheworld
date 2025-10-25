@@ -22,7 +22,7 @@ const TaskBoardTab = () => {
         setLoading(true);
         // Get all parent members
         const parentMembers = familyMembers.filter(m => m.role === 'parent' || m.role === 'guardian');
-        const parentIds = parentMembers.map(p => p.id);
+        const parentIds = parentMembers.map(p => p.userId || p.id);
         
         if (parentIds.length === 0) {
           setParentTasks([]);

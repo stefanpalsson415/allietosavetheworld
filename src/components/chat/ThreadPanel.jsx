@@ -28,7 +28,6 @@ const ThreadPanel = ({
   // Load thread messages
   useEffect(() => {
     if (!threadId || !isOpen) {
-      console.log('🔇 ThreadPanel: Not loading - threadId:', threadId, 'isOpen:', isOpen);
       return;
     }
 

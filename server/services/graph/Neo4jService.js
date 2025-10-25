@@ -1,7 +1,8 @@
 // Production Neo4j Service
 // Real driver, production-ready, scalable
+// Converted to CommonJS for compatibility with Express routes
 
-import neo4j from 'neo4j-driver';
+const neo4j = require('neo4j-driver');
 
 class Neo4jService {
   constructor() {
@@ -40,6 +41,15 @@ class Neo4jService {
       console.error('❌ Neo4j connection failed:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Get a new session
+   * @returns {Session} Neo4j session
+   */
+  async getSession() {
+    if (!this.connected) await this.connect();
+    return this.driver.session();
   }
 
   /**
@@ -182,4 +192,4 @@ class Neo4jService {
 // Singleton instance
 const neo4jService = new Neo4jService();
 
-export default neo4jService;
+module.exports = neo4jService;

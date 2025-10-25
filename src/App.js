@@ -78,6 +78,7 @@ const UserSettingsScreen = lazy(() => import('./components/user/UserSettingsScre
 const KidFriendlySurvey = lazy(() => import('./components/survey/KidFriendlySurvey'));
 const FamilySurveyDashboard = lazy(() => import('./components/survey/FamilySurveyDashboard'));
 const PaymentScreen = lazy(() => import('./components/payment/PaymentScreen'));
+const PaymentSuccess = lazy(() => import('./components/payment/PaymentSuccess'));
 const LandingPage = lazy(() => import('./components/marketing/LandingPage'));
 const NewLandingPage = lazy(() => import('./components/marketing/NewLandingPage'));
 const ExcitingLandingPage = lazy(() => import('./components/marketing/ExcitingLandingPage'));
@@ -454,6 +455,9 @@ function AppRoutes() {
         } />
         
         {/* Dashboard route - mobile shows chat-only, desktop shows full dashboard */}
+        {/* ✅ CRITICAL: Suspense wrapper REQUIRED for lazy-loaded components
+            MobileChatView and DashboardWrapper are both lazy imports (lines 73, 108)
+            LoadingFallback provides better UX than React error during lazy load */}
         <Route path="/dashboard" element={
           <Suspense fallback={<LoadingFallback />}>
             {isMobile && currentUser ? (
@@ -563,6 +567,11 @@ function AppRoutes() {
         <Route path="/payment" element={
           <Suspense fallback={<LoadingFallback />}>
             <PaymentScreen />
+          </Suspense>
+        } />
+        <Route path="/payment/success" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <PaymentSuccess />
           </Suspense>
         } />
         <Route path="/home" element={
@@ -687,9 +696,11 @@ function AppRoutes() {
         
         {/* Route for weekly check-in - directs kids to kid-friendly version */}
         <Route path="/weekly-check-in" element={
-          selectedUser?.role === 'child'
-            ? <KidFriendlySurvey surveyType="weekly" />
-            : <SurveyScreen mode="weekly" />
+          <Suspense fallback={<LoadingFallback />}>
+            {selectedUser?.role === 'child'
+              ? <KidFriendlySurvey surveyType="weekly" />
+              : <SurveyScreen mode="weekly" />}
+          </Suspense>
         } />
 
         {/* Test route for providers */}

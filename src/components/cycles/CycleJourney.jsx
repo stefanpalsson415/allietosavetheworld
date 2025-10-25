@@ -266,36 +266,46 @@ const CycleJourney = ({
   // Determine if current user can take a specific step
   const canTakeStep = (stepNumber) => {
     if (!currentUser) return false;
-    
+
     // For relationship cycles, only parents can participate
-    if (cycleType === 'relationship' && 
+    if (cycleType === 'relationship' &&
         (!currentUser.role || currentUser.role !== 'parent')) {
       return false;
     }
-    
-    // For family cycles, children now participate in step 1 as habit helpers
-    // No need to exclude them anymore
-  
+
     // Get current user's progress
     const userProgress = memberProgress[currentUser.id] || {};
-    
+
     // Check if the current user has completed this specific step
-    const hasCompletedThisStep = stepNumber === 2 && 
-      (userProgress.completedSurvey || 
+    const hasCompletedThisStep = stepNumber === 2 &&
+      (userProgress.completedSurvey ||
        currentUser.weeklyCompleted?.[currentCycle-1]?.completed ||
        userProgress.step > 2);
-    
+
     if (hasCompletedThisStep) {
       return false; // Step already completed
     }
-    
+
     // Step 1 is always available unless completed
     if (stepNumber === 1) {
       return !completedSteps.includes(1);
     }
-    
+
+    // SPECIAL CASE: Children start at step 2 (survey), so they should always be able to take it
+    if (stepNumber === 2 && cycleType === 'family' && currentUser.role === 'child') {
+      // Children can take survey if they haven't completed it yet
+      return !hasCompletedThisStep;
+    }
+
+    // SPECIAL CASE: Parents can take survey (step 2) if THEY individually have reached step 2
+    // even if the family-wide step 1 isn't complete (e.g., other parent hasn't finished habits)
+    if (stepNumber === 2 && cycleType === 'family' && currentUser.role === 'parent') {
+      // Check if THIS parent has personally reached step 2 (completed habits)
+      return userProgress.step >= 2 && !hasCompletedThisStep;
+    }
+
     // Other steps require previous step completion
-    return completedSteps.includes(stepNumber - 1) && 
+    return completedSteps.includes(stepNumber - 1) &&
            !completedSteps.includes(stepNumber);
   };
   
@@ -416,27 +426,14 @@ const CycleJourney = ({
               !hasUserCompletedStep(step.number);
               
             return (
-              <div 
+              <div
                 key={`step-${step.number}`}
-                onClick={(e) => {
-                  // Don't trigger if clicking on the change date button
-                  if (e.target.closest('button')) {
-                    return;
-                  }
-                  if (isClickable) {
-                    onStartStep(step.action);
-                  }
-                }}
                 className={`relative rounded-md p-4 transition-all duration-200 ${
-                  completedSteps.includes(step.number) 
-                    ? 'bg-green-50 border border-green-100' 
+                  completedSteps.includes(step.number)
+                    ? 'bg-green-50 border border-green-100'
                     : currentStep === step.number
-                      ? 'bg-blue-50 border border-blue-100' 
+                      ? 'bg-blue-50 border border-blue-100'
                       : 'bg-gray-50 border border-gray-200'
-                } ${
-                  isClickable 
-                    ? 'cursor-pointer hover:shadow-md hover:border-blue-300 hover:bg-blue-100' 
-                    : ''
                 }`}
               >
                 {/* Step Header */}
@@ -510,47 +507,56 @@ const CycleJourney = ({
                 
                 {/* Brief description */}
                 <p className={`text-xs ${
-                  completedSteps.includes(step.number) 
-                    ? 'text-green-600' 
+                  completedSteps.includes(step.number)
+                    ? 'text-green-600'
                     : currentStep === step.number
-                      ? 'text-blue-600' 
+                      ? 'text-blue-600'
                       : 'text-gray-500'
                 }`}>
                   {step.description}
                 </p>
-                
-                {/* Call to action for clickable steps */}
+
+                {/* Action button for clickable steps */}
                 {isClickable && (
-                  <div className="mt-2 flex items-center text-xs text-blue-600 font-medium">
-                    <span>Click to {step.buttonText}</span>
-                    <ArrowRight size={12} className="ml-1" />
+                  <div className="mt-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStartStep(step.action);
+                      }}
+                      className="w-full px-5 py-2.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    >
+                      {step.icon && React.cloneElement(step.icon, { size: 16 })}
+                      <span>{step.buttonText}</span>
+                    </button>
                   </div>
                 )}
                 
                 {/* Due date and change button for Step 3 */}
                 {step.number === 3 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-xs text-gray-600">
-                        <Calendar size={12} className="mr-1" />
-                        <span>
-                          {dueDate ? `Due: ${formatDate(dueDate)}` : 'No date scheduled'}
-                        </span>
-                      </div>
-                      {onChangeDueDate && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onChangeDueDate();
-                          }}
-                          className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-all font-medium shadow-md hover:shadow-lg flex items-center gap-1 group relative z-10"
-                        >
-                          <Edit2 size={12} className="group-hover:scale-110 transition-transform" />
-                          <span>{dueDate ? 'Change Date' : 'Schedule'}</span>
-                        </button>
-                      )}
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
+                    {/* Due date text - moved to top */}
+                    <div className="flex items-center text-sm text-gray-700 font-medium">
+                      <Calendar size={14} className="mr-2" />
+                      <span>
+                        {dueDate ? `Due: ${formatDate(dueDate)}` : 'No date scheduled'}
+                      </span>
                     </div>
+
+                    {/* Change Date button - moved to bottom */}
+                    {onChangeDueDate && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onChangeDueDate();
+                        }}
+                        className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-all font-medium shadow-md hover:shadow-lg flex items-center justify-center gap-2 group relative z-10"
+                      >
+                        <Edit2 size={16} className="group-hover:scale-110 transition-transform" />
+                        <span>{dueDate ? 'Change Date' : 'Schedule'}</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

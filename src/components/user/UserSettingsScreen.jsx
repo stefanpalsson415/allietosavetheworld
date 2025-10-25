@@ -28,6 +28,7 @@ import { db } from '../../services/firebase';
 import MagicLinkServiceV2 from '../../services/MagicLinkServiceV2';
 import SimpleCalendarSync from '../calendar-v2/views/SimpleCalendarSync';
 import ProfileBuilderInterview from '../interview/ProfileBuilderInterview';
+import BillingManagementPanel from '../billing/BillingManagementPanel';
 
 const UserSettingsScreen = ({ onClose }) => {
   const navigate = useNavigate();
@@ -1730,35 +1731,8 @@ const UserSettingsScreen = ({ onClose }) => {
                     </p>
                   </div>
                   
-                  {/* Subscription */}
-                  <div className="bg-white rounded-lg border">
-                    <div className="p-4 border-b">
-                      <h4 className="font-medium">Subscription</h4>
-                    </div>
-                    
-                    <div className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">Family Plan</div>
-                          <p className="text-sm text-gray-600">Unlimited access for up to 8 family members</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium text-green-600">Active</div>
-                          <p className="text-sm text-gray-600">Renews Jul 15, 2023</p>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 flex space-x-2">
-                        <button className="px-3 py-1.5 text-sm border border-gray-300 rounded flex items-center">
-                          <CreditCard size={16} className="mr-1" />
-                          Update Payment
-                        </button>
-                        <button className="px-3 py-1.5 text-sm border border-gray-300 rounded">
-                          View Plans
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Billing & Subscription Management */}
+                  <BillingManagementPanel />
                   
                   {/* Email Verification */}
                   <div className="bg-white rounded-lg border">

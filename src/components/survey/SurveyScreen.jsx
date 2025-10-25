@@ -1125,8 +1125,8 @@ const SurveyScreen = ({ mode = 'initial' }) => {
         }
       }
       
-      // Navigate to login screen (same as Switch User button)
-      navigate('/login');
+      // Navigate to dashboard Balance & Habits tab
+      navigate('/dashboard');
     } catch (error) {
       console.error(`Error saving ${mode} progress:`, error);
       // Use in-app notification instead of browser alert
@@ -1135,7 +1135,7 @@ const SurveyScreen = ({ mode = 'initial' }) => {
       setNotificationType('warning');
       // Wait 3 seconds then navigate
       setTimeout(() => {
-        navigate('/login');
+        navigate('/dashboard');
       }, 3000);
     } finally {
       setIsProcessing(false);
@@ -1310,8 +1310,10 @@ const SurveyScreen = ({ mode = 'initial' }) => {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // If no selected user or no current question, return loading
-  if (!selectedUser || !currentQuestion) {
+  // ✅ CRITICAL: Only block on missing selectedUser (essential data)
+  // Don't block on currentQuestion - let component render with available data
+  // This prevents infinite loading when question loading fails or times out
+  if (!selectedUser) {
     return <div className="flex items-center justify-center h-screen font-roboto">Loading...</div>;
   }
   
@@ -1372,10 +1374,22 @@ const SurveyScreen = ({ mode = 'initial' }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Content area - scrollable */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        {viewingQuestionList ? (
+        {!currentQuestion && questionsToUse.length === 0 ? (
+          // ✅ CRITICAL: Show loading state when questions haven't loaded yet
+          // This prevents crashes when currentQuestion is undefined
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-lg font-medium text-gray-800">Loading survey questions...</p>
+              <p className="text-sm text-gray-500 mt-2">
+                {personalizedQuestions.length === 0 && 'Personalizing questions for you'}
+              </p>
+            </div>
+          </div>
+        ) : viewingQuestionList ? (
           // Question list view
           <div className="p-4 overflow-y-auto h-full">
             <div className="max-w-3xl mx-auto">
@@ -1455,6 +1469,14 @@ const SurveyScreen = ({ mode = 'initial' }) => {
                   })}
                 </div>
               </div>
+            </div>
+          </div>
+        ) : !currentQuestion ? (
+          // ✅ Show loading if we somehow got here without a current question
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-lg font-medium text-gray-800">Loading current question...</p>
             </div>
           </div>
         ) : (

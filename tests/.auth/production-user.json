@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "https://checkallie.com",
+      "localStorage": [
+        {
+          "name": "selectedFamilyId",
+          "value": "palsson_family_simulation"
+        },
+        {
+          "name": "selectedUserId",
+          "value": "stefan_palsson_agent"
+        }
+      ]
+    }
+  ]
+}

@@ -237,7 +237,7 @@ const NotionDashboard = () => {
   
   // Handle starting the weekly check-in
   const handleStartWeeklyCheckIn = () => {
-    window.dispatchEvent(new CustomEvent('start-weekly-check-in'));
+    navigate('/weekly-check-in');
   };
   
   // Handle tab change with URL update

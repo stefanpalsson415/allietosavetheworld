@@ -566,7 +566,7 @@ export function NewEventProvider({ children }) {
         refreshInProgressRef.current = false;
       }, 500); // Increased to 500ms for more protection
     }
-  }, [currentUser, events, loadEvents, lastRefresh, circuitBreakerActive]);
+  }, [currentUser, familyId, events, loadEvents, lastRefresh, circuitBreakerActive]); // Added familyId to deps
 
   /**
    * Add a new event to the calendar

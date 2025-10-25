@@ -986,8 +986,8 @@ const NotionFamilySelectionScreen = () => {
     return (
       <div className="min-h-screen relative flex flex-col">
         {/* Background Image - Abstract Art */}
-        <div 
-          className="absolute inset-0 z-0"
+        <div
+          className="absolute inset-0 z-0 bg-gradient-to-br from-orange-400 via-pink-400 to-purple-500"
           style={{
             backgroundImage: `url('/login-background.png')`,
             backgroundSize: 'cover',

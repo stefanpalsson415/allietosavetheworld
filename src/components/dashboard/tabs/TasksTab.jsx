@@ -26,6 +26,7 @@ import CalendarService from '../../../services/CalendarService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useEvents } from '../../../contexts/EventContext';
 import CycleJourney from '../../cycles/CycleJourney';
+import EventDrawer from '../../calendar/EventDrawer';
 import eventStore from '../../../services/EventStore';
 import { useCycleDueDate } from '../../../hooks/useEvent';
 import { knowledgeBase } from '../../../data/AllieKnowledgeBase';
@@ -184,6 +185,9 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting, onSwitchTab }) =>
   const [selectedHabit, setSelectedHabit] = useState(null);
   const [reflection, setReflection] = useState('');
   const [showEnhancedHabits, setShowEnhancedHabits] = useState(true);
+  // Event drawer state for Family Meeting date changes
+  const [isEventDrawerOpen, setIsEventDrawerOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   // Calendar modal removed - navigation to calendar tab instead
   const [confirmModal, setConfirmModal] = useState({
     show: false,
@@ -2547,42 +2551,27 @@ if (isRefresh) {
         onStartStep={handleStartStep}
         dueDate={surveyDue instanceof Date ? surveyDue : (surveyDue ? new Date(surveyDue) : null)}
         onChangeDueDate={() => {
-          console.log('Change due date clicked - opening Allie');
-          
-          // Format the current due date
-          const currentDueDate = surveyDue ? 
-            new Date(surveyDue).toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              month: 'long', 
-              day: 'numeric',
-              year: 'numeric'
-            }) : 'not scheduled yet';
-          
-          // Create a message for Allie with the event details
-          // Check if we have an actual calendar event (not just a UI date)
-          const hasCalendarEvent = !!existingDueDateEvent;
-          const message = hasCalendarEvent ? 
-            `I need to change the date for our Cycle ${currentWeek} family meeting. It's currently scheduled for ${currentDueDate}. Can you help me reschedule it? Please show me the calendar and suggest some good times for our family meeting.` :
-            `I need to schedule our Cycle ${currentWeek} family meeting. ${surveyDue ? `The system suggests ${currentDueDate}, but there's no calendar event yet.` : `We haven't set a date yet.`} Can you help me create a calendar event for it? Please suggest some good times when the whole family might be available.`;
-          
-          // Store event context for Allie to use
-          const eventContext = {
-            type: 'cycle-due-date',
-            cycleNumber: currentWeek,
-            currentDate: surveyDue,
-            existingEventId: existingDueDateEvent?.id,
-            title: `Cycle ${currentWeek} Due Date`,
-            description: `Family meeting for Cycle ${currentWeek} to discuss survey results and set goals.`,
-            user: selectedUser // Add user info
-          };
-          
-          sessionStorage.setItem('alliePendingEvent', JSON.stringify(eventContext));
-          
-          // Trigger Allie chat with the message and user info
-          triggerAllieChat(message, { 
-            user: selectedUser,
-            isSystemPrompt: false 
-          });
+          console.log('Change due date clicked - opening Event Drawer');
+
+          // If there's an existing event, open it for editing
+          if (existingDueDateEvent) {
+            setSelectedEvent(existingDueDateEvent);
+            setIsEventDrawerOpen(true);
+          } else {
+            // Create a new event template for the family meeting
+            const newEvent = {
+              title: `Cycle ${currentWeek} Family Meeting`,
+              description: `Discuss survey results and plan improvements for Cycle ${currentWeek}.`,
+              startDate: surveyDue ? new Date(surveyDue) : new Date(),
+              endDate: surveyDue ? new Date(new Date(surveyDue).getTime() + 60 * 60 * 1000) : new Date(Date.now() + 60 * 60 * 1000), // 1 hour duration
+              allDay: false,
+              attendees: familyMembers.map(m => m.id),
+              userId: currentUser?.id,
+              familyId: familyId
+            };
+            setSelectedEvent(newEvent);
+            setIsEventDrawerOpen(true);
+          }
         }}
         loading={loading}
       />
@@ -3415,6 +3404,20 @@ if (isRefresh) {
           setNewHabitTemplate(null);
         }}
         isNewHabit={true}
+      />
+
+      {/* EventDrawer for Family Meeting date changes */}
+      <EventDrawer
+        isOpen={isEventDrawerOpen}
+        onClose={() => {
+          setIsEventDrawerOpen(false);
+          setSelectedEvent(null);
+        }}
+        event={selectedEvent}
+        onUpdate={(updatedEvent) => {
+          setSelectedEvent(updatedEvent);
+          // Optionally refresh events or cycle data here
+        }}
       />
     </div>
   );

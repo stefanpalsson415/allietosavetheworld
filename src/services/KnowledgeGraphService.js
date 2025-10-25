@@ -44,6 +44,38 @@ class KnowledgeGraphService {
   }
 
   /**
+   * Get invisible labor analysis by category
+   * Returns array of category breakdowns for survey personalization
+   * Format: [{category, anticipation, monitoring, execution}, ...]
+   */
+  async getInvisibleLaborByCategory(familyId) {
+    const cacheKey = `invisible_labor_category_${familyId}`;
+    const cached = this._getFromCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const response = await fetch(`${this.apiUrl}/api/knowledge-graph/invisible-labor-by-category`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ familyId })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      this._setCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Failed to get category-based invisible labor:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get coordination analysis for family
    */
   async getCoordinationAnalysis(familyId) {
@@ -176,6 +208,41 @@ class KnowledgeGraphService {
     } catch (error) {
       console.error('Failed to get node insights:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Query knowledge graph using natural language
+   * Phase 1: Intent classification + template queries
+   */
+  async queryNaturalLanguage(question, familyId, userId = null, userName = null) {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/knowledge-graph/natural-language`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question,
+          familyId,
+          userId,
+          userName
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to query knowledge graph with natural language:', error);
+      return {
+        success: false,
+        error: error.message,
+        question
+      };
     }
   }
 

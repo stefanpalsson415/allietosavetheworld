@@ -568,14 +568,14 @@ const BasicNotionHomePage = () => {
         // For now, just show the number of completed tasks
         // We'd need additional methods to get total assigned tasks
         const tasksCompleted = completedChores?.length || 0;
-        
-        // Get family harmony from knowledge graph
-        const insights = await QuantumKnowledgeGraph.getFamilyInsights(familyId);
-        
+
+        // DISABLED: QuantumKG is legacy system, replaced by Neo4j Knowledge Graph
+        // const insights = await QuantumKnowledgeGraph.getFamilyInsights(familyId);
+
         setFamilyStats({
-          harmony: insights?.harmony || 85,
+          harmony: 85, // Use default value instead of loading from QuantumKG
           tasksCompleted: Math.min(tasksCompleted * 20, 100), // Convert count to percentage
-          familyTime: insights?.familyTime || 75
+          familyTime: 75 // Use default value instead of loading from QuantumKG
         });
       } catch (error) {
         console.error('Error loading family stats:', error);

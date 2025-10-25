@@ -76,6 +76,21 @@ const VisualGraphMode = ({ familyId, insights, onNodeClick, selectedNode }) => {
           visual.icon = '📋';
           visual.fairPlayCard = node.fairPlayCardId;
           break;
+        case 'event':
+          visual.size = 16;
+          visual.color = '#F97316';
+          visual.icon = '📅';
+          break;
+        case 'survey':
+          visual.size = 14;
+          visual.color = '#F59E0B';
+          visual.icon = '📊';
+          break;
+        case 'family':
+          visual.size = 22;
+          visual.color = '#8B5CF6';
+          visual.icon = '🏠';
+          break;
         case 'responsibility':
           visual.size = 18;
           visual.color = '#8B5CF6';
@@ -228,7 +243,7 @@ const VisualGraphMode = ({ familyId, insights, onNodeClick, selectedNode }) => {
 
     svg.call(zoom);
 
-    // Create force simulation
+    // Create force simulation with performance optimizations
     const simulation = d3.forceSimulation(data.nodes)
       .force('link', d3.forceLink(data.links).id(d => d.id).distance(d => {
         // Shorter links for strong relationships, longer for weak
@@ -236,9 +251,19 @@ const VisualGraphMode = ({ familyId, insights, onNodeClick, selectedNode }) => {
       }).strength(d => d.strength || 0.5))
       .force('charge', d3.forceManyBody().strength(-300))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(d => d.size + 10));
+      .force('collision', d3.forceCollide().radius(d => d.size + 10))
+      .alphaDecay(0.02) // Faster convergence (default is 0.0228)
+      .velocityDecay(0.4); // More friction, settles faster (default is 0.4)
 
     simulationRef.current = simulation;
+
+    // Stop simulation after graph stabilizes to improve performance
+    let tickCount = 0;
+    const maxTicks = 300; // Safety limit - stop after 300 ticks (~10 seconds)
+
+    simulation.on('end', () => {
+      console.log('✅ Force simulation completed - graph stabilized');
+    });
 
     // Create links
     const link = g.append('g')
@@ -314,6 +339,8 @@ const VisualGraphMode = ({ familyId, insights, onNodeClick, selectedNode }) => {
 
     // Update positions on each tick
     simulation.on('tick', () => {
+      tickCount++;
+
       link
         .attr('x1', d => d.source.x)
         .attr('y1', d => d.source.y)
@@ -325,6 +352,12 @@ const VisualGraphMode = ({ familyId, insights, onNodeClick, selectedNode }) => {
         .attr('y', d => (d.source.y + d.target.y) / 2);
 
       node.attr('transform', d => `translate(${d.x},${d.y})`);
+
+      // Stop simulation when stabilized (alpha < 0.01) or after max ticks
+      if (simulation.alpha() < 0.01 || tickCount >= maxTicks) {
+        console.log(`⏸️ Stopping force simulation (alpha: ${simulation.alpha().toFixed(4)}, ticks: ${tickCount})`);
+        simulation.stop();
+      }
     });
 
     // Initial zoom to fit
@@ -411,14 +444,15 @@ const VisualGraphMode = ({ familyId, insights, onNodeClick, selectedNode }) => {
             <span className="text-xs text-slate-600">Person</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-emerald-500" />
-            <span className="text-xs text-slate-600">Task</span>
+            <div className="w-4 h-4 rounded-full bg-purple-500" />
+            <span className="text-xs text-slate-600">Family</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-purple-500" />
-            <span className="text-xs text-slate-600">Fair Play Card</span>
+            <div className="w-4 h-4 rounded-full bg-amber-500" />
+            <span className="text-xs text-slate-600">Survey</span>
           </div>
         </div>
+        <p className="text-xs text-slate-400 mt-3">Optimized view - ask Allie for details</p>
       </div>
 
       {/* Hover tooltip */}
@@ -445,7 +479,11 @@ const VisualGraphMode = ({ familyId, insights, onNodeClick, selectedNode }) => {
               )}
             </div>
           </div>
-          <p className="text-xs text-slate-400 mt-2">Click to explore insights →</p>
+          <p className="text-xs text-slate-400 mt-2">
+            {hoveredNode.type === 'survey'
+              ? 'Click to see detailed responses with Allie →'
+              : 'Click to explore with Allie →'}
+          </p>
         </motion.div>
       )}
 

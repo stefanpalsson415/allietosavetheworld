@@ -49,61 +49,11 @@ export const Calendar = () => {
   }, [isOpen]);
 
   const handleEventClick = (event) => {
-    // Check if we're already editing this event
-    if (currentEditingEventId === event.id) {
-      console.log('Already editing this event, not opening another form');
-      return;
-    }
-    
-    // If we're editing a different event, we need to clear the previous one
-    if (currentEditingEventId && currentEditingEventId !== event.id) {
-      // Dispatch event to clear the previous form
-      window.dispatchEvent(
-        new CustomEvent('allie-clear-event-form', { 
-          detail: { eventId: currentEditingEventId }
-        })
-      );
-    }
-    
-    // Set the current editing event ID
-    setCurrentEditingEventId(event.id);
-    
-    // Open Allie chat with event details for editing
-    const startDate = new Date(event.startTime);
-    const endDate = new Date(event.endTime);
-    
-    const dateStr = startDate.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric',
-      year: 'numeric'
-    });
-    
-    const startTimeStr = startDate.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit'
-    });
-    
-    const endTimeStr = endDate.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit'
-    });
-    
-    // Create a prompt that includes the event details
-    let prompt = `I'd like to edit the event "${event.title}" on ${dateStr} from ${startTimeStr} to ${endTimeStr}.`;
-    if (event.location) {
-      prompt += ` Location: ${event.location}.`;
-    }
-    if (event.description) {
-      prompt += ` Description: ${event.description}.`;
-    }
-    
-    openDrawerWithPrompt(prompt, {
-      eventEdit: true,
-      event: event,
-      initialDate: startDate,
-      eventId: event.id
-    });
+    console.log('Event clicked in Family Calendar - opening EventDrawer', event);
+
+    // Open EventDrawer with the clicked event
+    setDrawerEvent(event);
+    setIsEventDrawerOpen(true);
   };
 
   const handleDateClick = (date) => {

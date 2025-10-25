@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useRe
 import { calculateTaskWeight } from '../utils/TaskWeightCalculator';
 import QuestionFeedbackService from '../services/QuestionFeedbackService';
 import ELORatingService from '../services/ELORatingService';
+import knowledgeGraphService from '../services/KnowledgeGraphService';
 
 
 // Create the survey context
@@ -673,6 +674,54 @@ export function SurveyProvider({ children }) {
       return shuffled.slice(0, count);
     };
     
+    // Helper to fetch Knowledge Graph insights (Phase 1: KG Integration)
+    const getKnowledgeGraphInsights = async () => {
+      if (!familyData?.familyId) {
+        console.log('No familyId available for KG insights');
+        return null;
+      }
+
+      try {
+        console.log('Fetching Knowledge Graph insights for survey generation...');
+        // Use the singleton instance directly (no 'new' keyword)
+
+        // Fetch all KG data in parallel
+        const [invisibleLabor, coordination, temporal] = await Promise.all([
+          knowledgeGraphService.getInvisibleLaborByCategory(familyData.familyId).catch(err => {
+            console.warn('Failed to fetch invisible labor by category:', err);
+            return { success: false, data: [] };  // Return empty array on failure
+          }),
+          knowledgeGraphService.getCoordinationAnalysis(familyData.familyId).catch(err => {
+            console.warn('Failed to fetch coordination:', err);
+            return { success: false, data: null };
+          }),
+          knowledgeGraphService.getTemporalPatterns(familyData.familyId).catch(err => {
+            console.warn('Failed to fetch temporal patterns:', err);
+            return { success: false, data: null };
+          })
+        ]);
+
+        // Extract data with graceful degradation
+        const kgInsights = {
+          invisibleLabor: invisibleLabor?.success ? invisibleLabor.data : [],  // Array, not null
+          coordination: coordination?.success ? coordination.data : null,
+          temporal: temporal?.success ? temporal.data : null,
+          hasData: !!(invisibleLabor?.success || coordination?.success || temporal?.success)
+        };
+
+        console.log('KG insights loaded:', {
+          hasInvisibleLabor: !!kgInsights.invisibleLabor,
+          hasCoordination: !!kgInsights.coordination,
+          hasTemporal: !!kgInsights.temporal
+        });
+
+        return kgInsights;
+      } catch (error) {
+        console.warn('KG insights unavailable, using fallback:', error);
+        return null; // Graceful degradation - survey generation will continue without KG data
+      }
+    };
+
     // Helper to analyze imbalances by category based on ELO ratings
     const analyzeImbalancesByCategory = async () => {
       // If we have family data and can use ELO ratings
@@ -864,18 +913,141 @@ export function SurveyProvider({ children }) {
       return combinedQuestions.slice(0, count);
     };
     
-    // Get imbalance analysis with ELO data
-    const imbalancedCategories = await analyzeImbalancesByCategory();
-    
-    // Get task effectiveness data
+    // PHASE 1: Fetch all data sources in parallel (ELO + Knowledge Graph)
+    const [imbalancedCategories, balancedCategories, uncoveredTasksData, kgInsights] = await Promise.all([
+      analyzeImbalancesByCategory(),
+      identifyBalancedCategories(),
+      getUncoveredTasks(),
+      getKnowledgeGraphInsights() // NEW: Fetch KG data in parallel
+    ]);
+
+    // Get task effectiveness data (synchronous)
     const effectiveCategories = analyzeTaskEffectiveness(taskCompletionData);
-    
-    // Get balanced categories (to check for backsliding)
-    const balancedCategories = await identifyBalancedCategories();
-    
-    // Get uncovered tasks data
-    const uncoveredTasksData = await getUncoveredTasks();
-    
+
+    // Log KG data availability for debugging
+    if (kgInsights?.hasData) {
+      console.log('📊 Knowledge Graph data available for survey personalization');
+    } else {
+      console.log('⚠️  Knowledge Graph data unavailable, using ELO data only');
+    }
+
+    // PHASE 2: Helper functions to apply KG insights to question weighting
+
+    // Apply KG-based weighting to prioritize questions based on real behavior imbalances
+    const applyKGWeighting = (questions, kgInsights) => {
+      if (!kgInsights?.invisibleLabor) return questions;
+
+      return questions.map(q => {
+        // Find matching KG category data
+        // ✅ CRITICAL FIX: Map to actual categories returned by Knowledge Graph API
+        // API returns: "household", "coordination", "uncategorized"
+        const categoryMap = {
+          "Visible Household Tasks": "household",
+          "Invisible Household Tasks": "household",
+          "Visible Parental Tasks": "coordination",
+          "Invisible Parental Tasks": "coordination"
+        };
+
+        const kgCategory = categoryMap[q.category];
+        const kgData = kgInsights.invisibleLabor.find(
+          insight => insight.category === kgCategory
+        );
+
+        if (kgData) {
+          // Calculate priority score based on KG data
+          // Anticipation gap is most important (2x weight)
+          // Monitoring gap is significant (1.5x weight)
+          // Execution gap is baseline (1x weight)
+          const anticipationGap = Math.abs(kgData.anticipation?.percentageDifference || 0);
+          const monitoringGap = Math.abs(kgData.monitoring?.percentageDifference || 0);
+          const executionGap = Math.abs(kgData.execution?.percentageDifference || 0);
+
+          const kgPriorityScore =
+            (anticipationGap * 2.0) +
+            (monitoringGap * 1.5) +
+            (executionGap * 1.0);
+
+          return {
+            ...q,
+            kgPriority: kgPriorityScore,
+            kgSource: 'real_behavior',
+            kgData: {
+              anticipationGap,
+              monitoringGap,
+              executionGap,
+              leader: kgData.anticipation?.leader || kgData.execution?.leader
+            }
+          };
+        }
+
+        return { ...q, kgPriority: 0 };
+      });
+    };
+
+    // Apply temporal insights to boost questions based on time patterns
+    const applyTemporalInsights = (questions, kgInsights) => {
+      if (!kgInsights?.temporal) return questions;
+
+      return questions.map(q => {
+        let temporalBoost = 0;
+
+        // Check for Sunday planning spike pattern (common invisible labor pattern)
+        if (kgInsights.temporal.sundayPlanningSpike) {
+          // Boost "planning", "anticipate", "schedule" questions
+          const planningKeywords = ['plan', 'anticipate', 'schedule', 'coordinate', 'organize'];
+          const hasPlanningKeyword = planningKeywords.some(kw =>
+            q.text.toLowerCase().includes(kw)
+          );
+
+          if (hasPlanningKeyword) {
+            temporalBoost += 15; // Significant boost for planning questions
+          }
+        }
+
+        // Check for evening task creation pattern (another invisible labor indicator)
+        if (kgInsights.temporal.eveningTaskCreation) {
+          if (q.invisibility === 'completely' || q.invisibility === 'mostly') {
+            temporalBoost += 10; // Boost invisible work questions
+          }
+        }
+
+        return {
+          ...q,
+          kgPriority: (q.kgPriority || 0) + temporalBoost,
+          temporalBoost
+        };
+      });
+    };
+
+    // Apply coordination insights to prioritize coordination questions
+    const applyCoordinationInsights = (questions, kgInsights) => {
+      if (!kgInsights?.coordination) return questions;
+
+      return questions.map(q => {
+        let coordinationBoost = 0;
+
+        // If coordination burden is heavily imbalanced (>60%), boost coordination questions
+        const coordData = kgInsights.coordination;
+        if (coordData.imbalancePercentage > 60) {
+          // Boost questions about organizing, coordinating, scheduling events
+          const coordinationKeywords = ['coordinate', 'organize', 'schedule', 'plan', 'arrange'];
+          const hasCoordinationKeyword = coordinationKeywords.some(kw =>
+            q.text.toLowerCase().includes(kw)
+          );
+
+          if (hasCoordinationKeyword) {
+            coordinationBoost += Math.round(coordData.imbalancePercentage / 4); // Up to 25 point boost
+          }
+        }
+
+        return {
+          ...q,
+          kgPriority: (q.kgPriority || 0) + coordinationBoost,
+          coordinationBoost
+        };
+      });
+    };
+
     // Create our question distribution plan - ADAPTIVE ALGORITHM
     let questionAllocation = {};
     
@@ -970,19 +1142,36 @@ export function SurveyProvider({ children }) {
     // 6. SELECT ACTUAL QUESTIONS BASED ON ALLOCATION
     const selectedQuestions = [];
     const selectedIds = [];
-    
+
     // For each category, select the appropriate number of questions
     Object.entries(questionAllocation).forEach(([category, count]) => {
       // Get top questions for this category, prioritizing uncovered tasks
       const categoryQuestions = getQuestionsFromCategory(category, count, selectedIds, uncoveredTasksData);
-      
+
       // Add to our selections
       selectedQuestions.push(...categoryQuestions);
       selectedIds.push(...categoryQuestions.map(q => q.id));
     });
-    
+
+    // PHASE 2: Apply Knowledge Graph weighting to prioritize questions based on real behavior
+    let kgWeightedQuestions = selectedQuestions;
+    if (kgInsights?.hasData) {
+      console.log('Applying KG weighting to survey questions...');
+
+      // Apply all three KG weighting functions in sequence
+      kgWeightedQuestions = applyKGWeighting(kgWeightedQuestions, kgInsights);
+      kgWeightedQuestions = applyTemporalInsights(kgWeightedQuestions, kgInsights);
+      kgWeightedQuestions = applyCoordinationInsights(kgWeightedQuestions, kgInsights);
+
+      // Re-sort questions by KG priority score (highest first)
+      // This ensures the most important questions based on real behavior come first
+      kgWeightedQuestions.sort((a, b) => (b.kgPriority || 0) - (a.kgPriority || 0));
+
+      console.log(`KG-weighted ${kgWeightedQuestions.length} questions. Top priority: ${kgWeightedQuestions[0]?.kgPriority?.toFixed(1) || 'N/A'}`);
+    }
+
     // 7. ENHANCE WITH EXPLANATIONS BASED ON FAMILY CONTEXT
-    const finalQuestions = selectedQuestions.map((question, index) => {
+    const finalQuestions = kgWeightedQuestions.map((question, index) => {
       // For weekly/cycle surveys, assign new IDs starting from q73
       // This ensures weekly questions don't overlap with initial survey questions (q1-q72)
       const weeklyQuestionId = `q${72 + index + 1}`;
@@ -990,19 +1179,44 @@ export function SurveyProvider({ children }) {
       // Find this category's imbalance data
       const categoryImbalance = imbalancedCategories.find(c => c.category === question.category);
       
-      // Create a customized weekly explanation
+      // PHASE 3: Create personalized weekly explanation with KG context
       let weeklyExplanation = "";
-      
+
       // Check if this is an uncovered task
       const taskType = question.taskType || question.text;
-      const isUncoveredTask = question.uncoveredCount > 0 || 
+      const isUncoveredTask = question.uncoveredCount > 0 ||
         (uncoveredTasksData.byTask && uncoveredTasksData.byTask[taskType]);
-      
-      if (isUncoveredTask) {
+
+      // PHASE 3: Use KG data for highly personalized explanations
+      if (question.kgData && kgInsights?.hasData) {
+        // Get the leader from KG data
+        const leader = question.kgData.leader;
+
+        if (question.kgData.anticipationGap > 40) {
+          // Major anticipation gap - the most important invisible labor metric
+          weeklyExplanation = `📊 Based on your family's patterns, ${leader} has been noticing and planning ${question.kgData.anticipationGap.toFixed(0)}% more of these tasks. This "invisible labor" of anticipating needs is a major source of mental load.`;
+        } else if (question.kgData.monitoringGap > 40) {
+          // Major monitoring gap - checking if things are done
+          weeklyExplanation = `📊 Your family data shows ${leader} is monitoring these tasks ${question.kgData.monitoringGap.toFixed(0)}% more often - keeping track of whether they're done and following up. This creates significant mental load.`;
+        } else if (question.kgData.executionGap > 40) {
+          // Major execution gap - actually doing the work
+          weeklyExplanation = `📊 Based on actual behavior, ${leader} is executing ${question.kgData.executionGap.toFixed(0)}% more of these tasks. This question helps track if this pattern is changing over time.`;
+        } else if (question.temporalBoost > 0) {
+          // Temporal pattern detected (e.g., Sunday planning spike)
+          weeklyExplanation = `⏰ Your family shows a pattern of planning these tasks on Sunday evenings. This question helps us understand who's carrying that mental load.`;
+        } else if (question.coordinationBoost > 0) {
+          // Coordination burden detected
+          weeklyExplanation = `🔗 Your family data shows significant coordination needed for these tasks. This question helps identify who's doing the organizing and scheduling.`;
+        } else {
+          // Has KG data but no major gaps - use as progress tracking
+          weeklyExplanation = `✅ This area shows some imbalance in your family's data. This question helps track whether things are improving.`;
+        }
+      } else if (isUncoveredTask) {
+        // Uncovered task - no KG data needed
         const uncoveredCount = question.uncoveredCount || uncoveredTasksData.byTask[taskType] || 0;
         weeklyExplanation = `⚠️ This task has been marked as "no one does it" ${uncoveredCount} time${uncoveredCount > 1 ? 's' : ''}. This question helps identify gaps in your family's task coverage that may need attention.`;
       } else if (categoryImbalance && categoryImbalance.imbalance > 30) {
-        // High imbalance explanation with ELO confidence
+        // High imbalance explanation with ELO confidence (fallback when no KG data)
         const confidence = categoryImbalance.confidence ? ` (${Math.round(categoryImbalance.confidence * 100)}% confidence)` : '';
         weeklyExplanation = `This question is from an area with a significant imbalance (${categoryImbalance.imbalance.toFixed(0)}% difference${confidence}). ${categoryImbalance.dominantParent} is currently handling ${categoryImbalance.dominantParent === 'Mama' ? categoryImbalance.mamaPercent.toFixed(0) : categoryImbalance.papaPercent.toFixed(0)}% of these tasks.`;
       } else if (categoryImbalance && categoryImbalance.imbalance > 15) {

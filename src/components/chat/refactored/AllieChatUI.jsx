@@ -42,6 +42,7 @@ const AllieChatUI = ({
   extractedEntities,
   conversationContext,
   promptChips,
+  selectedChipIndex,
   showMultimodalExtractor,
   isDragging,
   canUseChat,
@@ -203,7 +204,7 @@ const AllieChatUI = ({
       {(isOpen || embedded || notionMode) && (
         <div
           ref={chatContainerRef}
-          className={`bg-white flex flex-col transition-all duration-300 font-roboto relative overflow-hidden ${
+          className={`bg-white flex flex-col transition-all duration-300 font-roboto relative ${
             embedded || notionMode ? 'flex-1 w-full' : 'shadow-xl rounded-t-lg mx-4'
           }`}
           style={
@@ -476,17 +477,26 @@ const AllieChatUI = ({
 
           {/* Prompt chips */}
           <div className="px-3 py-2 flex flex-wrap gap-2">
-            {promptChips.map((chip, index) => (
-              <button
-                key={index}
-                onClick={() => handleUsePrompt(chip.text, chip.memberId)}
-                className="bg-gray-100 hover:bg-gray-200 text-xs px-3 py-1 rounded-full font-roboto"
-              >
-                {chip.type === 'calendar' && <Calendar size={12} className="inline mr-1" />}
-                {chip.type === 'profile' && <User size={12} className="inline mr-1" />}
-                {chip.text}
-              </button>
-            ))}
+            {promptChips.map((chip, index) => {
+              const isSelected = selectedChipIndex === index;
+              return (
+                <button
+                  key={index}
+                  onClick={() => handleUsePrompt(chip.text, chip.memberId, index)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-roboto transition-all ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  }`}
+                >
+                  {isSelected && <span className="mr-1.5">✓</span>}
+                  {chip.icon && <span className="mr-1">{chip.icon}</span>}
+                  {chip.type === 'calendar' && <Calendar size={12} className="inline mr-1" />}
+                  {chip.type === 'profile' && <User size={12} className="inline mr-1" />}
+                  {chip.text}
+                </button>
+              );
+            })}
           </div>
 
           {/* Image preview area */}

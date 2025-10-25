@@ -663,6 +663,48 @@ useEffect(() => {
     };
   }, [currentUser]);
 
+  // Helper function to check if family has valid access (subscription or coupon)
+  function hasValidAccess(family = familyData) {
+    if (!family) return false;
+
+    // Check for coupon access
+    if (family.couponAccess === true) {
+      console.log('✅ Family has coupon access');
+      return true;
+    }
+
+    // Check for active subscription
+    const subscription = family.subscription;
+    if (!subscription) {
+      console.log('❌ No subscription found');
+      return false;
+    }
+
+    // Check subscription status
+    if (subscription.status === 'active') {
+      console.log('✅ Active subscription');
+      return true;
+    }
+
+    // Check if within grace period for past_due subscriptions
+    if (subscription.status === 'past_due' && subscription.currentPeriodEnd) {
+      const periodEnd = subscription.currentPeriodEnd instanceof Date
+        ? subscription.currentPeriodEnd
+        : new Date(subscription.currentPeriodEnd.seconds * 1000);
+      const gracePeriodDays = 3;
+      const gracePeriodEnd = new Date(periodEnd);
+      gracePeriodEnd.setDate(gracePeriodEnd.getDate() + gracePeriodDays);
+
+      if (new Date() < gracePeriodEnd) {
+        console.log('⚠️ In grace period (past_due)');
+        return true;
+      }
+    }
+
+    console.log('❌ No valid access:', subscription.status);
+    return false;
+  }
+
   // Context value
   const value = {
     currentUser: effectiveUser || currentUser, // Use effectiveUser as the primary user
@@ -670,6 +712,7 @@ useEffect(() => {
     effectiveUser, // Explicitly provide effectiveUser for components that need it
     familyData,
     availableFamilies,
+    hasValidAccess, // Export subscription checker
     signup,
     signUp: signup,  // Alias for compatibility
     login,

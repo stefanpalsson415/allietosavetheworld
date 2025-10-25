@@ -52,18 +52,21 @@ class AllieConversationEngine {
       habitRecommendations = [],
       recentMessages = [],
       childrenPresent = false,
-      observingChildren = []
+      observingChildren = [],
+      skipQuantumKG = false  // Skip loading old QuantumKG for performance
     } = options;
 
     // Load interview insights for enhanced context
+    // DISABLED: QuantumKG is legacy system, replaced by Neo4j Knowledge Graph
+    // Keeping this code commented in case we need to re-enable temporarily
     let interviewInsights = null;
-    if (familyId) {
-      try {
-        interviewInsights = await this.quantumKG.getInterviewInsights(familyId);
-      } catch (error) {
-        console.warn('Could not load interview insights for context:', error);
-      }
-    }
+    // if (familyId && !skipQuantumKG) {
+    //   try {
+    //     interviewInsights = await this.quantumKG.getInterviewInsights(familyId);
+    //   } catch (error) {
+    //     console.warn('Could not load interview insights for context:', error);
+    //   }
+    // }
 
     // Load Knowledge Graph insights from Neo4j
     let knowledgeGraphInsights = null;
@@ -198,10 +201,26 @@ class AllieConversationEngine {
 
   /**
    * Detect specialized agent needs
-   * Routes to SANTA, Harmony Detective, or other specialized agents
+   * Routes to SANTA, Harmony Detective, Knowledge Graph queries, or other specialized agents
    */
   detectSpecializedAgent(message, context) {
     const messageLower = message.toLowerCase();
+
+    // Knowledge Graph natural language query detection
+    // Detects questions about family patterns, invisible labor, workload, etc.
+    const graphQueryKeywords = [
+      'why am i', 'why are we', 'who notices', 'who creates', 'who does',
+      'anticipation', 'monitoring', 'coordination', 'bottleneck',
+      'tired', 'overwhelmed', 'exhausted', 'stressed', 'burnout',
+      'pattern', 'trend', 'usually', 'always', 'typically'
+    ];
+    if (graphQueryKeywords.some(keyword => messageLower.includes(keyword))) {
+      return {
+        agent: 'KnowledgeGraph',
+        priority: 'high',
+        reason: 'Natural language graph query detected'
+      };
+    }
 
     // SANTA Gift Agent detection
     const giftKeywords = [
@@ -252,7 +271,7 @@ class AllieConversationEngine {
    */
   async getResponse(message, contextOptions = {}) {
     try {
-      const context = this.buildContext(contextOptions);
+      const context = await this.buildContext(contextOptions);
 
       // Detect if specialized agent needed
       const specializedAgent = this.detectSpecializedAgent(message, context);
@@ -314,6 +333,9 @@ class AllieConversationEngine {
     console.log(`🤖 Routing to specialized agent: ${agentType}`);
 
     switch (agentType) {
+      case 'KnowledgeGraph':
+        return await this.handleKnowledgeGraphQuery(message, context);
+
       case 'SANTA':
         return await this.handleSANTAAgent(message, context);
 
@@ -331,6 +353,66 @@ class AllieConversationEngine {
           context.familyId,
           { currentUser: context.currentUser }
         );
+    }
+  }
+
+  /**
+   * Knowledge Graph Natural Language Query Handler
+   * Queries Neo4j graph database for family insights
+   */
+  async handleKnowledgeGraphQuery(message, context) {
+    try {
+      console.log(`📊 Processing natural language graph query: "${message}"`);
+      console.log(`📊 Context:`, { familyId: context.familyId, userId: context.currentUser?.userId, userName: context.currentUser?.name });
+
+      // Ensure familyId is present
+      if (!context.familyId) {
+        console.error('❌ Missing familyId in context');
+        return "I need your family ID to access the knowledge graph. Please try refreshing the page.";
+      }
+
+      // Call the natural language endpoint
+      const result = await this.knowledgeGraphService.queryNaturalLanguage(
+        message,
+        context.familyId,
+        context.currentUser?.userId,
+        context.currentUser?.name
+      );
+
+      if (!result.success) {
+        console.error('Graph query failed:', result.error);
+        return `I couldn't find that information in the knowledge graph right now. ${result.error || 'Please try rephrasing your question.'}`;
+      }
+
+      // Format the response for conversation
+      const { intent, confidence, data } = result;
+
+      // Build conversational response
+      let response = `**${data.summary}**\n\n`;
+
+      // Add key insights if available
+      if (data.keyInsights && data.keyInsights.length > 0) {
+        response += `**Key Insights:**\n`;
+        data.keyInsights.forEach(insight => {
+          if (insight.type === 'anticipation_leader') {
+            response += `• ${insight.person} notices the most tasks (${insight.metric})\n`;
+          } else if (insight.type === 'monitoring_leader') {
+            response += `• ${insight.person} does the most follow-up work (${insight.metric})\n`;
+          } else if (insight.type === 'creation_imbalance') {
+            response += `• ${insight.highest.person} creates ${Math.round(insight.highest.creationRatio * 100)}% of tasks, while ${insight.lowest.person} creates ${Math.round(insight.lowest.creationRatio * 100)}%\n`;
+          }
+        });
+        response += `\n`;
+      }
+
+      // Add context about what was analyzed
+      response += `*This analysis is based on your family's knowledge graph (detected intent: ${intent}, confidence: ${Math.round(confidence * 100)}%).*`;
+
+      return response;
+
+    } catch (error) {
+      console.error('Knowledge Graph query error:', error);
+      return "I'm having trouble accessing the knowledge graph right now. Let me help you in another way!";
     }
   }
 

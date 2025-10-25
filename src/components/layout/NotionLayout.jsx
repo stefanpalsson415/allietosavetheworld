@@ -8,13 +8,13 @@ import {
   CheckCircle, CheckSquare, Award, Star, DollarSign, Sparkles,
   FolderOpen, ClipboardList, Shirt, Package, Trees, Brain
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnifiedEvent } from '../../contexts/UnifiedEventContext';
 import { ChatDrawerProvider, useChatDrawer } from '../../contexts/ChatDrawerContext';
 import ChatButton from '../chat/ChatButton';
 import UserAvatar from '../common/UserAvatar';
-import ConfirmationDialog from '../common/ConfirmationDialog';
 import NotificationBell from '../common/NotificationBell';
 import BucksService from '../../services/BucksService';
 import FamilyDiscoveryDrawer from '../interview/FamilyDiscoveryDrawer';
@@ -29,8 +29,8 @@ const NotionLayoutInner = ({ children, title }) => {
   const location = useLocation();
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
-  const [switchDialogOpen, setSwitchDialogOpen] = useState(false);
   const [userToSwitchTo, setUserToSwitchTo] = useState(null);
+  const [confirmPosition, setConfirmPosition] = useState(null); // { x, y } for tooltip position
   const [localSelectedUser, setLocalSelectedUser] = useState(null);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [bucksBalance, setBucksBalance] = useState(0);
@@ -120,12 +120,12 @@ const NotionLayoutInner = ({ children, title }) => {
   const [hasProfilePhotos, setHasProfilePhotos] = useState(false);
   
   useEffect(() => {
-    // Check if any family member has completed survey
-    const surveyCompleted = familyMembers?.some(member => 
-      member.completed || member.surveyCompleted || member.initialSurveyCompleted
+    // Check if ALL family members have completed their initial survey
+    const allSurveysCompleted = familyMembers?.length > 0 && familyMembers.every(member =>
+      member.surveys?.initial?.completed || member.completed || member.surveyCompleted || member.initialSurveyCompleted
     );
-    setHasCompletedSurvey(surveyCompleted);
-    
+    setHasCompletedSurvey(allSurveysCompleted);
+
     // Check if any family member has profile photo
     const hasPhotos = familyMembers?.some(member => member.profilePictureUrl);
     setHasProfilePhotos(hasPhotos);
@@ -262,22 +262,23 @@ const NotionLayoutInner = ({ children, title }) => {
   };
   
   // Handle user switching
-  const handleUserSwitch = (member) => {
+  const handleUserSwitch = (member, position) => {
     // If clicking on already selected user, do nothing
     if (selectedUser && member.id === selectedUser.id) return;
-    
-    // Set the user to switch to and open the confirmation dialog
+
+    // Set the user to switch to and the position for the tooltip
     setUserToSwitchTo(member);
-    setSwitchDialogOpen(true);
+    setConfirmPosition(position);
   };
   
   // Confirm user switch
   const confirmUserSwitch = async () => {
     if (!userToSwitchTo) return;
-    
+
     try {
-      // Close dialog first to prevent UI freeze
-      setSwitchDialogOpen(false);
+      // Close both tooltip and dropdown
+      setConfirmPosition(null);
+      setShowUserDropdown(false);
       
       // Store user info before switching
       const userToSwitch = {...userToSwitchTo}; // Clone to avoid any reference issues
@@ -311,15 +312,17 @@ const NotionLayoutInner = ({ children, title }) => {
       }, 100);
     } catch (error) {
       console.error("Error switching user:", error);
-      setSwitchDialogOpen(false);
+      setConfirmPosition(null);
       setUserToSwitchTo(null);
+      setShowUserDropdown(false);
     }
   };
   
   // Cancel user switch
   const cancelUserSwitch = () => {
-    setSwitchDialogOpen(false);
+    setConfirmPosition(null);
     setUserToSwitchTo(null);
+    setShowUserDropdown(false); // Close the arc when canceling
   };
   
   // Handle navigation
@@ -439,52 +442,156 @@ const NotionLayoutInner = ({ children, title }) => {
               />
             </div>
             
-            {/* User dropdown menu */}
-            {showUserDropdown && (
-              <div className="absolute left-2 right-2 top-full mt-1 bg-white rounded-lg shadow-lg border border-[#E3E2E0] py-2 z-50">
-                <div className="px-3 pb-2">
-                  <div className="text-[11px] font-medium text-[#37352F]/40 uppercase tracking-wider">
-                    Switch User
-                  </div>
-                </div>
-                
-                {/* Family members list */}
-                {familyMembers.map(member => {
-                  const isSelected = 
-                    (localSelectedUser && localSelectedUser.id === member.id) ||
-                    (selectedUser && selectedUser.id === member.id);
-                  
-                  return (
-                    <button
-                      key={member.id}
-                      className={`w-full flex items-center px-3 py-2 text-[13px] hover:bg-[#37352F]/5 transition-all ${
-                        isSelected ? 'bg-[#37352F]/5 font-medium' : ''
-                      }`}
+            {/* Quarter-circle arc user switcher */}
+            <AnimatePresence>
+              {showUserDropdown && (
+                <>
+                  {/* Backdrop */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowUserDropdown(false)}
+                  />
+
+                  {/* Family members in quarter-circle arc */}
+                  <div className="absolute left-0 top-0 pointer-events-none z-50" style={{ width: '300px', height: '300px' }}>
+                    {familyMembers
+                      .filter(member => {
+                        const isSelected =
+                          (localSelectedUser && localSelectedUser.id === member.id) ||
+                          (selectedUser && selectedUser.id === member.id);
+                        // Filter out invalid members (empty names, names with '+', or '[Request interrupted')
+                        const hasValidName = member.name &&
+                          member.name.trim().length > 0 &&
+                          !member.name.startsWith('+') &&
+                          !member.name.includes('[Request interrupted');
+                        return !isSelected && hasValidName; // Don't show selected user or invalid members
+                      })
+                      .map((member, index, arr) => {
+                        // Calculate position in quarter-circle (0° to 90°)
+                        const radius = 140; // Distance from origin
+                        const angleStep = 90 / (arr.length + 1); // Divide quarter circle
+                        const angle = angleStep * (index + 1); // Angle in degrees
+                        const angleRad = (angle * Math.PI) / 180; // Convert to radians
+
+                        // Calculate x, y position (origin at top-left)
+                        const x = Math.cos(angleRad) * radius;
+                        const y = Math.sin(angleRad) * radius;
+
+                        return (
+                          <motion.button
+                            key={member.id}
+                            initial={{
+                              opacity: 0,
+                              scale: 0,
+                              x: 40,
+                              y: 20
+                            }}
+                            animate={{
+                              opacity: 1,
+                              scale: 1,
+                              x,
+                              y
+                            }}
+                            exit={{
+                              opacity: 0,
+                              scale: 0,
+                              x: 40,
+                              y: 20
+                            }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 300,
+                              damping: 25,
+                              delay: index * 0.05 // Stagger delay
+                            }}
+                            onClick={() => {
+                              // Don't close dropdown - keep avatars visible during confirmation
+                              handleUserSwitch(member, { x, y });
+                            }}
+                            className="absolute pointer-events-auto"
+                            style={{
+                              left: '40px',
+                              top: '20px'
+                            }}
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            {/* Avatar with glow effect */}
+                            <div className="relative group">
+                              <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-md opacity-0 group-hover:opacity-70 transition-opacity duration-300"></div>
+                              <div className="relative bg-white rounded-full p-1 shadow-lg border-2 border-white">
+                                <UserAvatar user={member} size={56} />
+                              </div>
+                              {/* Name label on hover */}
+                              <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                whileHover={{ opacity: 1, y: 0 }}
+                                className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-[#37352F] text-white px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap shadow-lg"
+                              >
+                                {member.name}
+                              </motion.div>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+
+                    {/* Add family member button at the end of arc */}
+                    <motion.button
+                      initial={{
+                        opacity: 0,
+                        scale: 0,
+                        x: 40,
+                        y: 20
+                      }}
+                      animate={{
+                        opacity: 1,
+                        scale: 1,
+                        x: Math.cos((95 * Math.PI) / 180) * 140,
+                        y: Math.sin((95 * Math.PI) / 180) * 140
+                      }}
+                      exit={{
+                        opacity: 0,
+                        scale: 0
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 25,
+                        delay: familyMembers.length * 0.05
+                      }}
                       onClick={() => {
                         setShowUserDropdown(false);
-                        handleUserSwitch(member);
+                        // Add family member logic here
                       }}
+                      className="absolute pointer-events-auto"
+                      style={{
+                        left: '40px',
+                        top: '20px'
+                      }}
+                      whileHover={{ scale: 1.15 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <UserAvatar user={member} size={24} className="mr-3" />
-                      <div className="flex-1 text-left">
-                        <div className="text-[#37352F]">{member.name}</div>
-                        <div className="text-[11px] text-[#37352F]/60">{member.role}</div>
+                      <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-blue-500 rounded-full blur-md opacity-0 group-hover:opacity-70 transition-opacity duration-300"></div>
+                        <div className="relative bg-white rounded-full p-1 shadow-lg border-2 border-dashed border-[#37352F]/30 w-[52px] h-[52px] flex items-center justify-center hover:border-blue-500 transition-colors">
+                          <Plus size={24} className="text-[#37352F]/40 group-hover:text-blue-500 transition-colors" />
+                        </div>
+                        <motion.div
+                          initial={{ opacity: 0, y: -5 }}
+                          whileHover={{ opacity: 1, y: 0 }}
+                          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-[#37352F] text-white px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap shadow-lg"
+                        >
+                          Add member
+                        </motion.div>
                       </div>
-                      {isSelected && (
-                        <CheckCircle size={14} className="text-[#37352F]/60" />
-                      )}
-                    </button>
-                  );
-                })}
-                
-                <div className="border-t border-[#E3E2E0] mt-2 pt-2">
-                  <button className="w-full flex items-center px-3 py-2 text-[13px] text-[#37352F]/60 hover:bg-[#37352F]/5">
-                    <Plus size={14} className="mr-3" />
-                    <span>Add family member</span>
-                  </button>
-                </div>
-              </div>
-            )}
+                    </motion.button>
+                  </div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
           
           {/* Search */}
@@ -790,16 +897,71 @@ const NotionLayoutInner = ({ children, title }) => {
           </div>
         )}
         
-        {/* User switching confirmation dialog */}
-        <ConfirmationDialog
-          isOpen={switchDialogOpen}
-          title="Switch User"
-          message={userToSwitchTo ? `Do you want to switch to ${userToSwitchTo.name}'s account?` : "Do you want to switch users?"}
-          confirmText="Switch"
-          cancelText="Cancel"
-          onConfirm={confirmUserSwitch}
-          onCancel={cancelUserSwitch}
-        />
+        {/* Localized confirm tooltip - appears next to clicked avatar */}
+        <AnimatePresence>
+          {confirmPosition && userToSwitchTo && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40"
+                onClick={cancelUserSwitch}
+              />
+
+              {/* Confirm tooltip positioned near clicked avatar */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, x: confirmPosition.x, y: confirmPosition.y }}
+                animate={{ opacity: 1, scale: 1, x: confirmPosition.x, y: confirmPosition.y }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="absolute z-50 pointer-events-auto"
+                style={{
+                  left: `${40 + confirmPosition.x + 10}px`, // Position to the right of avatar (very close)
+                  top: `${20 + confirmPosition.y - 20}px`     // Center vertically with avatar
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Tooltip card */}
+                <div className="relative">
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl blur-md opacity-60"></div>
+
+                  {/* Content */}
+                  <div className="relative bg-white rounded-xl shadow-2xl border-2 border-white p-3 min-w-[140px]">
+                    <p className="text-xs text-gray-600 mb-2">
+                      Switch to <span className="font-semibold text-gray-900">{userToSwitchTo.name}</span>?
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={cancelUserSwitch}
+                        className="flex-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={confirmUserSwitch}
+                        className="flex-1 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-lg transition-all shadow-sm"
+                      >
+                        Confirm
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Arrow pointing to avatar */}
+                  <div className="absolute -left-2 top-1/2 transform -translate-y-1/2">
+                    <div className="w-0 h-0 border-t-8 border-t-transparent border-r-8 border-r-white border-b-8 border-b-transparent"></div>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
   );
 };

@@ -1,0 +1,1248 @@
+{
+  "familyId": "palsson_family_simulation",
+  "startDate": "2025-01-01",
+  "endDate": "2025-12-31",
+  "duration": "0.04",
+  "stats": {
+    "calendarEvents": 324,
+    "tasksCreated": 431,
+    "documentsUploaded": 0,
+    "surveysCompleted": 0,
+    "allieInteractions": 292,
+    "messages": 0
+  },
+  "eventLog": [
+    {
+      "timestamp": "2025-01-01T00:00:00.000Z",
+      "day": 1,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Oly has gym clothes",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-01T00:00:00.000Z",
+      "day": 1,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "tegner",
+      "data": {
+        "title": "Swimming lessons with Dad",
+        "startHour": 16,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-01T00:00:00.000Z",
+      "day": 1,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-01T00:00:00.000Z",
+      "day": 1,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Plan weekend birthday party for Jake (Oly's friend)",
+        "category": "coordination",
+        "anticipationDays": 7
+      }
+    },
+    {
+      "timestamp": "2025-01-01T00:00:00.000Z",
+      "day": 1,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "kimberly",
+      "data": {
+        "title": "Family dinner",
+        "startHour": 18,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "kimberly",
+          "lillian",
+          "oly",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-02T00:00:00.000Z",
+      "day": 2,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Verify Lillian has volleyball uniform clean",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-02T00:00:00.000Z",
+      "day": 2,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "tegner",
+      "data": {
+        "title": "Put shoes in closet",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-02T00:00:00.000Z",
+      "day": 2,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "lillian",
+      "data": {
+        "title": "Volleyball practice",
+        "startHour": 16,
+        "duration": 90
+      }
+    },
+    {
+      "timestamp": "2025-01-02T00:00:00.000Z",
+      "day": 2,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "oly",
+      "data": {
+        "title": "Science club",
+        "startHour": 15.5,
+        "duration": 60
+      }
+    },
+    {
+      "timestamp": "2025-01-02T00:00:00.000Z",
+      "day": 2,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-02T00:00:00.000Z",
+      "day": 2,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "kimberly",
+      "data": {
+        "title": "Family dinner",
+        "startHour": 18,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "kimberly",
+          "lillian",
+          "oly",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-03T00:00:00.000Z",
+      "day": 3,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "tegner",
+      "data": {
+        "title": "Put shoes in closet",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-03T00:00:00.000Z",
+      "day": 3,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-03T00:00:00.000Z",
+      "day": 3,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-03T00:00:00.000Z",
+      "day": 3,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Schedule dentist appointments for all 3 kids",
+        "category": "coordination",
+        "anticipationDays": 4
+      }
+    },
+    {
+      "timestamp": "2025-01-03T00:00:00.000Z",
+      "day": 3,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "kimberly",
+      "data": {
+        "title": "Family dinner",
+        "startHour": 18,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "kimberly",
+          "lillian",
+          "oly",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-04T00:00:00.000Z",
+      "day": 4,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Verify Lillian has volleyball uniform clean",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-04T00:00:00.000Z",
+      "day": 4,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-04T00:00:00.000Z",
+      "day": 4,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Coordinate who picks up Oly from science club",
+        "category": "coordination",
+        "anticipationDays": 6
+      }
+    },
+    {
+      "timestamp": "2025-01-04T00:00:00.000Z",
+      "day": 4,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "kimberly",
+      "data": {
+        "title": "Family dinner",
+        "startHour": 18,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "kimberly",
+          "lillian",
+          "oly",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-05T00:00:00.000Z",
+      "day": 5,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Coordinate who picks up Oly from science club",
+        "category": "coordination",
+        "anticipationDays": 2
+      }
+    },
+    {
+      "timestamp": "2025-01-05T00:00:00.000Z",
+      "day": 5,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "kimberly",
+      "data": {
+        "title": "Family dinner",
+        "startHour": 18,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "kimberly",
+          "lillian",
+          "oly",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-06T00:00:00.000Z",
+      "day": 6,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Oly has gym clothes",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-06T00:00:00.000Z",
+      "day": 6,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-06T00:00:00.000Z",
+      "day": 6,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Research summer camp options for Oly",
+        "category": "coordination",
+        "anticipationDays": 6
+      }
+    },
+    {
+      "timestamp": "2025-01-07T00:00:00.000Z",
+      "day": 7,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Make lunches for all 3 kids",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-07T00:00:00.000Z",
+      "day": 7,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "tegner",
+      "data": {
+        "title": "Put shoes in closet",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-07T00:00:00.000Z",
+      "day": 7,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "lillian",
+      "data": {
+        "title": "Volleyball practice",
+        "startHour": 16,
+        "duration": 90
+      }
+    },
+    {
+      "timestamp": "2025-01-07T00:00:00.000Z",
+      "day": 7,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "oly",
+      "data": {
+        "title": "Study time (30 min)",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-07T00:00:00.000Z",
+      "day": 7,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-07T00:00:00.000Z",
+      "day": 7,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-07T00:00:00.000Z",
+      "day": 7,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Tegner needs ride to swimming",
+        "category": "coordination",
+        "anticipationDays": 5
+      }
+    },
+    {
+      "timestamp": "2025-01-08T00:00:00.000Z",
+      "day": 8,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Oly has gym clothes",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-08T00:00:00.000Z",
+      "day": 8,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "tegner",
+      "data": {
+        "title": "Swimming lessons with Dad",
+        "startHour": 16,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-08T00:00:00.000Z",
+      "day": 8,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "oly",
+      "data": {
+        "title": "Study time (30 min)",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-08T00:00:00.000Z",
+      "day": 8,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-08T00:00:00.000Z",
+      "day": 8,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "kimberly",
+      "data": {
+        "title": "Family dinner",
+        "startHour": 18,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "kimberly",
+          "lillian",
+          "oly",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-09T00:00:00.000Z",
+      "day": 9,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "tegner",
+      "data": {
+        "title": "Put shoes in closet",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-09T00:00:00.000Z",
+      "day": 9,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "lillian",
+      "data": {
+        "title": "Volleyball practice",
+        "startHour": 16,
+        "duration": 90
+      }
+    },
+    {
+      "timestamp": "2025-01-09T00:00:00.000Z",
+      "day": 9,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "oly",
+      "data": {
+        "title": "Science club",
+        "startHour": 15.5,
+        "duration": 60
+      }
+    },
+    {
+      "timestamp": "2025-01-09T00:00:00.000Z",
+      "day": 9,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "oly",
+      "data": {
+        "title": "Study time (30 min)",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-09T00:00:00.000Z",
+      "day": 9,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-10T00:00:00.000Z",
+      "day": 10,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Make lunches for all 3 kids",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-10T00:00:00.000Z",
+      "day": 10,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "tegner",
+      "data": {
+        "title": "Put shoes in closet",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-10T00:00:00.000Z",
+      "day": 10,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-11T00:00:00.000Z",
+      "day": 11,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Verify Lillian has volleyball uniform clean",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-11T00:00:00.000Z",
+      "day": 11,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-11T00:00:00.000Z",
+      "day": 11,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Research summer camp options for Oly",
+        "category": "coordination",
+        "anticipationDays": 4
+      }
+    },
+    {
+      "timestamp": "2025-01-12T00:00:00.000Z",
+      "day": 12,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Make lunches for all 3 kids",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-12T00:00:00.000Z",
+      "day": 12,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-12T00:00:00.000Z",
+      "day": 12,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-13T00:00:00.000Z",
+      "day": 13,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Tegner needs new shoes - remind Stefan",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-13T00:00:00.000Z",
+      "day": 13,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "oly",
+      "data": {
+        "title": "Study time (30 min)",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-13T00:00:00.000Z",
+      "day": 13,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-13T00:00:00.000Z",
+      "day": 13,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-14T00:00:00.000Z",
+      "day": 14,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "lillian",
+      "data": {
+        "title": "Volleyball practice",
+        "startHour": 16,
+        "duration": 90
+      }
+    },
+    {
+      "timestamp": "2025-01-14T00:00:00.000Z",
+      "day": 14,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-14T00:00:00.000Z",
+      "day": 14,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-14T00:00:00.000Z",
+      "day": 14,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Schedule dentist appointments for all 3 kids",
+        "category": "coordination",
+        "anticipationDays": 6
+      }
+    },
+    {
+      "timestamp": "2025-01-15T00:00:00.000Z",
+      "day": 15,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Verify Lillian has volleyball uniform clean",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-15T00:00:00.000Z",
+      "day": 15,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "tegner",
+      "data": {
+        "title": "Swimming lessons with Dad",
+        "startHour": 16,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-16T00:00:00.000Z",
+      "day": 16,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Stefan can take Oly to science club Thursday",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-16T00:00:00.000Z",
+      "day": 16,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "lillian",
+      "data": {
+        "title": "Volleyball practice",
+        "startHour": 16,
+        "duration": 90
+      }
+    },
+    {
+      "timestamp": "2025-01-16T00:00:00.000Z",
+      "day": 16,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "oly",
+      "data": {
+        "title": "Science club",
+        "startHour": 15.5,
+        "duration": 60
+      }
+    },
+    {
+      "timestamp": "2025-01-16T00:00:00.000Z",
+      "day": 16,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "oly",
+      "data": {
+        "title": "Study time (30 min)",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-16T00:00:00.000Z",
+      "day": 16,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-16T00:00:00.000Z",
+      "day": 16,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-16T00:00:00.000Z",
+      "day": 16,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Stefan can cover Wednesday swimming",
+        "category": "coordination",
+        "anticipationDays": 7
+      }
+    },
+    {
+      "timestamp": "2025-01-17T00:00:00.000Z",
+      "day": 17,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Verify Lillian has volleyball uniform clean",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-17T00:00:00.000Z",
+      "day": 17,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-17T00:00:00.000Z",
+      "day": 17,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-18T00:00:00.000Z",
+      "day": 18,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Tegner needs new shoes - remind Stefan",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-18T00:00:00.000Z",
+      "day": 18,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-18T00:00:00.000Z",
+      "day": 18,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-18T00:00:00.000Z",
+      "day": 18,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Plan weekend birthday party for Jake (Oly's friend)",
+        "category": "coordination",
+        "anticipationDays": 4
+      }
+    },
+    {
+      "timestamp": "2025-01-19T00:00:00.000Z",
+      "day": 19,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Make lunches for all 3 kids",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-19T00:00:00.000Z",
+      "day": 19,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-19T00:00:00.000Z",
+      "day": 19,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-19T00:00:00.000Z",
+      "day": 19,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Verify Lillian can get to volleyball practice",
+        "category": "coordination",
+        "anticipationDays": 5
+      }
+    },
+    {
+      "timestamp": "2025-01-20T00:00:00.000Z",
+      "day": 20,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Plan weekend birthday party for Jake (Oly's friend)",
+        "category": "coordination",
+        "anticipationDays": 2
+      }
+    },
+    {
+      "timestamp": "2025-01-21T00:00:00.000Z",
+      "day": 21,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Stefan can take Oly to science club Thursday",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-21T00:00:00.000Z",
+      "day": 21,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "lillian",
+      "data": {
+        "title": "Volleyball practice",
+        "startHour": 16,
+        "duration": 90
+      }
+    },
+    {
+      "timestamp": "2025-01-22T00:00:00.000Z",
+      "day": 22,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Stefan can take Oly to science club Thursday",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-22T00:00:00.000Z",
+      "day": 22,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "tegner",
+      "data": {
+        "title": "Put shoes in closet",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-22T00:00:00.000Z",
+      "day": 22,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "tegner",
+      "data": {
+        "title": "Swimming lessons with Dad",
+        "startHour": 16,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-22T00:00:00.000Z",
+      "day": 22,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "oly",
+      "data": {
+        "title": "Study time (30 min)",
+        "quality": "okay"
+      }
+    },
+    {
+      "timestamp": "2025-01-22T00:00:00.000Z",
+      "day": 22,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-22T00:00:00.000Z",
+      "day": 22,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-22T00:00:00.000Z",
+      "day": 22,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Coordinate who picks up Oly from science club",
+        "category": "coordination",
+        "anticipationDays": 1
+      }
+    },
+    {
+      "timestamp": "2025-01-22T00:00:00.000Z",
+      "day": 22,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "kimberly",
+      "data": {
+        "title": "Family dinner",
+        "startHour": 18,
+        "duration": 60,
+        "attendees": [
+          "stefan",
+          "kimberly",
+          "lillian",
+          "oly",
+          "tegner"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-01-23T00:00:00.000Z",
+      "day": 23,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Verify Lillian has volleyball uniform clean",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-23T00:00:00.000Z",
+      "day": 23,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "lillian",
+      "data": {
+        "title": "Volleyball practice",
+        "startHour": 16,
+        "duration": 90
+      }
+    },
+    {
+      "timestamp": "2025-01-23T00:00:00.000Z",
+      "day": 23,
+      "phase": "chaos",
+      "eventType": "calendar_event",
+      "agent": "oly",
+      "data": {
+        "title": "Science club",
+        "startHour": 15.5,
+        "duration": 60
+      }
+    },
+    {
+      "timestamp": "2025-01-23T00:00:00.000Z",
+      "day": 23,
+      "phase": "chaos",
+      "eventType": "allie_interaction",
+      "agent": "oly",
+      "data": {
+        "type": "ask_question",
+        "topic": "science",
+        "enthusiasm": 0.95
+      }
+    },
+    {
+      "timestamp": "2025-01-23T00:00:00.000Z",
+      "day": 23,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-25T00:00:00.000Z",
+      "day": 25,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Stefan can take Oly to science club Thursday",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-25T00:00:00.000Z",
+      "day": 25,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-26T00:00:00.000Z",
+      "day": 26,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Verify Lillian has volleyball uniform clean",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    },
+    {
+      "timestamp": "2025-01-26T00:00:00.000Z",
+      "day": 26,
+      "phase": "chaos",
+      "eventType": "chore_completed",
+      "agent": "lillian",
+      "data": {
+        "title": "Water plants",
+        "quality": "good"
+      }
+    },
+    {
+      "timestamp": "2025-01-27T00:00:00.000Z",
+      "day": 27,
+      "phase": "chaos",
+      "eventType": "task_created",
+      "agent": "kimberly",
+      "data": {
+        "title": "Check if Stefan can take Oly to science club Thursday",
+        "category": "household",
+        "anticipationDays": 0
+      }
+    }
+  ]
+}

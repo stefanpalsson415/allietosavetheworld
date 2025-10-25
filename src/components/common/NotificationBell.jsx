@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, MessageSquare, AtSign, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChatDrawer } from '../../contexts/ChatDrawerContext';
@@ -122,100 +123,158 @@ const NotificationBell = () => {
         )}
       </button>
 
-      {/* Dropdown */}
-      {showDropdown && (
-        <>
-          {/* Click outside to close */}
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setShowDropdown(false)}
-          />
-          
-          {/* Notification Dropdown */}
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-            {/* Header */}
-            <div className="flex items-center justify-between p-3 border-b">
-              <h3 className="font-semibold text-gray-800">Notifications</h3>
-              <div className="flex items-center gap-2">
-                {notifications.length > 0 && (
-                  <button
-                    onClick={handleMarkAllAsRead}
-                    className="text-xs text-blue-600 hover:text-blue-700"
-                  >
-                    Mark all as read
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowDropdown(false)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+      {/* Reversed quarter-circle arc notification popout */}
+      <AnimatePresence>
+        {showDropdown && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40"
+              onClick={() => setShowDropdown(false)}
+            />
 
-            {/* Notifications List */}
-            <div className="max-h-96 overflow-y-auto">
+            {/* Notifications in reversed quarter-circle arc */}
+            <div className="absolute right-0 top-0 pointer-events-none z-50" style={{ width: '300px', height: '300px' }}>
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <Bell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No new notifications</p>
-                </div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                  animate={{ opacity: 1, scale: 1, x: -120, y: 60 }}
+                  exit={{ opacity: 0, scale: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className="absolute pointer-events-auto"
+                  style={{ right: '0px', top: '0px' }}
+                >
+                  <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-100 p-6 w-64">
+                    <div className="text-center text-gray-500">
+                      <Bell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p className="text-sm">No new notifications</p>
+                    </div>
+                  </div>
+                </motion.div>
               ) : (
-                <div className="divide-y divide-gray-100">
-                  {notifications.map((notification) => (
-                    <button
+                notifications.slice(0, 5).map((notification, index, arr) => {
+                  // Reversed quarter-circle: from 270° to 360° (top-right to bottom)
+                  const radius = 140;
+                  const angleStep = 90 / (arr.length + 1);
+                  const angle = 270 + angleStep * (index + 1); // Start at 270° (top)
+                  const angleRad = (angle * Math.PI) / 180;
+
+                  // Calculate position (origin at top-right)
+                  const x = Math.cos(angleRad) * radius;
+                  const y = Math.sin(angleRad) * radius;
+
+                  return (
+                    <motion.button
                       key={notification.id}
+                      initial={{
+                        opacity: 0,
+                        scale: 0,
+                        x: 0,
+                        y: 0
+                      }}
+                      animate={{
+                        opacity: 1,
+                        scale: 1,
+                        x,
+                        y
+                      }}
+                      exit={{
+                        opacity: 0,
+                        scale: 0
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 25,
+                        delay: index * 0.05
+                      }}
                       onClick={() => handleNotificationClick(notification)}
-                      className="w-full p-3 hover:bg-gray-50 transition-colors text-left"
+                      className="absolute pointer-events-auto group"
+                      style={{
+                        right: '0px',
+                        top: '0px'
+                      }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <div className="flex items-start gap-3">
-                        {/* Icon */}
-                        <div className="mt-0.5">
-                          {getNotificationIcon(notification.type)}
+                      {/* Notification card with glow */}
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl blur-md opacity-0 group-hover:opacity-60 transition-opacity duration-300"></div>
+                        <div className="relative bg-white rounded-2xl shadow-lg border-2 border-white p-4 w-56 hover:shadow-xl transition-shadow">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 mt-0.5">
+                              {getNotificationIcon(notification.type)}
+                            </div>
+                            <div className="flex-1 min-w-0 text-left">
+                              <p className="text-xs font-semibold text-gray-900 truncate">
+                                {notification.title}
+                              </p>
+                              <p className="text-[10px] text-gray-600 line-clamp-2 mt-0.5">
+                                {notification.body}
+                              </p>
+                              <p className="text-[9px] text-gray-400 mt-1">
+                                {formatTimestamp(notification.createdAt)}
+                              </p>
+                            </div>
+                            {!notification.read && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                            )}
+                          </div>
                         </div>
-                        
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-gray-600 truncate mt-0.5">
-                            {notification.body}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {formatTimestamp(notification.createdAt)}
-                          </p>
-                        </div>
-                        
-                        {/* Unread indicator */}
-                        {!notification.read && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                        )}
                       </div>
-                    </button>
-                  ))}
-                </div>
+                    </motion.button>
+                  );
+                })
+              )}
+
+              {/* Mark all as read button at the end of arc */}
+              {notifications.length > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    x: Math.cos((365 * Math.PI) / 180) * 140,
+                    y: Math.sin((365 * Math.PI) / 180) * 140
+                  }}
+                  exit={{ opacity: 0, scale: 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 25,
+                    delay: notifications.length * 0.05
+                  }}
+                  onClick={handleMarkAllAsRead}
+                  className="absolute pointer-events-auto group"
+                  style={{
+                    right: '0px',
+                    top: '0px'
+                  }}
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full blur-md opacity-0 group-hover:opacity-70 transition-opacity duration-300"></div>
+                    <div className="relative bg-white rounded-full p-3 shadow-lg border-2 border-white w-14 h-14 flex items-center justify-center hover:border-green-500 transition-colors">
+                      <Check size={20} className="text-gray-600 group-hover:text-green-500 transition-colors" />
+                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      whileHover={{ opacity: 1, y: 0 }}
+                      className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap shadow-lg"
+                    >
+                      Mark all read
+                    </motion.div>
+                  </div>
+                </motion.button>
               )}
             </div>
-
-            {/* Footer */}
-            {notifications.length > 0 && (
-              <div className="p-2 border-t">
-                <button
-                  onClick={() => {
-                    setShowDropdown(false);
-                    // Navigate to full notifications page if you have one
-                  }}
-                  className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-1"
-                >
-                  View all notifications
-                </button>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

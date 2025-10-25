@@ -4,6 +4,52 @@ import { db } from './firebase';
 import { doc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import FamilyKnowledgeGraph from './FamilyKnowledgeGraph';
 
+// Simple rate limiter to prevent API rate limit errors
+class RateLimiter {
+  constructor(delayMs = 2000) {
+    this.delayMs = delayMs;
+    this.lastCallTime = 0;
+    this.queue = Promise.resolve();
+  }
+
+  async throttle() {
+    // Use a queue to ensure calls are truly sequential
+    return this.queue = this.queue.then(async () => {
+      const now = Date.now();
+      const timeSinceLastCall = now - this.lastCallTime;
+
+      if (timeSinceLastCall < this.delayMs) {
+        const waitTime = this.delayMs - timeSinceLastCall;
+        console.log(`⏱️ Rate limiting: waiting ${waitTime}ms before next API call`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+
+      this.lastCallTime = Date.now();
+    });
+  }
+
+  // Retry logic for rate limit errors
+  async withRetry(apiCall, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.throttle();
+        return await apiCall();
+      } catch (error) {
+        if (error.message && error.message.includes('429') && attempt < maxRetries) {
+          const backoffMs = Math.min(1000 * Math.pow(2, attempt), 8000); // Exponential backoff, max 8 seconds
+          console.log(`⚠️ Rate limit hit, retry ${attempt}/${maxRetries} after ${backoffMs}ms`);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+}
+
+// Create a shared rate limiter instance (2 seconds between calls with queue)
+const rateLimiter = new RateLimiter(2000);
+
 class FixedUniversalAIProcessor {
   static async processInboxItem(itemId, item, familyMembers = []) {
     try {
@@ -102,10 +148,12 @@ class FixedUniversalAIProcessor {
         const summaryPrompt = `Summarize this ${item.source} in one short sentence:
 ${fullContent}`;
 
-        const summaryResponse = await ClaudeService.generateResponse(
-          [{ role: 'user', content: summaryPrompt }],
-          { temperature: 0.3, max_tokens: 100 }
-        );
+        const summaryResponse = await rateLimiter.withRetry(async () => {
+          return await ClaudeService.generateResponse(
+            [{ role: 'user', content: summaryPrompt }],
+            { temperature: 0.3, max_tokens: 100 }
+          );
+        });
 
         summary = summaryResponse.trim() || 'Email received';
       } catch (summaryError) {
@@ -122,10 +170,12 @@ ${fullContent}`;
 ${fullContent}
 Reply with just the category word.`;
 
-        const categoryResponse = await ClaudeService.generateResponse(
-          [{ role: 'user', content: categoryPrompt }],
-          { temperature: 0.3, max_tokens: 10 }
-        );
+        const categoryResponse = await rateLimiter.withRetry(async () => {
+          return await ClaudeService.generateResponse(
+            [{ role: 'user', content: categoryPrompt }],
+            { temperature: 0.3, max_tokens: 10 }
+          );
+        });
 
         category = categoryResponse.trim().toLowerCase() || 'general';
       } catch (categoryError) {
@@ -154,10 +204,12 @@ If it's an appointment, include "Prepare questions" as a task.
 Format each action on a new line like:
 TYPE: TITLE | DETAILS (include full date, time, location)`;
 
-          const actionsResponse = await ClaudeService.generateResponse(
-            [{ role: 'user', content: actionsPrompt }],
-            { temperature: 0.3, max_tokens: 500 }
-          );
+          const actionsResponse = await rateLimiter.withRetry(async () => {
+            return await ClaudeService.generateResponse(
+              [{ role: 'user', content: actionsPrompt }],
+              { temperature: 0.3, max_tokens: 500 }
+            );
+          });
 
           // Parse actions
           const actionLines = actionsResponse.split('\n').filter(line => line.trim());

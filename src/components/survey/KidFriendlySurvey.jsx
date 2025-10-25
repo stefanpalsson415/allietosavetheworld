@@ -260,12 +260,12 @@ useEffect(() => {
     };
   }, []);
 
-  // Add keyboard shortcuts for M and P keys
+  // Add keyboard shortcuts for M, P, and B keys
   useEffect(() => {
     // Function to handle key press
     const handleKeyPress = (e) => {
       if (isProcessing) return; // Prevent actions while processing
-      
+
       // 'M' key selects Mama
       if (e.key.toLowerCase() === 'm') {
         handleSelectParent('Mama');
@@ -273,6 +273,10 @@ useEffect(() => {
       // 'P' key selects Papa
       else if (e.key.toLowerCase() === 'p') {
         handleSelectParent('Papa');
+      }
+      // 'B' key selects Both
+      else if (e.key.toLowerCase() === 'b' && !(e.ctrlKey || e.metaKey)) {
+        handleSelectParent('Draw');
       }
     };
     
@@ -327,14 +331,20 @@ useEffect(() => {
     
     // Generate adaptive questions with full context AND child's ID
     questionSet = generateWeeklyQuestions(
-      currentWeek, 
+      currentWeek,
       true, // Pass true to indicate child
-      familyData, 
+      familyData,
       previousResponses,
       [], // No task completion data for kids
       selectedUser?.id // Pass the child's ID for personalization
     );
-    
+
+    // Ensure questionSet is always an array (defensive check)
+    if (!Array.isArray(questionSet)) {
+      console.warn('generateWeeklyQuestions returned non-array, using fallback:', questionSet);
+      questionSet = fullQuestionSet; // Fallback to full question set
+    }
+
     console.log(`Generated ${questionSet?.length || 0} personalized weekly questions for child: ${selectedUser?.name}`);
   } else {
     console.log(`Using full question set with ${fullQuestionSet.length} questions`);
@@ -1040,21 +1050,21 @@ const isValidImageUrl = (url) => {
       
       {/* Parent selection */}
       <div className="flex justify-center items-center mb-6">
-        <div className="flex w-full max-w-md justify-between items-center">
+        <div className="flex w-full max-w-lg justify-between items-center">
           {/* Mama */}
           <div className="flex flex-col items-center">
             <button
               onClick={() => !isProcessing && !isSubmitting && handleSelectParent('Mama')}
-              className={`w-28 h-28 sm:w-36 sm:h-36 rounded-full focus:outline-none border-4 overflow-hidden transition-all transform hover:scale-105 ${
-                selectedParent === 'Mama' 
-                  ? 'border-purple-500 scale-110' 
+              className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full focus:outline-none border-4 overflow-hidden transition-all transform hover:scale-105 ${
+                selectedParent === 'Mama'
+                  ? 'border-purple-500 scale-110'
                   : 'border-purple-200 hover:border-purple-300'
               } ${(isProcessing || isSubmitting) ? 'opacity-70 cursor-not-allowed' : ''}`}
               aria-label="Select Mama"
               disabled={isProcessing || isSubmitting}
             >
-              <img 
-                src={parents.mama.image} 
+              <img
+                src={parents.mama.image}
                 alt="Mama"
                 className="w-full h-full object-cover"
               />
@@ -1062,28 +1072,40 @@ const isValidImageUrl = (url) => {
             <p className="mt-2 font-medium text-black">{parents.mama.name}</p>
             <p className="text-xs text-gray-600">(press M key)</p>
           </div>
-          
-          {/* Center divider */}
-          <div className="flex flex-col items-center">
-            <div className="h-32 sm:h-40 w-px bg-gray-300"></div>
-            <div className="bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center text-gray-800 font-bold text-sm absolute">
-              OR
-            </div>
+
+          {/* Both button in the middle */}
+          <div className="flex flex-col items-center mx-2">
+            <button
+              onClick={() => !isProcessing && !isSubmitting && handleSelectParent('Draw')}
+              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full focus:outline-none border-4 transition-all transform hover:scale-105 ${
+                selectedParent === 'Draw'
+                  ? 'border-gray-600 scale-110 bg-gray-100'
+                  : 'border-gray-300 hover:border-gray-400 bg-white'
+              } ${(isProcessing || isSubmitting) ? 'opacity-70 cursor-not-allowed' : ''}`}
+              aria-label="Select Both"
+              disabled={isProcessing || isSubmitting}
+            >
+              <div className="flex flex-col items-center justify-center h-full">
+                <span className="text-2xl mb-1">👨‍👩‍👧‍👦</span>
+                <span className="text-xs font-medium text-gray-700">Both</span>
+              </div>
+            </button>
+            <p className="text-xs text-gray-600 mt-2">(press B key)</p>
           </div>
-          
+
           {/* Papa */}
           <div className="flex flex-col items-center">
             <button
               onClick={() => !isProcessing && !isSubmitting && handleSelectParent('Papa')}
-              className={`w-28 h-28 sm:w-36 sm:h-36 rounded-full focus:outline-none border-4 overflow-hidden transition-all transform hover:scale-105 ${
-                selectedParent === 'Papa' 
-                  ? 'border-blue-500 scale-110' 
+              className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full focus:outline-none border-4 overflow-hidden transition-all transform hover:scale-105 ${
+                selectedParent === 'Papa'
+                  ? 'border-blue-500 scale-110'
                   : 'border-blue-200 hover:border-blue-300'
               } ${(isProcessing || isSubmitting) ? 'opacity-70 cursor-not-allowed' : ''}`}
               aria-label="Select Papa"
               disabled={isProcessing || isSubmitting}
             >
-              <img 
+              <img
                 src={parents.papa.image}
                 alt="Papa"
                 className="w-full h-full object-cover"

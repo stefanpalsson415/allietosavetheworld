@@ -486,6 +486,43 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && belongsToFamily(resource.data.familyId);
     }
 
+    // Family documents collection for unified inbox
+    match /familyDocuments/{documentId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow delete: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Family contacts collection for unified inbox
+    match /familyContacts/{contactId} {
+      allow read: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow create: if isAuthenticated() && belongsToFamily(request.resource.data.familyId);
+      allow update: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+      allow delete: if isAuthenticated() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Family Balance Score tracking for usage-based pricing
+    match /familyBalanceScores/{familyId} {
+      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      allow create: if isAuthenticated() && belongsToFamily(familyId);
+      allow update: if isAuthenticated() && belongsToFamily(familyId);
+      allow delete: if false; // Scores should not be deleted (billing history)
+
+      // Historical score data subcollection
+      match /history/{scoreId} {
+        allow read: if isAuthenticated() && belongsToFamily(familyId);
+        allow create: if isAuthenticated() && (
+          belongsToFamily(familyId) ||
+          // Allow Cloud Function to record weekly scores
+          request.auth.uid == 'service-account' ||
+          request.resource.data.createdBy == 'allie-system'
+        );
+        allow update: if false; // History is immutable
+        allow delete: if false; // Keep full history for billing
+      }
+    }
+
     // Families collection - MUST be before default rule
     match /families/{familyId} {
       // Habits2 subcollection for HabitService2

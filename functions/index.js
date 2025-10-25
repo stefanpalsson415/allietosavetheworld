@@ -2093,3 +2093,940 @@ exports.syncChoreToNeo4j = functions.firestore
 exports.syncFairPlayToNeo4j = functions.firestore
   .document('fairPlayResponses/{responseId}')
   .onCreate(neo4jSyncModule.onFairPlayResponseCreate);
+
+// Sync survey completions → Person nodes + cognitive load + ELO ratings (Week 1: Flow 1 → KG)
+exports.syncSurveyToNeo4j = functions.firestore
+  .document('surveyResponses/{surveyId}')
+  .onWrite(neo4jSyncModule.onSurveyWrite);
+
+// ========================================
+// STRIPE PAYMENT FUNCTIONS
+// ========================================
+
+const stripeService = require('./services/stripe-service');
+
+/**
+ * Create Stripe Checkout Session
+ * Called from frontend when user selects a plan
+ */
+exports.createCheckoutSession = functions.https.onCall(async (data, context) => {
+  // Verify user is authenticated
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { priceId, familyData } = data;
+
+  if (!priceId) {
+    throw new functions.https.HttpsError('invalid-argument', 'priceId is required');
+  }
+
+  const customerEmail = context.auth.token.email;
+  const appUrl = functions.config().app?.url || 'https://checkallie.com';
+  const successUrl = `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${appUrl}/payment`;
+
+  // Store family data temporarily in Firestore
+  // (Stripe metadata is limited, so we store full data separately)
+  const tempDataRef = admin.firestore().collection('tempCheckoutData').doc();
+  await tempDataRef.set({
+    familyData: familyData,
+    email: customerEmail,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)) // 24 hours
+  });
+
+  const result = await stripeService.createCheckoutSession({
+    priceId,
+    customerEmail,
+    familyData: {
+      familyName: familyData.familyName,
+      tempDataId: tempDataRef.id // Store reference to full data
+    },
+    successUrl,
+    cancelUrl
+  });
+
+  if (!result.success) {
+    throw new functions.https.HttpsError('internal', result.error);
+  }
+
+  return result;
+});
+
+/**
+ * Stripe Webhook Handler
+ * Handles payment events from Stripe
+ */
+exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+
+  let event;
+
+  try {
+    event = stripeService.constructWebhookEvent(req.rawBody, sig);
+  } catch (err) {
+    console.error('❌ Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log(`📬 Webhook event type: ${event.type}`);
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object);
+        break;
+
+      case 'customer.subscription.updated':
+        await stripeService.handleSubscriptionUpdate(event.data.object);
+        break;
+
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object);
+        break;
+
+      case 'invoice.payment_failed':
+        await handlePaymentFailed(event.data.object);
+        break;
+
+      default:
+        console.log(`ℹ️ Unhandled event type: ${event.type}`);
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('❌ Error processing webhook:', error);
+    res.status(500).send('Webhook processing failed');
+  }
+});
+
+/**
+ * Handle successful checkout
+ * Create the family account after payment succeeds
+ */
+async function handleCheckoutSessionCompleted(session) {
+  console.log('✅ Checkout completed for session:', session.id);
+
+  const tempDataId = session.metadata.tempDataId;
+  if (!tempDataId) {
+    console.error('❌ No tempDataId in session metadata');
+    return;
+  }
+
+  // Retrieve full family data from temp storage
+  const tempDataDoc = await admin.firestore()
+    .collection('tempCheckoutData')
+    .doc(tempDataId)
+    .get();
+
+  if (!tempDataDoc.exists) {
+    console.error('❌ Temp checkout data not found:', tempDataId);
+    return;
+  }
+
+  const { familyData, email } = tempDataDoc.data();
+
+  // Store the data and let the success page handle creation
+  await admin.firestore()
+    .collection('completedCheckouts')
+    .doc(session.id)
+    .set({
+      sessionId: session.id,
+      familyData: familyData,
+      email: email,
+      subscription: {
+        id: session.subscription,
+        customerId: session.customer
+      },
+      status: 'pending_family_creation',
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+  // Clean up temp data
+  await tempDataDoc.ref.delete();
+
+  console.log('✅ Checkout data stored, ready for family creation');
+
+  // Send welcome email
+  try {
+    await sendPaymentConfirmationEmail(email, familyData.familyName, session);
+    console.log('✅ Welcome email sent to:', email);
+  } catch (error) {
+    console.error('❌ Error sending welcome email:', error);
+  }
+}
+
+async function handleSubscriptionDeleted(subscription) {
+  const familyId = subscription.metadata.familyId;
+
+  if (familyId) {
+    await admin.firestore()
+      .collection('families')
+      .doc(familyId)
+      .update({
+        'subscription.status': 'canceled',
+        'subscription.canceledAt': admin.firestore.FieldValue.serverTimestamp()
+      });
+
+    // Send cancellation email
+    try {
+      await sendSubscriptionCanceledEmail(familyId);
+      console.log('✅ Cancellation email sent for family:', familyId);
+    } catch (error) {
+      console.error('❌ Error sending cancellation email:', error);
+    }
+  }
+}
+
+async function handlePaymentFailed(invoice) {
+  console.error('❌ Payment failed for invoice:', invoice.id);
+
+  // Send email notification to customer
+  try {
+    await sendPaymentFailedEmail(invoice.customer_email, invoice);
+    console.log('✅ Payment failed email sent to:', invoice.customer_email);
+  } catch (error) {
+    console.error('❌ Error sending payment failed email:', error);
+  }
+}
+
+/**
+ * Send payment confirmation email
+ */
+async function sendPaymentConfirmationEmail(email, familyName, session) {
+  if (!sgMail || !functions.config().sendgrid?.api_key) {
+    console.warn('⚠️ SendGrid not configured, skipping email');
+    return;
+  }
+
+  const msg = {
+    to: email,
+    from: functions.config().sendgrid.from_email || 'stefan@checkallie.com',
+    subject: 'Welcome to Allie - Payment Confirmed! 🎉',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #000;">Welcome to Allie, ${familyName}!</h1>
+        <p style="font-size: 16px;">Your payment has been successfully processed.</p>
+        <p style="font-size: 16px;">You now have full access to all of Allie's features:</p>
+        <ul style="font-size: 14px;">
+          <li>AI-powered family management</li>
+          <li>Calendar integration & conflict resolution</li>
+          <li>Fair Play task distribution</li>
+          <li>Knowledge Graph insights</li>
+          <li>Multi-person voice interviews</li>
+        </ul>
+        <p style="font-size: 16px; margin-top: 30px;">
+          <a href="https://checkallie.com/dashboard" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+            Go to Dashboard
+          </a>
+        </p>
+        <p style="font-size: 12px; color: #666; margin-top: 30px;">
+          Questions? Reply to this email or contact us at stefan@checkallie.com
+        </p>
+      </div>
+    `
+  };
+
+  await sgMail.send(msg);
+}
+
+/**
+ * Send payment failed email
+ */
+async function sendPaymentFailedEmail(email, invoice) {
+  if (!sgMail || !functions.config().sendgrid?.api_key) {
+    console.warn('⚠️ SendGrid not configured, skipping email');
+    return;
+  }
+
+  const msg = {
+    to: email,
+    from: functions.config().sendgrid.from_email || 'stefan@checkallie.com',
+    subject: 'Allie - Payment Issue',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #000;">Payment Issue</h1>
+        <p style="font-size: 16px;">We weren't able to process your payment for Allie.</p>
+        <p style="font-size: 16px;">This could be due to:</p>
+        <ul style="font-size: 14px;">
+          <li>Insufficient funds</li>
+          <li>Expired credit card</li>
+          <li>Billing address mismatch</li>
+        </ul>
+        <p style="font-size: 16px; margin-top: 30px;">
+          Please update your payment method to continue using Allie.
+        </p>
+        <p style="font-size: 16px;">
+          <a href="https://checkallie.com/settings/billing" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+            Update Payment Method
+          </a>
+        </p>
+        <p style="font-size: 12px; color: #666; margin-top: 30px;">
+          Questions? Reply to this email or contact us at stefan@checkallie.com
+        </p>
+      </div>
+    `
+  };
+
+  await sgMail.send(msg);
+}
+
+/**
+ * Send subscription canceled email
+ */
+async function sendSubscriptionCanceledEmail(familyId) {
+  if (!sgMail || !functions.config().sendgrid?.api_key) {
+    console.warn('⚠️ SendGrid not configured, skipping email');
+    return;
+  }
+
+  // Get family data to get email
+  const familyDoc = await admin.firestore().collection('families').doc(familyId).get();
+  if (!familyDoc.exists) {
+    console.error('Family not found:', familyId);
+    return;
+  }
+
+  const familyData = familyDoc.data();
+  const email = familyData.email || familyData.primaryEmail;
+
+  if (!email) {
+    console.error('No email found for family:', familyId);
+    return;
+  }
+
+  const msg = {
+    to: email,
+    from: functions.config().sendgrid.from_email || 'stefan@checkallie.com',
+    subject: 'Allie - Subscription Canceled',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #000;">We're sorry to see you go</h1>
+        <p style="font-size: 16px;">Your Allie subscription has been canceled.</p>
+        <p style="font-size: 16px;">Your access will continue until the end of your current billing period.</p>
+        <p style="font-size: 16px; margin-top: 30px;">
+          Changed your mind?
+        </p>
+        <p style="font-size: 16px;">
+          <a href="https://checkallie.com/settings/billing" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+            Reactivate Subscription
+          </a>
+        </p>
+        <p style="font-size: 12px; color: #666; margin-top: 30px;">
+          We'd love to hear why you're leaving. Reply to this email with feedback.
+        </p>
+      </div>
+    `
+  };
+
+  await sgMail.send(msg);
+}
+
+/**
+ * Cancel subscription (callable from frontend)
+ */
+exports.cancelSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { subscriptionId } = data;
+  return await stripeService.cancelSubscription(subscriptionId);
+});
+
+/**
+ * Reactivate subscription (callable from frontend)
+ */
+exports.reactivateSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { subscriptionId } = data;
+  return await stripeService.reactivateSubscription(subscriptionId);
+});
+
+/**
+ * Update subscription metadata with familyId
+ * Called after family creation to link subscription to family
+ */
+exports.updateSubscriptionMetadata = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { subscriptionId, familyId } = data;
+
+  if (!subscriptionId || !familyId) {
+    throw new functions.https.HttpsError('invalid-argument', 'subscriptionId and familyId are required');
+  }
+
+  try {
+    // Get Stripe instance
+    const stripeKey = functions.config().stripe?.secret_key || process.env.STRIPE_SECRET_KEY;
+    if (!stripeKey) {
+      throw new functions.https.HttpsError('internal', 'Stripe not configured');
+    }
+    const stripe = require('stripe')(stripeKey);
+
+    // Update subscription metadata
+    await stripe.subscriptions.update(subscriptionId, {
+      metadata: { familyId }
+    });
+
+    // Also update the family document with subscription details
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    await admin.firestore()
+      .collection('families')
+      .doc(familyId)
+      .update({
+        subscription: {
+          stripeCustomerId: subscription.customer,
+          stripeSubscriptionId: subscription.id,
+          status: subscription.status,
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          priceId: subscription.items.data[0].price.id,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }
+      });
+
+    console.log(`✅ Linked subscription ${subscriptionId} to family ${familyId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error updating subscription metadata:', error);
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});
+
+/**
+ * Weekly Balance Score Tracker
+ * Runs every Sunday at midnight PST to record balance scores for usage-based pricing
+ * This creates the historical data needed for billing and analytics
+ */
+exports.weeklyBalanceScoreTracker = functions.pubsub
+  .schedule('0 0 * * 0') // Every Sunday at midnight
+  .timeZone('America/Los_Angeles') // PST
+  .onRun(async (context) => {
+    console.log('🔄 Starting weekly balance score tracking...');
+
+    try {
+      // Get all families with active subscriptions
+      const familiesSnapshot = await admin.firestore()
+        .collection('families')
+        .where('subscription.status', '==', 'active')
+        .get();
+
+      console.log(`Found ${familiesSnapshot.size} families with active subscriptions`);
+
+      const results = {
+        success: [],
+        errors: [],
+        skipped: []
+      };
+
+      // Process each family
+      for (const familyDoc of familiesSnapshot.docs) {
+        const familyId = familyDoc.id;
+        const familyData = familyDoc.data();
+
+        try {
+          // Only track for usage-based pricing customers
+          const subscriptionMetadata = familyData.subscription?.metadata || {};
+          if (subscriptionMetadata.pricingPlan !== 'usage-based') {
+            results.skipped.push(familyId);
+            continue;
+          }
+
+          // Calculate balance score using the same logic as FamilyBalanceScoreService
+          const scoreData = await calculateBalanceScoreForFamily(familyId);
+
+          if (!scoreData) {
+            results.errors.push({ familyId, error: 'Failed to calculate score' });
+            continue;
+          }
+
+          // Generate week ID (format: "2025-W43")
+          const now = new Date();
+          const weekNumber = getISOWeek(now);
+          const year = now.getFullYear();
+          const weekId = `${year}-W${String(weekNumber).padStart(2, '0')}`;
+
+          // Save to history subcollection
+          await admin.firestore()
+            .collection('familyBalanceScores')
+            .doc(familyId)
+            .collection('history')
+            .doc(weekId)
+            .set({
+              ...scoreData,
+              weekId,
+              recordedAt: admin.firestore.FieldValue.serverTimestamp(),
+              createdBy: 'allie-system',
+              type: 'weekly'
+            });
+
+          console.log(`✅ Recorded score for family ${familyId}: ${scoreData.totalScore}`);
+          results.success.push(familyId);
+
+        } catch (error) {
+          console.error(`❌ Error processing family ${familyId}:`, error);
+          results.errors.push({ familyId, error: error.message });
+        }
+      }
+
+      console.log('📊 Weekly balance score tracking complete:', {
+        totalProcessed: familiesSnapshot.size,
+        successful: results.success.length,
+        errors: results.errors.length,
+        skipped: results.skipped.length
+      });
+
+      return results;
+
+    } catch (error) {
+      console.error('❌ Fatal error in weekly balance score tracker:', error);
+      throw error;
+    }
+  });
+
+/**
+ * Helper: Calculate balance score for a family (server-side version of FamilyBalanceScoreService)
+ * This duplicates the logic from the client-side service for server-side execution
+ */
+async function calculateBalanceScoreForFamily(familyId) {
+  try {
+    // TODO: Implement server-side balance score calculation
+    // For now, return a placeholder
+    // This should call the same APIs/services that FamilyBalanceScoreService uses:
+    // 1. Knowledge Graph for mental load (40%)
+    // 2. ELO ratings for task distribution (30%)
+    // 3. Power Features for relationship harmony (20%)
+    // 4. Habits for consistency (10%)
+
+    console.warn(`⚠️ Balance score calculation not yet implemented for family ${familyId}`);
+    console.warn('   TODO: Add server-side implementation of balance score calculation');
+
+    return null; // Will be implemented in next iteration
+  } catch (error) {
+    console.error('Error calculating balance score:', error);
+    return null;
+  }
+}
+
+/**
+ * Helper: Get ISO week number
+ */
+function getISOWeek(date) {
+  const target = new Date(date.valueOf());
+  const dayNumber = (date.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayNumber + 3);
+  const firstThursday = target.valueOf();
+  target.setMonth(0, 1);
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+  }
+  return 1 + Math.ceil((firstThursday - target) / 604800000);
+}
+
+/**
+ * Stripe Webhook Handler
+ * Handles subscription events and metered billing for usage-based pricing
+ */
+
+// Initialize Stripe
+const stripe = require('stripe')(
+  functions.config().stripe?.secret_key || process.env.STRIPE_SECRET_KEY
+);
+
+exports.stripeWebhook = functions
+  .region('us-central1')
+  .runWith({
+    timeoutSeconds: 60,
+    memory: '512MB'
+  })
+  .https.onRequest(async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const endpointSecret = functions.config().stripe?.webhook_secret || process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event;
+
+    try {
+      // Verify webhook signature
+      event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+    } catch (err) {
+      console.error('⚠️  Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    console.log('✅ Verified webhook event:', event.type);
+
+    // Handle the event
+    try {
+      switch (event.type) {
+        case 'customer.subscription.created':
+          await handleSubscriptionCreated(event.data.object);
+          break;
+
+        case 'customer.subscription.updated':
+          await handleSubscriptionUpdated(event.data.object);
+          break;
+
+        case 'customer.subscription.deleted':
+          await handleSubscriptionDeleted(event.data.object);
+          break;
+
+        case 'invoice.created':
+          // Report usage for metered billing BEFORE invoice is finalized
+          await handleInvoiceCreated(event.data.object);
+          break;
+
+        case 'invoice.payment_succeeded':
+          await handlePaymentSucceeded(event.data.object);
+          break;
+
+        case 'invoice.payment_failed':
+          await handlePaymentFailed(event.data.object);
+          break;
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Error handling webhook:', error);
+      res.status(500).json({ error: 'Webhook handler failed' });
+    }
+  });
+
+/**
+ * Handle subscription creation
+ */
+async function handleSubscriptionCreated(subscription) {
+  console.log('📝 Processing subscription.created:', subscription.id);
+
+  const customerId = subscription.customer;
+  const pricingPlan = subscription.metadata?.pricingPlan || 'unknown';
+  const isUsageBased = subscription.metadata?.usageBasedPricing === 'true';
+
+  // Find the family by Stripe customer ID
+  const familiesSnapshot = await admin.firestore()
+    .collection('families')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (familiesSnapshot.empty) {
+    console.warn('⚠️  No family found for customer:', customerId);
+    return;
+  }
+
+  const familyDoc = familiesSnapshot.docs[0];
+  const familyId = familyDoc.id;
+
+  // Update family subscription data
+  await familyDoc.ref.update({
+    'subscription.status': subscription.status,
+    'subscription.stripeSubscriptionId': subscription.id,
+    'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+    'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
+    'subscription.metadata': {
+      pricingPlan,
+      usageBasedPricing: isUsageBased
+    },
+    'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  // If usage-based, record baseline score
+  if (isUsageBased) {
+    console.log('📊 Recording baseline score for usage-based pricing...');
+
+    // Calculate current balance score
+    const scoreData = await calculateBalanceScoreForFamily(familyId);
+
+    // Save baseline in familyBalanceScores collection
+    await admin.firestore()
+      .collection('familyBalanceScores')
+      .doc(familyId)
+      .set({
+        familyId,
+        currentScore: scoreData.totalScore,
+        baselineScore: scoreData.totalScore,
+        hasBaseline: true,
+        baselineRecordedAt: admin.firestore.FieldValue.serverTimestamp(),
+        subscriptionId: subscription.id,
+        pricingPlan: 'usage-based'
+      }, { merge: true });
+
+    console.log('✅ Baseline score recorded:', scoreData.totalScore);
+  }
+
+  console.log('✅ Subscription created for family:', familyId);
+}
+
+/**
+ * Handle subscription updates
+ */
+async function handleSubscriptionUpdated(subscription) {
+  console.log('📝 Processing subscription.updated:', subscription.id);
+
+  const customerId = subscription.customer;
+
+  // Find and update family
+  const familiesSnapshot = await admin.firestore()
+    .collection('families')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (!familiesSnapshot.empty) {
+    await familiesSnapshot.docs[0].ref.update({
+      'subscription.status': subscription.status,
+      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+      'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
+      'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    console.log('✅ Subscription updated');
+  }
+}
+
+/**
+ * Handle subscription deletion/cancellation
+ */
+async function handleSubscriptionDeleted(subscription) {
+  console.log('📝 Processing subscription.deleted:', subscription.id);
+
+  const customerId = subscription.customer;
+
+  // Find and update family
+  const familiesSnapshot = await admin.firestore()
+    .collection('families')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (!familiesSnapshot.empty) {
+    await familiesSnapshot.docs[0].ref.update({
+      'subscription.status': 'canceled',
+      'subscription.canceledAt': admin.firestore.FieldValue.serverTimestamp(),
+      'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    console.log('✅ Subscription canceled');
+  }
+}
+
+/**
+ * Handle invoice creation - Report usage for metered billing
+ * This runs BEFORE the invoice is finalized
+ */
+async function handleInvoiceCreated(invoice) {
+  console.log('📝 Processing invoice.created:', invoice.id);
+
+  const subscriptionId = invoice.subscription;
+  if (!subscriptionId) {
+    console.log('⏭️  No subscription on invoice, skipping');
+    return;
+  }
+
+  // Get subscription details
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const customerId = subscription.customer;
+  const pricingPlan = subscription.metadata?.pricingPlan;
+  const isUsageBased = subscription.metadata?.usageBasedPricing === 'true';
+
+  if (!isUsageBased) {
+    console.log('⏭️  Not a usage-based subscription, skipping usage report');
+    return;
+  }
+
+  console.log('📊 Reporting usage for usage-based subscription...');
+
+  // Find family
+  const familiesSnapshot = await admin.firestore()
+    .collection('families')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (familiesSnapshot.empty) {
+    console.warn('⚠️  No family found for customer:', customerId);
+    return;
+  }
+
+  const familyId = familiesSnapshot.docs[0].id;
+
+  // Get balance score data
+  const scoreDoc = await admin.firestore()
+    .collection('familyBalanceScores')
+    .doc(familyId)
+    .get();
+
+  if (!scoreDoc.exists) {
+    console.warn('⚠️  No balance score data found for family:', familyId);
+    return;
+  }
+
+  const scoreData = scoreDoc.data();
+
+  // Calculate improvement
+  const improvement = scoreData.hasBaseline
+    ? Math.max(0, scoreData.currentScore - scoreData.baselineScore)
+    : 0;
+
+  // Usage quantity = improvement points (1 point = $1, max $50)
+  const usageQuantity = Math.min(50, Math.round(improvement));
+
+  console.log('📊 Balance Score Improvement:', {
+    baseline: scoreData.baselineScore,
+    current: scoreData.currentScore,
+    improvement,
+    usageQuantity,
+    maxCharge: `$${usageQuantity}`
+  });
+
+  // Find the metered price item in the subscription
+  const meteredPriceId = subscription.items.data.find(
+    item => item.price.recurring?.usage_type === 'metered'
+  )?.id;
+
+  if (!meteredPriceId) {
+    console.error('❌ No metered price found in subscription');
+    return;
+  }
+
+  // Report usage to Stripe
+  const usageRecord = await stripe.subscriptionItems.createUsageRecord(
+    meteredPriceId,
+    {
+      quantity: usageQuantity,
+      timestamp: Math.floor(Date.now() / 1000),
+      action: 'set' // Use 'set' to replace any existing usage for this period
+    }
+  );
+
+  console.log('✅ Usage reported to Stripe:', {
+    subscriptionItemId: meteredPriceId,
+    quantity: usageQuantity,
+    usageRecordId: usageRecord.id
+  });
+
+  // Record usage report in Firestore for history
+  await admin.firestore()
+    .collection('familyBalanceScores')
+    .doc(familyId)
+    .collection('billingHistory')
+    .add({
+      invoiceId: invoice.id,
+      subscriptionId: subscription.id,
+      periodStart: new Date(invoice.period_start * 1000),
+      periodEnd: new Date(invoice.period_end * 1000),
+      baselineScore: scoreData.baselineScore,
+      currentScore: scoreData.currentScore,
+      improvement,
+      usageQuantity,
+      estimatedCharge: usageQuantity, // $1 per point
+      reportedAt: admin.firestore.FieldValue.serverTimestamp(),
+      usageRecordId: usageRecord.id
+    });
+
+  console.log('✅ Usage report recorded in Firestore');
+}
+
+/**
+ * Handle successful payment
+ */
+async function handlePaymentSucceeded(invoice) {
+  console.log('💰 Processing invoice.payment_succeeded:', invoice.id);
+
+  const customerId = invoice.customer;
+  const amountPaid = invoice.amount_paid / 100; // Convert cents to dollars
+
+  // Find family
+  const familiesSnapshot = await admin.firestore()
+    .collection('families')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (familiesSnapshot.empty) {
+    console.warn('⚠️  No family found for customer:', customerId);
+    return;
+  }
+
+  const familyId = familiesSnapshot.docs[0].id;
+
+  // Record payment
+  await admin.firestore()
+    .collection('familyBalanceScores')
+    .doc(familyId)
+    .collection('billingHistory')
+    .doc(invoice.id)
+    .set({
+      invoiceId: invoice.id,
+      status: 'paid',
+      amountPaid,
+      paidAt: admin.firestore.FieldValue.serverTimestamp(),
+      invoiceUrl: invoice.hosted_invoice_url,
+      invoicePdf: invoice.invoice_pdf
+    }, { merge: true });
+
+  console.log('✅ Payment recorded:', {
+    familyId,
+    amountPaid,
+    invoiceId: invoice.id
+  });
+}
+
+/**
+ * Handle failed payment
+ */
+async function handlePaymentFailed(invoice) {
+  console.log('❌ Processing invoice.payment_failed:', invoice.id);
+
+  const customerId = invoice.customer;
+
+  // Find family
+  const familiesSnapshot = await admin.firestore()
+    .collection('families')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (familiesSnapshot.empty) {
+    console.warn('⚠️  No family found for customer:', customerId);
+    return;
+  }
+
+  const familyId = familiesSnapshot.docs[0].id;
+
+  // Record failed payment
+  await admin.firestore()
+    .collection('familyBalanceScores')
+    .doc(familyId)
+    .collection('billingHistory')
+    .doc(invoice.id)
+    .set({
+      invoiceId: invoice.id,
+      status: 'payment_failed',
+      attemptCount: invoice.attempt_count,
+      failedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+  // Update subscription status
+  await familiesSnapshot.docs[0].ref.update({
+    'subscription.status': 'past_due',
+    'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  console.log('✅ Payment failure recorded:', {
+    familyId,
+    invoiceId: invoice.id,
+    attemptCount: invoice.attempt_count
+  });
+
+  // TODO: Send email notification to family about payment failure
+}
