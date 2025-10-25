@@ -50,3 +50,10 @@ public/check-twilio-webhook.js
 
 # IDE
 **/.claude/settings.local.json
+
+# CircleCI sensitive files (DO NOT COMMIT!)
+.firebase-token.txt
+.gcloud-service-key-base64.txt
+.circleci-env-vars.txt
+*service-account*.json
+*-key-base64.txt
