@@ -57,3 +57,11 @@ public/check-twilio-webhook.js
 .circleci-env-vars.txt
 *service-account*.json
 *-key-base64.txt
+
+# Neo4j database files (too large for GitHub)
+neo4j/data/
+neo4j/logs/
+neo4j/import/
+neo4j/plugins/
+neo4j/*.db
+neo4j/transactions/
