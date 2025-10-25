@@ -1,0 +1,533 @@
+# CircleCI Configuration for Allie Project
+# Version: 2.1 (Latest CircleCI syntax)
+
+version: 2.1
+
+# ============================================================================
+# ORBS - Pre-packaged CircleCI configurations
+# ============================================================================
+orbs:
+  node: circleci/node@5.2.0
+  gcp-cli: circleci/gcp-cli@3.2.0
+  slack: circleci/slack@4.13.3
+
+# ============================================================================
+# EXECUTORS - Define the execution environments
+# ============================================================================
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:20.18.0  # Match Node 20 from firebase.json
+    working_directory: ~/project
+    resource_class: large  # Use larger resources for faster builds
+    environment:
+      NODE_ENV: test
+      CI: true
+
+  gcp-executor:
+    docker:
+      - image: google/cloud-sdk:latest
+    working_directory: ~/project
+
+# ============================================================================
+# COMMANDS - Reusable command sequences
+# ============================================================================
+commands:
+  restore-dependencies:
+    description: "Restore cached dependencies"
+    steps:
+      - restore_cache:
+          name: Restore node_modules cache
+          keys:
+            - v1-deps-{{ checksum "package-lock.json" }}
+            - v1-deps-  # Fallback to latest cache
+
+  install-dependencies:
+    description: "Install npm dependencies with caching"
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            if [ ! -d "node_modules" ]; then
+              echo "node_modules not found in cache, running npm ci..."
+              npm ci --prefer-offline --no-audit
+            else
+              echo "node_modules restored from cache"
+            fi
+      - save_cache:
+          name: Save node_modules cache
+          key: v1-deps-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+            - ~/.npm
+
+  install-firebase-tools:
+    description: "Install Firebase CLI"
+    steps:
+      - run:
+          name: Install Firebase Tools
+          command: |
+            if ! command -v firebase &> /dev/null; then
+              npm install -g firebase-tools@latest
+            fi
+
+  setup-gcloud:
+    description: "Setup Google Cloud SDK"
+    parameters:
+      key_file:
+        type: env_var_name
+        default: GCLOUD_SERVICE_KEY
+    steps:
+      - run:
+          name: Setup Google Cloud credentials
+          command: |
+            echo $<< parameters.key_file >> | base64 --decode > ${HOME}/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+            gcloud config set project ${GCLOUD_PROJECT_ID}
+
+  notify-deployment:
+    description: "Send deployment notification to Slack"
+    parameters:
+      environment:
+        type: string
+    steps:
+      - slack/notify:
+          event: pass
+          custom: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "✅ *Deployment to << parameters.environment >> successful!*\n\nBranch: ${CIRCLE_BRANCH}\nCommit: ${CIRCLE_SHA1:0:7}\nAuthor: ${CIRCLE_USERNAME}"
+                  }
+                }
+              ]
+            }
+
+  notify-failure:
+    description: "Send failure notification to Slack"
+    steps:
+      - slack/notify:
+          event: fail
+          custom: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ *Build Failed!*\n\nBranch: ${CIRCLE_BRANCH}\nCommit: ${CIRCLE_SHA1:0:7}\nAuthor: ${CIRCLE_USERNAME}\n\n<${CIRCLE_BUILD_URL}|View Build>"
+                  }
+                }
+              ]
+            }
+
+# ============================================================================
+# JOBS - Individual tasks in the pipeline
+# ============================================================================
+jobs:
+  # --------------------------------------------------------------------------
+  # INSTALL & SETUP
+  # --------------------------------------------------------------------------
+  setup:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore-dependencies
+      - install-dependencies
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+            - .
+
+  # --------------------------------------------------------------------------
+  # BUILD FRONTEND
+  # --------------------------------------------------------------------------
+  build:
+    executor: node-executor
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Build React Application
+          command: |
+            echo "Building for environment: ${DEPLOY_ENV:-production}"
+
+            # Copy appropriate .env file
+            if [ "${DEPLOY_ENV}" = "staging" ]; then
+              cp .env.staging .env.production 2>/dev/null || echo "No staging env file"
+            fi
+
+            npm run build
+          no_output_timeout: 15m
+      - run:
+          name: Verify build output
+          command: |
+            if [ ! -d "build" ]; then
+              echo "❌ Build directory not found!"
+              exit 1
+            fi
+            if [ ! -f "build/index.html" ]; then
+              echo "❌ index.html not found in build!"
+              exit 1
+            fi
+            echo "✅ Build verification passed"
+            ls -lh build/
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+            - build
+      - store_artifacts:
+          path: build
+          destination: build-output
+
+  # --------------------------------------------------------------------------
+  # RUN TESTS
+  # --------------------------------------------------------------------------
+  test-unit:
+    executor: node-executor
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Run Unit Tests
+          command: |
+            npm test -- --watchAll=false --coverage --maxWorkers=2
+          environment:
+            CI: true
+      - store_test_results:
+          path: coverage
+      - store_artifacts:
+          path: coverage
+          destination: coverage-report
+
+  test-regression:
+    executor: node-executor
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Install Playwright
+          command: |
+            npx playwright install --with-deps chromium
+      - run:
+          name: Run Regression Tests
+          command: |
+            npm run test:regression
+          no_output_timeout: 10m
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: regression-results
+      - store_artifacts:
+          path: playwright-report
+          destination: playwright-report
+
+  test-smoke:
+    executor: node-executor
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Install Playwright
+          command: |
+            npx playwright install --with-deps chromium
+      - run:
+          name: Run Smoke Tests
+          command: |
+            npm run test:smoke
+          no_output_timeout: 5m
+      - store_test_results:
+          path: test-results
+
+  # --------------------------------------------------------------------------
+  # BUILD CLOUD RUN SERVER (Optional - only if changed)
+  # --------------------------------------------------------------------------
+  build-server:
+    executor: gcp-executor
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - setup-gcloud
+      - run:
+          name: Build and Push Server Docker Image
+          command: |
+            cd server
+
+            # Build for linux/amd64 platform
+            docker build --platform linux/amd64 \
+              -t gcr.io/${GCLOUD_PROJECT_ID}/allie-claude-api:${CIRCLE_SHA1:0:7} \
+              -t gcr.io/${GCLOUD_PROJECT_ID}/allie-claude-api:latest \
+              .
+
+            # Configure Docker to use gcloud as credential helper
+            gcloud auth configure-docker gcr.io
+
+            # Push images
+            docker push gcr.io/${GCLOUD_PROJECT_ID}/allie-claude-api:${CIRCLE_SHA1:0:7}
+            docker push gcr.io/${GCLOUD_PROJECT_ID}/allie-claude-api:latest
+          no_output_timeout: 20m
+
+  # --------------------------------------------------------------------------
+  # DEPLOY TO STAGING
+  # --------------------------------------------------------------------------
+  deploy-staging:
+    executor: node-executor
+    environment:
+      DEPLOY_ENV: staging
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - install-firebase-tools
+      - run:
+          name: Deploy to Firebase Staging
+          command: |
+            # Authenticate with Firebase
+            firebase use staging || firebase use default
+
+            # Deploy hosting, functions, and firestore rules
+            firebase deploy \
+              --only hosting,functions,firestore:rules,firestore:indexes \
+              --token "${FIREBASE_TOKEN}" \
+              --force \
+              --message "CircleCI Deploy #${CIRCLE_BUILD_NUM} - ${CIRCLE_SHA1:0:7}"
+          no_output_timeout: 15m
+      - notify-deployment:
+          environment: "Staging"
+
+  # --------------------------------------------------------------------------
+  # DEPLOY TO PRODUCTION
+  # --------------------------------------------------------------------------
+  deploy-production:
+    executor: node-executor
+    environment:
+      DEPLOY_ENV: production
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - install-firebase-tools
+      - run:
+          name: Deploy to Firebase Production
+          command: |
+            # Authenticate with Firebase
+            firebase use production || firebase use default
+
+            # Deploy hosting
+            firebase deploy \
+              --only hosting \
+              --token "${FIREBASE_TOKEN}" \
+              --force \
+              --message "CircleCI Production Deploy #${CIRCLE_BUILD_NUM} - ${CIRCLE_SHA1:0:7}"
+          no_output_timeout: 15m
+      - run:
+          name: Deploy Firebase Functions (if changed)
+          command: |
+            # Check if functions directory has changes
+            if git diff --name-only HEAD~1 HEAD | grep -q "^functions/"; then
+              echo "Functions changed, deploying..."
+              firebase deploy \
+                --only functions \
+                --token "${FIREBASE_TOKEN}" \
+                --force
+            else
+              echo "No functions changes, skipping deployment"
+            fi
+          no_output_timeout: 15m
+      - run:
+          name: Deploy Firestore Rules (if changed)
+          command: |
+            # Check if firestore files have changes
+            if git diff --name-only HEAD~1 HEAD | grep -E "firestore\.(rules|indexes\.json)"; then
+              echo "Firestore config changed, deploying..."
+              firebase deploy \
+                --only firestore:rules,firestore:indexes \
+                --token "${FIREBASE_TOKEN}"
+            else
+              echo "No firestore config changes, skipping deployment"
+            fi
+      - notify-deployment:
+          environment: "Production"
+
+  # --------------------------------------------------------------------------
+  # DEPLOY CLOUD RUN SERVER
+  # --------------------------------------------------------------------------
+  deploy-server:
+    executor: gcp-executor
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - setup-gcloud
+      - run:
+          name: Deploy to Cloud Run
+          command: |
+            gcloud run deploy allie-claude-api \
+              --image gcr.io/${GCLOUD_PROJECT_ID}/allie-claude-api:${CIRCLE_SHA1:0:7} \
+              --region us-central1 \
+              --platform managed \
+              --allow-unauthenticated \
+              --timeout=300 \
+              --set-env-vars="NODE_ENV=production,ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}" \
+              --quiet
+      - run:
+          name: Verify Cloud Run Deployment
+          command: |
+            # Get Cloud Run URL
+            SERVICE_URL=$(gcloud run services describe allie-claude-api \
+              --region us-central1 \
+              --format 'value(status.url)')
+
+            echo "Testing Cloud Run endpoint: ${SERVICE_URL}"
+
+            # Test the health endpoint
+            curl -f "${SERVICE_URL}/health" || exit 1
+
+            echo "✅ Cloud Run deployment successful!"
+
+  # --------------------------------------------------------------------------
+  # VERIFY DEPLOYMENT
+  # --------------------------------------------------------------------------
+  verify-deployment:
+    executor: node-executor
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Verify Production Deployment
+          command: |
+            # Wait for deployment to propagate
+            sleep 30
+
+            # Test production URL
+            curl -f https://checkallie.com || exit 1
+
+            # Test API endpoint
+            curl -f https://checkallie.com/api/health || echo "Warning: Health endpoint not responding"
+
+            echo "✅ Production deployment verified!"
+
+# ============================================================================
+# WORKFLOWS - Define the execution order of jobs
+# ============================================================================
+workflows:
+  version: 2
+
+  # --------------------------------------------------------------------------
+  # MAIN WORKFLOW - Runs on every commit
+  # --------------------------------------------------------------------------
+  build-test-deploy:
+    jobs:
+      # 1. Setup (always runs)
+      - setup:
+          filters:
+            branches:
+              only: /.*/
+
+      # 2. Build (parallel with tests)
+      - build:
+          requires:
+            - setup
+
+      # 3. Tests (run in parallel)
+      - test-unit:
+          requires:
+            - setup
+
+      - test-smoke:
+          requires:
+            - build
+
+      # 4. Deploy to staging (develop branch only)
+      - deploy-staging:
+          requires:
+            - build
+            - test-unit
+            - test-smoke
+          filters:
+            branches:
+              only: develop
+
+      # 5. Hold for production approval (main branch only)
+      - hold-production:
+          type: approval
+          requires:
+            - build
+            - test-unit
+            - test-smoke
+          filters:
+            branches:
+              only:
+                - main
+                - master
+
+      # 6. Deploy to production (after approval)
+      - deploy-production:
+          requires:
+            - hold-production
+          filters:
+            branches:
+              only:
+                - main
+                - master
+
+      # 7. Verify deployment
+      - verify-deployment:
+          requires:
+            - deploy-production
+          filters:
+            branches:
+              only:
+                - main
+                - master
+
+  # --------------------------------------------------------------------------
+  # NIGHTLY WORKFLOW - Comprehensive tests
+  # --------------------------------------------------------------------------
+  nightly-tests:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *"  # Run at 2 AM daily
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+    jobs:
+      - setup
+      - test-unit:
+          requires:
+            - setup
+      - test-regression:
+          requires:
+            - setup
+      - notify-failure
+
+  # --------------------------------------------------------------------------
+  # SERVER DEPLOYMENT WORKFLOW - Only when server changes
+  # --------------------------------------------------------------------------
+  deploy-server-workflow:
+    jobs:
+      - setup:
+          filters:
+            branches:
+              only:
+                - main
+                - master
+      - build-server:
+          requires:
+            - setup
+          filters:
+            branches:
+              only:
+                - main
+                - master
+      - deploy-server:
+          requires:
+            - build-server
+          filters:
+            branches:
+              only:
+                - main
+                - master

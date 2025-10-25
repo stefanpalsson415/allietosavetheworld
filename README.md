@@ -6,6 +6,7 @@ Allie is a comprehensive family management platform that uses AI to help familie
 
 [![Production](https://img.shields.io/badge/Production-Live-brightgreen)](https://checkallie.com)
 [![Firebase](https://img.shields.io/badge/Firebase-Deployed-orange)](https://parentload-ba995.web.app)
+[![CircleCI](https://dl.circleci.com/status-badge/img/circleci/82hJfozkeGv7PMpWEzTa7J/parentload-clean/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/circleci/82hJfozkeGv7PMpWEzTa7J/parentload-clean/tree/main)
 [![License](https://img.shields.io/badge/License-Proprietary-red)]()
 
 ## 🎯 Project Overview
