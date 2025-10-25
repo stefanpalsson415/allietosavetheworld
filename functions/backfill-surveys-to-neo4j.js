@@ -3,10 +3,13 @@
  * Syncs all 225 existing surveys without waiting for updates
  */
 
-// Set Neo4j credentials in environment before loading neo4j-sync
-process.env.NEO4J_PASSWORD = 'YOUR_PASSWORD_HERE';
-process.env.NEO4J_URI = 'neo4j+s://c82dff38.databases.neo4j.io';
-process.env.NEO4J_USER = 'neo4j';
+// Neo4j credentials must be set in environment variables
+// Set these before running: NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
+if (!process.env.NEO4J_PASSWORD) {
+  throw new Error('NEO4J_PASSWORD environment variable required');
+}
+process.env.NEO4J_URI = process.env.NEO4J_URI || 'neo4j+s://c82dff38.databases.neo4j.io';
+process.env.NEO4J_USER = process.env.NEO4J_USER || 'neo4j';
 
 const admin = require('firebase-admin');
 const path = require('path');

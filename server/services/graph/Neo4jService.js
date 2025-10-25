@@ -18,7 +18,11 @@ class Neo4jService {
 
     const uri = process.env.NEO4J_URI || 'bolt://localhost:7687';
     const user = process.env.NEO4J_USER || 'neo4j';
-    const password = process.env.NEO4J_PASSWORD || 'YOUR_PASSWORD_HERE';
+    const password = process.env.NEO4J_PASSWORD;
+
+    if (!password) {
+      throw new Error('NEO4J_PASSWORD environment variable is required');
+    }
 
     this.driver = neo4j.driver(
       uri,
