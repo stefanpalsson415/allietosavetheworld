@@ -42,7 +42,7 @@
 **Set Stripe keys in Firebase Functions:**
 
 ```bash
-# Set Stripe secret key (KEEP THIS SECRET!)
+# Set Stripe secret key (KEEP THIS SECRET! Use your actual key from Stripe Dashboard)
 firebase functions:config:set stripe.secret_key="$STRIPE_SECRET_KEY"
 
 # Set app URL for success/cancel redirects
