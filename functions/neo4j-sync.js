@@ -292,7 +292,132 @@ class Neo4jSyncService {
       }
     }
 
+    // Query 3: Sync role assignments → PERFORMED_ROLE relationships
+    if (eventData.roleAssignments && eventData.roleAssignments.length > 0) {
+      console.log(`  🎭 Syncing ${eventData.roleAssignments.length} role assignments...`);
+
+      for (const assignment of eventData.roleAssignments) {
+        // Sync each specific role as a separate PERFORMED_ROLE relationship
+        for (const roleName of assignment.specificRoles || []) {
+          const roleRelationshipCypher = `
+            MATCH (p:Person {userId: $userId, familyId: $familyId})
+            MATCH (e:Event {eventId: $eventId})
+            MERGE (p)-[r:PERFORMED_ROLE {
+              roleName: $roleName,
+              eventId: $eventId
+            }]->(e)
+            SET r.eventTitle = $eventTitle,
+                r.category = $category,
+                r.cognitiveLoadWeight = $cognitiveLoadWeight,
+                r.timestamp = datetime($timestamp),
+                r.assignedBy = $assignedBy,
+                r.wasAutoAssigned = $wasAutoAssigned,
+                r.confirmedByUser = $confirmedByUser,
+                r.updatedAt = datetime()
+          `;
+
+          try {
+            // Get cognitive load weight from role name (will implement lookup)
+            const cognitiveLoadWeight = this.getRoleCognitiveLoad(roleName);
+            const category = this.getRoleCategory(roleName);
+
+            await this.executeWrite(roleRelationshipCypher, {
+              userId: assignment.userId,
+              familyId: eventData.familyId,
+              eventId: eventId,
+              roleName: roleName,
+              eventTitle: eventData.title || 'Untitled Event',
+              category: category,
+              cognitiveLoadWeight: cognitiveLoadWeight,
+              timestamp: assignment.assignedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+              assignedBy: assignment.assignedBy || 'unknown',
+              wasAutoAssigned: assignment.wasAutoAssigned || false,
+              confirmedByUser: assignment.confirmedByUser !== false  // Default to true
+            });
+
+            console.log(`    ✅ ${assignment.userName}: ${roleName} (load: ${cognitiveLoadWeight})`);
+          } catch (error) {
+            console.warn(`    ⚠️ Could not create PERFORMED_ROLE for ${assignment.userName} → ${roleName}: ${error.message}`);
+          }
+        }
+      }
+    }
+
     console.log(`✅ Synced event: ${eventData.title}`);
+  }
+
+  /**
+   * Get cognitive load weight for a role name
+   * Maps role names to their cognitive load values (1-5 scale)
+   */
+  getRoleCognitiveLoad(roleName) {
+    const roleWeights = {
+      // Transportation (avg 4.0)
+      'Driver': 3,
+      'Carpool Coordinator': 5,
+      'Time Keeper': 4,
+
+      // Preparation (avg 3.5)
+      'Gear Manager': 4,
+      'Snack Master': 3,
+      'Outfit Coordinator': 3,
+      'Document Keeper': 4,
+
+      // Supervision (avg 4.0)
+      'Lead Parent': 5,
+      'Helper Parent': 3,
+      'Sibling Supervisor': 4,
+      'Buddy System Partner': 2,
+
+      // Communication (avg 4.5)
+      'Team Parent Liaison': 5,
+      'Social Coordinator': 4,
+
+      // Financial (avg 2.0)
+      'Treasurer': 2,
+
+      // Event-Specific (avg 2.5)
+      'Gift Wrapper': 2,
+      'Setup Crew': 3,
+      'Cleanup Captain': 2,
+
+      // Special Circumstance (avg 4.5)
+      'Appointment Advocate': 5,
+      'Question Asker': 4,
+      'Comfort Provider': 4
+    };
+
+    return roleWeights[roleName] || 3; // Default to 3 if unknown
+  }
+
+  /**
+   * Get category for a role name
+   */
+  getRoleCategory(roleName) {
+    const roleCategories = {
+      'Driver': 'transportation',
+      'Carpool Coordinator': 'transportation',
+      'Time Keeper': 'transportation',
+      'Gear Manager': 'preparation',
+      'Snack Master': 'preparation',
+      'Outfit Coordinator': 'preparation',
+      'Document Keeper': 'preparation',
+      'Lead Parent': 'supervision',
+      'Helper Parent': 'supervision',
+      'Sibling Supervisor': 'supervision',
+      'Buddy System Partner': 'supervision',
+      'Team Parent Liaison': 'communication',
+      'Social Coordinator': 'communication',
+      'Treasurer': 'financial',
+      'Gift Wrapper': 'event_specific',
+      'Setup Crew': 'event_specific',
+      'Cleanup Captain': 'event_specific',
+      'Appointment Advocate': 'special_circumstance',
+      'Question Asker': 'special_circumstance',
+      'Comfort Provider': 'special_circumstance'
+    };
+
+    return roleCategories[roleName] || 'unknown';
   }
 
   /**

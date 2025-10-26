@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import UserAvatar from '../common/UserAvatar';
 import messageService from '../../services/MessageService';
 import GooglePlacesInput from '../common/GooglePlacesInput';
+import EventRoleAssignment from '../calendar-v2/EventRoleAssignment';
 
 const DRAWER_WIDTH = '480px';
 
@@ -607,6 +608,18 @@ const EventDrawer = ({ isOpen, onClose, event, onUpdate }) => {
               })}
             </div>
           </div>
+
+          {/* Event Roles - Makes Invisible Labor Visible! */}
+          {(editedEvent.attendees || []).length > 0 && (
+            <div className="space-y-3 border-t pt-4 mt-4">
+              <EventRoleAssignment
+                familyMembers={familyMembers}
+                attendees={(editedEvent.attendees || []).map(a => a.id)}
+                roleAssignments={editedEvent.roleAssignments || []}
+                onRoleAssignmentsChange={(assignments) => handleFieldChange('roleAssignments', assignments)}
+              />
+            </div>
+          )}
 
           {/* Reminders */}
           <div className="space-y-3">

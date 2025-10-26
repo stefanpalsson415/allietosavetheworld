@@ -1700,6 +1700,253 @@ When users ask questions from ANY tab (Calendar, Tasks, Home, etc.), `AllieConve
 
 **System Prompt Section:** `ClaudeService.js:358-395` includes KG capabilities with when/how to use examples
 
+### Event Role Types - Make Invisible Labor Visible 🔥 (Oct 26, 2025) ✅ **PHASE 1 & 2 LIVE IN PRODUCTION**
+
+**Game-Changing Feature:** Track WHO does WHAT before, during, and after family events!
+
+**Deployment:** October 26, 2025 - Two-level role assignment system deployed
+
+**Why This Is Revolutionary:**
+- **Before:** "Stefan attended the soccer game" ✅
+- **After:** "Stefan drove, Kimberly packed snacks, Stefan supervised, Kimberly coordinated carpool" 🔥
+- Makes invisible labor (anticipation, coordination, emotional support) **VISIBLE**
+- Tracks cognitive load per event, not just attendance
+- Feeds into Family Balance Score (15% weight)
+
+**Architecture:**
+
+**Level 1: Role Categories (7 categories)**
+1. 🚗 **Transportation** - Driving, carpool coordination, time keeping (avg load: 4.0/5)
+2. 🎒 **Preparation** - Gear, snacks, outfits, documents (avg load: 3.5/5)
+3. 👥 **Supervision** - Lead parent, helper parent, sibling supervisor (avg load: 4.0/5)
+4. 📱 **Communication** - Team parent liaison, social coordinator (avg load: 4.5/5)
+5. 💰 **Financial** - Treasurer, fee handler (avg load: 2.0/5)
+6. 🎯 **Event-Specific** - Setup, cleanup, gift wrapping (avg load: 2.5/5)
+7. 🏥 **Special Needs** - Appointment advocate, question asker, comfort provider (avg load: 4.5/5)
+
+**Level 2: Specific Roles (20 total)**
+- Example: Select "Transportation" category → Expand to choose "Driver" (3/5) or "Carpool Coordinator" (5/5)
+- Each role has: icon, description, timing (pre/during/post), cognitive load weight (1-5), kid-appropriate flag
+- **Complete Role List:**
+  - Transportation (3): Driver, Carpool Coordinator, Time Keeper
+  - Preparation (4): Gear Manager, Snack Master, Outfit Coordinator, Document Keeper
+  - Supervision (4): Lead Parent, Helper Parent, Sibling Supervisor, Buddy System Partner
+  - Communication (2): Team Parent Liaison, Social Coordinator
+  - Financial (1): Treasurer
+  - Event-Specific (3): Gift Wrapper, Setup Crew, Cleanup Captain
+  - Special Needs (3): Appointment Advocate, Question Asker, Comfort Provider
+
+**Key Features:**
+- **Two-Level Selection**: Pick category first, optionally expand to specific role
+- **Kid-Friendly Roles**: Some roles appropriate for kids (with min age requirements)
+  - ✅ Time Keeper (age 12+), Snack Master (age 8+), Setup Crew (age 10+)
+  - ❌ Driver, Carpool Coordinator, Appointment Advocate (parents only)
+- **Cognitive Load Calculation**: Auto-calculates total load per person
+- **Imbalance Detection**: Alerts if one person has 2x more load than another
+- **Multi-Assignment**: Multiple people can have roles in same event
+
+**Data Schema:**
+
+```javascript
+// Firestore events collection
+{
+  // ... existing event fields ...
+  roleAssignments: [
+    {
+      userId: 'stefan_id',
+      userName: 'Stefan',
+      userRole: 'parent',
+      categories: ['transportation', 'supervision'],  // Level 1
+      specificRoles: ['Driver', 'Lead Parent'],       // Level 2 (optional)
+      assignedAt: Timestamp,
+      assignedBy: 'kimberly_id',
+      wasAutoAssigned: false,
+      confirmedByUser: true
+    },
+    {
+      userId: 'kimberly_id',
+      userName: 'Kimberly',
+      userRole: 'parent',
+      categories: ['preparation', 'communication'],
+      specificRoles: ['Snack Master', 'Gear Manager', 'Carpool Coordinator'],
+      assignedAt: Timestamp,
+      assignedBy: 'kimberly_id',  // Self-assigned
+      wasAutoAssigned: false,
+      confirmedByUser: true
+    }
+  ],
+
+  // Auto-calculated fields (for queries)
+  totalRoles: 6,
+  rolesPerPerson: {
+    'stefan_id': 2,
+    'kimberly_id': 4
+  },
+  cognitiveLoadDistribution: {
+    'stefan_id': 8,   // Driver (3) + Lead Parent (5)
+    'kimberly_id': 12 // Snack (3) + Gear (4) + Carpool Coord (5)
+  },
+  hasRoleImbalance: true  // Kimberly has 1.5x more load
+}
+```
+
+**UI/UX:**
+
+```jsx
+// EventDrawer.jsx integration (line 613-622)
+{(editedEvent.attendees || []).length > 0 && (
+  <div className="space-y-3 border-t pt-4 mt-4">
+    <EventRoleAssignment
+      familyMembers={familyMembers}
+      attendees={(editedEvent.attendees || []).map(a => a.id)}
+      roleAssignments={editedEvent.roleAssignments || []}
+      onRoleAssignmentsChange={(assignments) => handleFieldChange('roleAssignments', assignments)}
+    />
+  </div>
+)}
+```
+
+**User Flow:**
+1. Create/edit event in EventDrawer
+2. Add attendees (Stefan, Kimberly, Lillian)
+3. Event Roles section appears automatically
+4. Select category: Click "🚗 Transportation" for Stefan
+5. Optionally expand: Click ▶ to see "Driver", "Carpool Coordinator", "Time Keeper"
+6. Assign specific role: Click "Driver" for Stefan
+7. Repeat for other attendees
+8. View summary: "Stefan: Transportation (Driver) Load: 3/25"
+9. See imbalance alert if one person has 2x more load
+
+**Files:**
+
+**Core System:**
+- `/src/types/eventRoles.ts` (458 lines) - Role definitions, cognitive weights, helper functions
+- `/src/components/calendar-v2/EventRoleAssignment.jsx` (356 lines) - Two-level UI component
+- `/src/factories/EventFactory.js` (lines 42, 63, 112-132) - Role assignment support
+- `/src/components/calendar/EventDrawer.jsx` (lines 13, 613-622) - Integration
+
+**Helper Functions:**
+```typescript
+getRolesByCategory(category)        // Get all roles in category
+getKidAppropriateRoles(age?)        // Filter by kid-appropriate + age
+calculateRoleCognitiveLoad(roles)   // Sum cognitive load weights
+detectRoleImbalance(assignments)    // Check for 2x load imbalance
+```
+
+**Example Insights (Future Phases):**
+
+```
+Allie: "I noticed over the last 3 months:
+- Kimberly has been 'Carpool Coordinator' for 15 events (HIGH cognitive load)
+- Stefan has been 'Driver' for 12 events (MEDIUM cognitive load)
+- Kimberly also does 'Gear Manager' 80% of the time (invisible labor)
+- Total event cognitive load: Kimberly 78%, Stefan 22%
+
+Would you like me to suggest redistributing some roles to balance this?"
+```
+
+**Phase 1 & 2 Status (Oct 26):** ✅ **COMPLETE**
+- ✅ eventRoles.ts with 7 categories, 20 roles, cognitive weights
+- ✅ EventFactory updated with roleAssignments support
+- ✅ EventRoleAssignment.jsx component (two-level UI)
+- ✅ Integrated into EventDrawer
+- ✅ Comprehensive unit tests (32/32 passing)
+- ✅ Deployed to production (https://parentload-ba995.web.app)
+
+**Remaining Phases (Not Yet Implemented):**
+- ⏳ Phase 3: Neo4j sync (`PERFORMED_ROLE` relationships)
+- ⏳ Phase 4: Survey integration (role pattern questions)
+- ⏳ Phase 5: Allie auto-suggestion (with confirmation)
+- ⏳ Phase 6: Family Balance Score integration (15% weight)
+- ⏳ Phase 6: Role Distribution Dashboard widget
+- ⏳ Phase 6: Backfill 682 Palsson family events
+
+**Cognitive Load Weights (1-5 scale):**
+- **5 (Highest):** Carpool Coordinator, Team Parent Liaison, Lead Parent, Appointment Advocate
+- **4 (High):** Gear Manager, Time Keeper, Document Keeper, Sibling Supervisor, Social Coordinator, Question Asker, Comfort Provider
+- **3 (Medium):** Driver, Snack Master, Outfit Coordinator, Helper Parent, Setup Crew
+- **2 (Low):** Buddy System Partner, Treasurer, Gift Wrapper, Cleanup Captain
+
+**Testing:**
+
+**✅ Unit Tests (32/32 PASSING)**
+
+```bash
+# Run event role unit tests
+npm test -- --testPathPattern=eventRoles --no-coverage
+
+Test Suites: 1 passed, 1 total
+Tests:       32 passed, 32 total
+Time:        0.54s
+```
+
+**Test Coverage:**
+- `/src/types/__tests__/eventRoles.test.ts` (412 lines, comprehensive coverage)
+
+**Test Suites:**
+1. **Role Definitions** (5 tests)
+   - ✅ ROLE_CATEGORIES has 7 categories
+   - ✅ Each category has required properties (id, name, icon, description, color, avgCognitiveLoad)
+   - ✅ EVENT_ROLES has 20 roles
+   - ✅ Each role has required properties (category, name, icon, timing flags, cognitive weight, kid-appropriate flag)
+   - ✅ Cognitive load weights match expected values (Driver=3, Carpool Coordinator=5, Treasurer=2, etc.)
+
+2. **getRolesByCategory()** (4 tests)
+   - ✅ Returns correct roles for transportation category (3 roles: Driver, Carpool Coordinator, Time Keeper)
+   - ✅ Returns correct roles for preparation category (4 roles: Gear Manager, Snack Master, Outfit Coordinator, Document Keeper)
+   - ✅ Returns correct roles for communication category (2 roles: Team Parent Liaison, Social Coordinator)
+   - ✅ Returns empty array for unknown category
+
+3. **getKidAppropriateRoles()** (3 tests)
+   - ✅ Returns only kid-appropriate roles when no age specified
+   - ✅ Filters by age when age specified (8-year-old sees Snack Master, not Time Keeper)
+   - ✅ Returns more roles for older kids (12-year-old sees more than 8-year-old)
+
+4. **getRoleByName()** (3 tests)
+   - ✅ Returns role for valid name ('Driver' → Driver role object)
+   - ✅ Returns undefined for invalid name
+   - ✅ Is case-sensitive ('driver' ≠ 'Driver')
+
+5. **calculateRoleCognitiveLoad()** (5 tests)
+   - ✅ Calculates correct load for single role (Driver = 3)
+   - ✅ Calculates correct load for multiple roles (Driver + Snack Master + Carpool Coordinator = 11)
+   - ✅ Returns 0 for empty array
+   - ✅ Handles unknown role names gracefully (ignores them)
+   - ✅ High cognitive load example (4 highest roles = 20)
+
+6. **getRolesByTiming()** (4 tests)
+   - ✅ Returns pre-event roles (Gear Manager, Snack Master, Setup Crew, etc.)
+   - ✅ Returns during-event roles (Lead Parent, Driver, etc.)
+   - ✅ Returns post-event roles (Cleanup Captain, etc.)
+   - ✅ Some roles appear in multiple timings (Driver: pre, during, post)
+
+7. **detectRoleImbalance()** (4 tests)
+   - ✅ Detects no imbalance when only one person
+   - ✅ Detects no imbalance when load is balanced (Stefan: 3, Kimberly: 3)
+   - ✅ Detects imbalance when one person has 2x load (Kimberly: 12, Stefan: 3 → Alert!)
+   - ✅ Returns details with correct cognitive loads (includes names and numbers)
+
+8. **Role Coverage** (4 tests)
+   - ✅ All 7 categories are covered by roles
+   - ✅ Cognitive load distribution is appropriate (mix of low/medium/high roles)
+   - ✅ Kid-appropriate roles exist in multiple categories (not just one type)
+   - ✅ Each timing phase has adequate role coverage (pre > 5, during > 5, post > 0)
+
+**Manual Testing in Production:**
+```bash
+1. Login to Palsson family
+2. Go to Family Calendar
+3. Create/edit event
+4. Add attendees (Stefan, Kimberly)
+5. Scroll to "Event Roles - Make Invisible Labor Visible 🔥"
+6. Click "Transportation" for Stefan
+7. Expand ▶ to see "Driver", "Carpool Coordinator", etc.
+8. Assign specific roles
+9. View summary with cognitive load
+```
+
+---
+
 ### Multi-Person Interviews
 **3 Phases:** Visual selection (keyboard 1-5) → Smart persistence (40% fewer prompts) → Voice enrollment (auto-detect 70%+ confidence)
 

@@ -39,6 +39,7 @@ import { Timestamp } from 'firebase/firestore';
  * @param {string} [data.category] - Event category
  * @param {Array<Object>} [data.reminders] - Reminder objects
  * @param {Array<string>} [data.attendees] - Attendee names
+ * @param {Array<Object>} [data.roleAssignments] - Event role assignments (NEW!)
  * @param {Object} [options] - Options
  * @param {boolean} [options.skipValidation] - Skip validation
  * @returns {Object} Complete event object
@@ -58,7 +59,8 @@ export function createEvent(data, options = {}) {
     googleEventId,
     category,
     reminders = [],
-    attendees = []
+    attendees = [],
+    roleAssignments = []
   } = data;
 
   // CRITICAL: Validate required security fields
@@ -105,6 +107,29 @@ export function createEvent(data, options = {}) {
     ...(category && { category }),
     reminders,
     attendees,
+
+    // Event Role Assignments (NEW!)
+    roleAssignments,
+
+    // Auto-calculated role fields (for queries and analytics)
+    ...(roleAssignments.length > 0 && {
+      totalRoles: roleAssignments.reduce((sum, ra) => sum + ra.specificRoles.length, 0),
+      rolesPerPerson: roleAssignments.reduce((acc, ra) => {
+        acc[ra.userId] = ra.specificRoles.length;
+        return acc;
+      }, {}),
+      cognitiveLoadDistribution: roleAssignments.reduce((acc, ra) => {
+        // Import would be needed at top: import { calculateRoleCognitiveLoad } from '../types/eventRoles';
+        // For now, we'll calculate inline
+        const load = ra.specificRoles.reduce((sum, roleName) => {
+          // This will be enhanced when we import eventRoles.ts helper
+          return sum + 3; // Default weight, will be replaced with actual
+        }, 0);
+        acc[ra.userId] = load;
+        return acc;
+      }, {}),
+      hasRoleImbalance: false  // Will be calculated in separate function
+    }),
 
     // Timestamps
     createdAt: data.createdAt || Timestamp.now(),

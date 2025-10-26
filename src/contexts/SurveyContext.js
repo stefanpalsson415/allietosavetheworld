@@ -108,7 +108,16 @@ export function SurveyProvider({ children }) {
         "Who teaches children how to use new apps, devices, or digital tools?",
         "Who participates in virtual parent-teacher conferences or online school communications?",
         "Who helps children navigate social media or their online presence?",
-        "Who engages in recreational activities with kids?"
+        "Who engages in recreational activities with kids?",
+        // EVENT ROLE QUESTIONS - Visible (Transportation, Supervision, Financial)
+        "Who typically drives kids to activities and appointments?",
+        "Who supervises kids during sports practices and activities?",
+        "Who packs snacks and drinks for kids' events?",
+        "Who ensures kids have the right gear/equipment for activities?",
+        "Who makes sure kids are dressed appropriately for events?",
+        "Who handles money for event fees and concessions?",
+        "Who arrives early to set up for parties or events?",
+        "Who stays late to clean up after events?"
       ],
       "Invisible Parental Tasks": [
         "Who coordinates children's schedules to prevent conflicts?",
@@ -135,7 +144,18 @@ export function SurveyProvider({ children }) {
         "Who researches strategies for supporting children through emotional challenges?",
         "Who notices subtle changes in children's emotional wellbeing and follows up?",
         "Who coordinates the 'emotional climate' of the family during stressful periods?",
-        "Who keeps mental track of each child's emotional triggers and coping mechanisms?"
+        "Who keeps mental track of each child's emotional triggers and coping mechanisms?",
+        // EVENT ROLE QUESTIONS - Invisible (Coordination, Communication, Emotional Labor)
+        "Who coordinates carpools with other families for activities?",
+        "Who communicates with coaches, teachers, and activity leaders?",
+        "Who keeps track of event schedules and prevents conflicts?",
+        "Who plans social meetups with other families at events?",
+        "Who brings permission slips, tickets, and important documents to events?",
+        "Who takes notes at doctor/school appointments and asks questions?",
+        "Who provides emotional support for kids at anxiety-inducing events (shots, dentist)?",
+        "Who notices when kids need comfort or reassurance at events?",
+        "Who coordinates who drives, who stays, who picks up for each event?",
+        "Who anticipates what will be needed for events (sunscreen, extra clothes, etc.)?"
       ],
       "Relationship Health": [
         "How would you rate your overall relationship satisfaction?",

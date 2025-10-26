@@ -695,4 +695,322 @@ router.post('/natural-language', async (req, res) => {
   }
 });
 
+// ========================================
+// EVENT ROLE ANALYSIS ENDPOINTS
+// ========================================
+
+/**
+ * GET /api/knowledge-graph/event-role-distribution
+ *
+ * Analyzes who performs which event roles, how often, and cognitive load impact
+ *
+ * Returns:
+ * {
+ *   success: true,
+ *   data: {
+ *     byPerson: [
+ *       {
+ *         person: "Kimberly",
+ *         totalRoles: 45,
+ *         totalCognitiveLoad: 180,
+ *         avgLoadPerEvent: 4.0,
+ *         topRoles: [
+ *           { role: "Carpool Coordinator", count: 15, load: 75 },
+ *           { role: "Snack Master", count: 12, load: 36 }
+ *         ]
+ *       }
+ *     ],
+ *     byRole: [
+ *       {
+ *         role: "Driver",
+ *         totalCount: 30,
+ *         distribution: [
+ *           { person: "Stefan", count: 18, percentage: 60 },
+ *           { person: "Kimberly", count: 12, percentage: 40 }
+ *         ]
+ *       }
+ *     ],
+ *     imbalances: [
+ *       {
+ *         role: "Carpool Coordinator",
+ *         leader: "Kimberly",
+ *         percentage: 95,
+ *         cognitiveLoad: 5,
+ *         severity: "high"
+ *       }
+ *     ]
+ *   }
+ * }
+ */
+router.post('/event-role-distribution', async (req, res) => {
+  try {
+    const { familyId } = req.body;
+
+    if (!familyId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: familyId'
+      });
+    }
+
+    console.log(`📊 Analyzing event role distribution for family: ${familyId}`);
+
+    // Query 1: Role distribution by person
+    const byPersonQuery = `
+      MATCH (p:Person {familyId: $familyId})-[r:PERFORMED_ROLE]->(e:Event)
+      WITH p, r.category as category, r.roleName as roleName, count(r) as roleCount,
+           sum(r.cognitiveLoadWeight) as totalLoad
+      WITH p,
+           sum(roleCount) as totalRoles,
+           sum(totalLoad) as totalCognitiveLoad,
+           collect({
+             role: roleName,
+             category: category,
+             count: roleCount,
+             load: totalLoad
+           }) as roles
+      RETURN p.name as person,
+             p.userId as userId,
+             totalRoles,
+             totalCognitiveLoad,
+             toFloat(totalCognitiveLoad) / toFloat(totalRoles) as avgLoadPerEvent,
+             [role IN roles | role][0..5] as topRoles
+      ORDER BY totalCognitiveLoad DESC
+    `;
+
+    const byPersonResult = await neo4jService.runQuery(byPersonQuery, { familyId });
+
+    // Query 2: Role distribution by role type
+    const byRoleQuery = `
+      MATCH (p:Person {familyId: $familyId})-[r:PERFORMED_ROLE]->(e:Event)
+      WITH r.roleName as role, r.category as category, r.cognitiveLoadWeight as weight,
+           p.name as person, count(r) as personCount
+      WITH role, category, weight, collect({person: person, count: personCount}) as distribution,
+           sum(personCount) as totalCount
+      WITH role, category, weight, totalCount, distribution,
+           [d IN distribution |
+             d {.*, percentage: toFloat(d.count) / toFloat(totalCount) * 100}
+           ] as distributionWithPercentage
+      RETURN role,
+             category,
+             weight as cognitiveLoadWeight,
+             totalCount,
+             distributionWithPercentage as distribution
+      ORDER BY totalCount DESC
+    `;
+
+    const byRoleResult = await neo4jService.runQuery(byRoleQuery, { familyId });
+
+    // Query 3: Detect imbalances (one person does 70%+ of a high-load role)
+    const imbalancesQuery = `
+      MATCH (p:Person {familyId: $familyId})-[r:PERFORMED_ROLE]->(e:Event)
+      WHERE r.cognitiveLoadWeight >= 4
+      WITH r.roleName as role, r.cognitiveLoadWeight as load, r.category as category,
+           p.name as person, count(r) as personCount
+      WITH role, load, category, collect({person: person, count: personCount}) as distribution,
+           sum(personCount) as totalCount
+      WITH role, load, category, totalCount, distribution,
+           [d IN distribution WHERE toFloat(d.count) / toFloat(totalCount) >= 0.7 |
+             d {.*, percentage: toFloat(d.count) / toFloat(totalCount) * 100}
+           ][0] as leader
+      WHERE leader IS NOT NULL
+      RETURN role,
+             category,
+             load as cognitiveLoadWeight,
+             leader.person as leader,
+             toInteger(leader.percentage) as percentage,
+             CASE
+               WHEN leader.percentage >= 90 THEN 'critical'
+               WHEN leader.percentage >= 80 THEN 'high'
+               ELSE 'moderate'
+             END as severity
+      ORDER BY leader.percentage DESC, load DESC
+    `;
+
+    const imbalancesResult = await neo4jService.runQuery(imbalancesQuery, { familyId });
+
+    res.json({
+      success: true,
+      data: {
+        byPerson: byPersonResult,
+        byRole: byRoleResult,
+        imbalances: imbalancesResult
+      },
+      metadata: {
+        familyId,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error analyzing event role distribution:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/knowledge-graph/invisible-event-labor
+ *
+ * Focuses on HIGH cognitive load event roles (preparation, communication, special needs)
+ * These are the INVISIBLE tasks that create mental load
+ *
+ * Returns:
+ * {
+ *   success: true,
+ *   data: {
+ *     summary: {
+ *       totalInvisibleRoles: 150,
+ *       byPerson: [
+ *         {
+ *           person: "Kimberly",
+ *           invisibleRoles: 120,
+ *           percentage: 80,
+ *           avgCognitiveLoad: 4.5,
+ *           burnoutRisk: "high"
+ *         }
+ *       ]
+ *     },
+ *     byCategory: [
+ *       {
+ *         category: "communication",
+ *         leader: "Kimberly",
+ *         leaderPercentage: 95,
+ *         roles: ["Team Parent Liaison", "Social Coordinator"]
+ *       }
+ *     ],
+ *     recommendations: [
+ *       {
+ *         action: "redistribute",
+ *         role: "Carpool Coordinator",
+ *         from: "Kimberly",
+ *         to: "Stefan",
+ *         reason: "Kimberly has 95% of communication roles (burnout risk)"
+ *       }
+ *     ]
+ *   }
+ * }
+ */
+router.post('/invisible-event-labor', async (req, res) => {
+  try {
+    const { familyId } = req.body;
+
+    if (!familyId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: familyId'
+      });
+    }
+
+    console.log(`🔍 Analyzing invisible event labor for family: ${familyId}`);
+
+    // Focus on high cognitive load categories: preparation, communication, special_circumstance
+    const invisibleCategories = ['preparation', 'communication', 'special_circumstance'];
+
+    // Query 1: Summary by person
+    const summaryQuery = `
+      MATCH (p:Person {familyId: $familyId})-[r:PERFORMED_ROLE]->(e:Event)
+      WHERE r.category IN $invisibleCategories
+      WITH p, count(r) as invisibleRoles, sum(r.cognitiveLoadWeight) as totalLoad
+      WITH p, invisibleRoles, totalLoad,
+           toFloat(totalLoad) / toFloat(invisibleRoles) as avgLoad,
+           sum(invisibleRoles) OVER () as familyTotal
+      WITH p, invisibleRoles, totalLoad, avgLoad,
+           toFloat(invisibleRoles) / toFloat(familyTotal) * 100 as percentage
+      RETURN p.name as person,
+             p.userId as userId,
+             invisibleRoles,
+             toInteger(percentage) as percentage,
+             toFloat(avgLoad) as avgCognitiveLoad,
+             CASE
+               WHEN percentage >= 75 THEN 'high'
+               WHEN percentage >= 60 THEN 'moderate'
+               ELSE 'low'
+             END as burnoutRisk
+      ORDER BY invisibleRoles DESC
+    `;
+
+    const summaryResult = await neo4jService.runQuery(summaryQuery, {
+      familyId,
+      invisibleCategories
+    });
+
+    // Query 2: By category (which categories are most imbalanced)
+    const byCategoryQuery = `
+      MATCH (p:Person {familyId: $familyId})-[r:PERFORMED_ROLE]->(e:Event)
+      WHERE r.category IN $invisibleCategories
+      WITH r.category as category, p.name as person, count(r) as roleCount,
+           collect(DISTINCT r.roleName) as roles
+      WITH category, collect({person: person, count: roleCount}) as distribution,
+           sum(roleCount) as totalCount, collect(DISTINCT roles) as allRoles
+      WITH category, totalCount, distribution, reduce(acc=[], role IN allRoles | acc + role) as uniqueRoles,
+           [d IN distribution WHERE toFloat(d.count) / toFloat(totalCount) >= 0.6 |
+             d {.*, percentage: toInteger(toFloat(d.count) / toFloat(totalCount) * 100)}
+           ][0] as leader
+      WHERE leader IS NOT NULL
+      RETURN category,
+             leader.person as leader,
+             leader.percentage as leaderPercentage,
+             uniqueRoles[0..5] as topRoles,
+             totalCount
+      ORDER BY leader.percentage DESC
+    `;
+
+    const byCategoryResult = await neo4jService.runQuery(byCategoryQuery, {
+      familyId,
+      invisibleCategories
+    });
+
+    // Query 3: Generate recommendations
+    const recommendationsQuery = `
+      MATCH (p:Person {familyId: $familyId})-[r:PERFORMED_ROLE]->(e:Event)
+      WHERE r.category IN $invisibleCategories AND r.cognitiveLoadWeight >= 4
+      WITH r.roleName as role, p.name as person, count(r) as roleCount
+      WITH role, collect({person: person, count: roleCount}) as distribution,
+           sum(roleCount) as totalCount
+      WITH role, distribution, totalCount,
+           [d IN distribution WHERE toFloat(d.count) / toFloat(totalCount) >= 0.7][0] as overloadedPerson,
+           [d IN distribution WHERE toFloat(d.count) / toFloat(totalCount) < 0.3][0] as underloadedPerson
+      WHERE overloadedPerson IS NOT NULL AND underloadedPerson IS NOT NULL
+      RETURN 'redistribute' as action,
+             role,
+             overloadedPerson.person as from,
+             underloadedPerson.person as to,
+             'Overloaded person has ' + toString(toInteger(toFloat(overloadedPerson.count) / toFloat(totalCount) * 100)) + '% of this role' as reason
+      LIMIT 5
+    `;
+
+    const recommendationsResult = await neo4jService.runQuery(recommendationsQuery, {
+      familyId,
+      invisibleCategories
+    });
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          totalInvisibleRoles: summaryResult.reduce((sum, p) => sum + p.invisibleRoles, 0),
+          byPerson: summaryResult
+        },
+        byCategory: byCategoryResult,
+        recommendations: recommendationsResult
+      },
+      metadata: {
+        familyId,
+        invisibleCategories,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error analyzing invisible event labor:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

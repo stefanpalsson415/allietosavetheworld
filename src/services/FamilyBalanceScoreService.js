@@ -28,7 +28,8 @@ import {
   orderBy,
   limit,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp
 } from 'firebase/firestore';
 
 class FamilyBalanceScoreService {
@@ -38,10 +39,11 @@ class FamilyBalanceScoreService {
 
     // Weights for each component (must sum to 1.0)
     this.WEIGHTS = {
-      mentalLoad: 0.40,
-      taskDistribution: 0.30,
-      relationshipHarmony: 0.20,
-      habitConsistency: 0.10
+      mentalLoad: 0.35,            // Reduced from 40%
+      taskDistribution: 0.25,      // Reduced from 30%
+      relationshipHarmony: 0.15,   // Reduced from 20%
+      habitConsistency: 0.10,      // Same
+      eventRoleDistribution: 0.15  // NEW: Event role balance
     };
 
     // Cache settings
@@ -71,17 +73,19 @@ class FamilyBalanceScoreService {
     console.log('🎯 Calculating Family Balance Score for:', familyId);
 
     try {
-      // Fetch all 4 components in parallel for speed
+      // Fetch all 5 components in parallel for speed
       const [
         mentalLoadScore,
         taskDistributionScore,
         harmonyScore,
-        habitScore
+        habitScore,
+        eventRoleScore
       ] = await Promise.all([
         this.calculateMentalLoadBalance(familyId),
         this.calculateTaskDistribution(familyId),
         this.calculateRelationshipHarmony(familyId),
-        this.calculateHabitConsistency(familyId)
+        this.calculateHabitConsistency(familyId),
+        this.calculateEventRoleDistribution(familyId)
       ]);
 
       // Calculate weighted total
@@ -89,7 +93,8 @@ class FamilyBalanceScoreService {
         (mentalLoadScore.score * this.WEIGHTS.mentalLoad) +
         (taskDistributionScore.score * this.WEIGHTS.taskDistribution) +
         (harmonyScore.score * this.WEIGHTS.relationshipHarmony) +
-        (habitScore.score * this.WEIGHTS.habitConsistency)
+        (habitScore.score * this.WEIGHTS.habitConsistency) +
+        (eventRoleScore.score * this.WEIGHTS.eventRoleDistribution)
       );
 
       const result = {
@@ -120,6 +125,12 @@ class FamilyBalanceScoreService {
             weight: this.WEIGHTS.habitConsistency,
             contribution: Math.round(habitScore.score * this.WEIGHTS.habitConsistency),
             details: habitScore.details
+          },
+          eventRoleDistribution: {
+            score: eventRoleScore.score,
+            weight: this.WEIGHTS.eventRoleDistribution,
+            contribution: Math.round(eventRoleScore.score * this.WEIGHTS.eventRoleDistribution),
+            details: eventRoleScore.details
           }
         },
         interpretation: this._getScoreInterpretation(totalScore),
@@ -399,6 +410,138 @@ class FamilyBalanceScoreService {
       };
     } catch (error) {
       console.error('Error calculating habit consistency:', error);
+      return {
+        score: 0,
+        details: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Calculate Event Role Distribution (15% weight)
+   * Measures balance of event-related labor (who drives, coordinates, prepares, etc.)
+   */
+  async calculateEventRoleDistribution(familyId) {
+    try {
+      // Query recent events with role assignments
+      const threeMonthsAgo = Timestamp.fromDate(
+        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+      );
+
+      const eventsQuery = query(
+        collection(db, 'events'),
+        where('familyId', '==', familyId),
+        where('status', 'in', ['active', 'confirmed']),
+        where('startTime', '>=', threeMonthsAgo),
+        orderBy('startTime', 'desc'),
+        limit(100)
+      );
+
+      const eventsSnapshot = await getDocs(eventsQuery);
+      const events = eventsSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(e => e.roleAssignments && e.roleAssignments.length > 0);
+
+      if (events.length === 0) {
+        return {
+          score: 100, // No data yet = perfect balance (neutral)
+          details: {
+            dataAvailable: false,
+            message: 'No events with role assignments yet',
+            eventsAnalyzed: 0
+          }
+        };
+      }
+
+      // Calculate cognitive load per person from role assignments
+      const loadByPerson = {};
+      let totalLoad = 0;
+
+      events.forEach(event => {
+        event.roleAssignments.forEach(assignment => {
+          const personLoad = assignment.specificRoles.reduce((sum, roleName) => {
+            // Import role weights from eventRoles.ts
+            const roleWeights = {
+              'Driver': 3,
+              'Carpool Coordinator': 5,
+              'Time Keeper': 4,
+              'Gear Manager': 4,
+              'Snack Master': 3,
+              'Outfit Coordinator': 3,
+              'Document Keeper': 4,
+              'Lead Parent': 5,
+              'Helper Parent': 3,
+              'Sibling Supervisor': 4,
+              'Buddy System Partner': 2,
+              'Team Parent Liaison': 5,
+              'Social Coordinator': 4,
+              'Treasurer': 2,
+              'Gift Wrapper': 2,
+              'Setup Crew': 3,
+              'Cleanup Captain': 2,
+              'Appointment Advocate': 5,
+              'Question Asker': 4,
+              'Comfort Provider': 4
+            };
+            return sum + (roleWeights[roleName] || 3);
+          }, 0);
+
+          loadByPerson[assignment.userId] = (loadByPerson[assignment.userId] || 0) + personLoad;
+          totalLoad += personLoad;
+        });
+      });
+
+      // Calculate balance score (closer to equal distribution = higher score)
+      const people = Object.keys(loadByPerson);
+      if (people.length === 0) {
+        return {
+          score: 100,
+          details: {
+            dataAvailable: false,
+            message: 'No people assigned roles yet'
+          }
+        };
+      }
+
+      if (people.length === 1) {
+        // Single person = perfect balance (no imbalance possible)
+        return {
+          score: 100,
+          details: {
+            dataAvailable: true,
+            singlePerson: true,
+            eventsAnalyzed: events.length
+          }
+        };
+      }
+
+      const loads = Object.values(loadByPerson);
+      const avgLoad = totalLoad / people.length;
+      const maxLoad = Math.max(...loads);
+      const minLoad = Math.min(...loads);
+
+      // Score calculation: Perfect balance = 100, 2x imbalance = 50, 4x imbalance = 0
+      const imbalanceRatio = minLoad > 0 ? maxLoad / minLoad : maxLoad;
+      const score = Math.max(0, Math.min(100, Math.round(
+        100 - ((imbalanceRatio - 1) * 25) // Each 1x difference = -25 points
+      )));
+
+      return {
+        score,
+        details: {
+          dataAvailable: true,
+          eventsAnalyzed: events.length,
+          peopleTracked: people.length,
+          totalCognitiveLoad: totalLoad,
+          avgLoadPerPerson: Math.round(avgLoad),
+          maxLoad,
+          minLoad,
+          imbalanceRatio: Math.round(imbalanceRatio * 10) / 10,
+          loadByPerson
+        }
+      };
+    } catch (error) {
+      console.error('Error calculating event role distribution:', error);
       return {
         score: 0,
         details: { error: error.message }
