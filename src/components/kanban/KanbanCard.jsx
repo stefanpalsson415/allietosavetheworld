@@ -61,13 +61,21 @@ const KanbanCard = ({ task, onEdit, onDelete, onComplete, familyMembers }) => {
     });
   };
 
-  // Get assigned member
-  const getAssignedMember = () => {
-    if (!task.assignedTo) return null;
-    return familyMembers.find(m => m.id === task.assignedTo);
+  // Get assigned members (handles both array and single value for backwards compatibility)
+  const getAssignedMembers = () => {
+    if (!task.assignedTo) return [];
+
+    // Handle array of member IDs
+    if (Array.isArray(task.assignedTo)) {
+      return familyMembers.filter(m => task.assignedTo.includes(m.id));
+    }
+
+    // Handle legacy single assignedTo value
+    const member = familyMembers.find(m => m.id === task.assignedTo);
+    return member ? [member] : [];
   };
 
-  const assignedMember = getAssignedMember();
+  const assignedMembers = getAssignedMembers();
 
   return (
     <div
@@ -131,10 +139,25 @@ const KanbanCard = ({ task, onEdit, onDelete, onComplete, familyMembers }) => {
           </span>
         )}
         
-        {assignedMember && (
+        {assignedMembers.length > 0 && (
           <span className="flex items-center mr-2">
-            <UserAvatar user={assignedMember} size={16} className="mr-1" />
-            {assignedMember.name}
+            <div className="flex -space-x-1 mr-1">
+              {assignedMembers.map((member, index) => (
+                <div
+                  key={member.id}
+                  className="relative ring-2 ring-white rounded-full"
+                  style={{ zIndex: assignedMembers.length - index }}
+                  title={member.name}
+                >
+                  <UserAvatar user={member} size={20} />
+                </div>
+              ))}
+            </div>
+            {assignedMembers.length === 1 ? (
+              <span className="text-xs">{assignedMembers[0].name}</span>
+            ) : (
+              <span className="text-xs">{assignedMembers.length} people</span>
+            )}
           </span>
         )}
         
