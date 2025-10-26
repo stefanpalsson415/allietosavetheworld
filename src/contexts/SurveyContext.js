@@ -4,6 +4,7 @@ import { calculateTaskWeight } from '../utils/TaskWeightCalculator';
 import QuestionFeedbackService from '../services/QuestionFeedbackService';
 import ELORatingService from '../services/ELORatingService';
 import knowledgeGraphService from '../services/KnowledgeGraphService';
+import DynamicSurveyGenerator from '../services/DynamicSurveyGenerator';
 
 
 // Create the survey context
@@ -1159,19 +1160,65 @@ export function SurveyProvider({ children }) {
       }
     }
     
-    // 6. SELECT ACTUAL QUESTIONS BASED ON ALLOCATION
-    const selectedQuestions = [];
-    const selectedIds = [];
+    // 6. GENERATE AI-PERSONALIZED QUESTIONS (Haiku 4.5)
+    // Instead of static pool, use AI to generate hyper-personalized questions
+    console.log('✨ Generating AI-personalized weekly survey questions...');
 
-    // For each category, select the appropriate number of questions
-    Object.entries(questionAllocation).forEach(([category, count]) => {
-      // Get top questions for this category, prioritizing uncovered tasks
-      const categoryQuestions = getQuestionsFromCategory(category, count, selectedIds, uncoveredTasksData);
+    let selectedQuestions = [];
 
-      // Add to our selections
-      selectedQuestions.push(...categoryQuestions);
-      selectedIds.push(...categoryQuestions.map(q => q.id));
-    });
+    try {
+      // Create context for AI with imbalance data and KG insights
+      const aiContext = {
+        familyId: familyData?.familyId,
+        memberId: familyData?.currentUserId || familyData?.familyMembers?.[0]?.id,
+        targetCount: targetQuestionCount,
+        mode: 'weekly', // Different from 'initial' mode
+        focusAreas: {
+          // Pass the most imbalanced categories for AI to focus on
+          topImbalances: imbalancedCategories.slice(0, 3).map(cat => ({
+            category: cat.category,
+            imbalance: cat.imbalance,
+            dominantParent: cat.dominantParent
+          })),
+          // Pass question allocation so AI knows how many per category
+          questionAllocation,
+          // Pass KG insights for even more targeted questions
+          kgInsights: kgInsights?.hasData ? {
+            invisibleLaborLeader: kgInsights.invisibleLabor?.[0]?.leader,
+            coordinationLeader: kgInsights.coordination?.leader,
+            temporalPatterns: kgInsights.temporal
+          } : null
+        }
+      };
+
+      // Use DynamicSurveyGenerator with Haiku 4.5 for fast, personalized questions
+      const generator = new DynamicSurveyGenerator();
+      const aiQuestions = await generator.generateDynamicQuestions(
+        familyData?.familyId,
+        familyData?.currentUserId || familyData?.familyMembers?.[0]?.id,
+        targetQuestionCount,
+        aiContext
+      );
+
+      if (aiQuestions && aiQuestions.length > 0) {
+        console.log(`✅ Generated ${aiQuestions.length} AI-personalized questions`);
+        selectedQuestions = aiQuestions;
+      } else {
+        // Fallback to static pool if AI generation fails
+        console.warn('⚠️ AI generation failed, falling back to static pool');
+        throw new Error('AI generation returned no questions');
+      }
+    } catch (error) {
+      console.error('❌ Error generating AI questions, using static fallback:', error);
+
+      // FALLBACK: Use static pool selection (original logic)
+      const selectedIds = [];
+      Object.entries(questionAllocation).forEach(([category, count]) => {
+        const categoryQuestions = getQuestionsFromCategory(category, count, selectedIds, uncoveredTasksData);
+        selectedQuestions.push(...categoryQuestions);
+        selectedIds.push(...categoryQuestions.map(q => q.id));
+      });
+    }
 
     // PHASE 2: Apply Knowledge Graph weighting to prioritize questions based on real behavior
     let kgWeightedQuestions = selectedQuestions;

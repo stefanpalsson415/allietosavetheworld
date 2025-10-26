@@ -272,8 +272,10 @@ Make the questions feel like they were written by someone who knows this family 
       const response = await ClaudeService.generateResponse(
         [{ role: 'user', content: userPrompt }],
         {
+          model: 'claude-haiku-4-5-20251001', // Haiku 4.5 for fast, cost-effective survey generation
           system: systemPrompt,
-          max_tokens: 8000 // Increased for 72 questions (was defaulting to 1024)
+          max_tokens: 8000, // Increased for 72 questions (was defaulting to 1024)
+          temperature: 0.7 // IMPORTANT: Haiku 4.5 requires ONLY temperature (not top_p)
         }
       );
 
