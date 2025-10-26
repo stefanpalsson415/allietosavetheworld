@@ -1715,6 +1715,29 @@ When users ask questions from ANY tab (Calendar, Tasks, Home, etc.), `AllieConve
 - **Premium:** OpenAI TTS-1-HD (Nova, 0.95x speed)
 - **Critical:** Pause mic during TTS (prevents feedback loop)
 
+### Task Board
+- **Drag-and-drop:** dnd-kit for task movement between columns
+- **Multi-assignment:** Tasks can be assigned to multiple family members (array of userIds)
+- **Columns:** Backlog, This Week, In Progress, Done, Needs Help
+- **Integration:** Allie can create tasks from chat, links to calendar events
+- **Kid Tokens:** Children can verify parent task completion for Family Bucks rewards
+- **Source tracking:** Tasks linked to inbox items (email/SMS that created them)
+- **Real-time sync:** Firestore onSnapshot listeners update all family members instantly
+- **Avatar display:** Multiple assignees show as overlapping avatars with white ring borders
+
+**Components:**
+- `FamilyKanbanBoard.jsx` - Main board with drag-and-drop
+- `KanbanCard.jsx` - Task card with multi-avatar display
+- `TaskDrawer.jsx` - Task detail panel with multi-select assignee checkboxes
+- `KidTokenSystem.jsx` - Family Bucks verification system
+
+**How Allie Creates Tasks:**
+User: "Allie, create a task to clean the garage this weekend"
+→ Allie extracts: title, assignee(s), due date, category
+→ Saves to `kanbanTasks` collection with `assignedTo: [userId1, userId2]`
+→ Fires `kanban-task-added` event
+→ Board updates automatically via Firestore listener
+
 ## 📊 Data Model
 
 ### Collections
@@ -1734,6 +1757,60 @@ When users ask questions from ANY tab (Calendar, Tasks, Home, etc.), `AllieConve
   source: "google" | "manual" | "email" | "sms"
 }
 ```
+
+### Task Board Schema (KanbanTasks)
+**CRITICAL:** `assignedTo` is an **array** of member IDs, not a single value
+
+```javascript
+{
+  familyId: string,        // REQUIRED for security
+  title: string,           // Task name
+  description: string,     // Optional details
+  assignedTo: [userId],    // ARRAY of member IDs (supports multi-assignment)
+  column: string,          // 'backlog' | 'this-week' | 'in-progress' | 'done' | 'needs-help'
+  category: string,        // 'household' | 'relationship' | 'parenting' | 'errands' | 'work'
+  priority: string,        // 'low' | 'medium' | 'high'
+  dueDate: string,         // ISO date string
+  position: number,        // Sort order within column
+  subtasks: [{             // Checklist items
+    id: string,
+    title: string,
+    completed: boolean
+  }],
+  createdAt: Timestamp,
+  createdBy: userId,
+  updatedAt: Timestamp,
+  updatedBy: userId,
+
+  // Calendar integration
+  eventId: string,         // Optional: linked calendar event
+
+  // Kid token system
+  hasKidToken: boolean,    // Task has kid verification token
+  kidTokenVerified: boolean, // Kid verified completion
+  kidTokenValue: number,   // Family Bucks reward
+
+  // Source tracking
+  source: string,          // 'allie' | 'manual' | 'email' | 'sms'
+  sourceInboxId: string,   // Optional: linked inbox item
+  inboxItemType: string    // Optional: 'email' | 'sms'
+}
+```
+
+**UI Pattern - Multi-Assignment Display:**
+```javascript
+// KanbanCard.jsx displays multiple assigned members as overlapping avatars
+const assignedMembers = getAssignedMembers(); // Returns array
+// Shows: [Avatar1][Avatar2][Avatar3] "3 people"
+// Each avatar has white ring border (ring-2 ring-white)
+// Stacked with -space-x-1 for overlap effect
+```
+
+**Common Issue Fixed (Oct 26, 2025):**
+- **Problem:** Task detail shows multiple assignees checked, but card only shows one avatar
+- **Cause:** `assignedTo` is array but component treated as single value
+- **Fix:** `KanbanCard.jsx` now handles both array (current) and single value (legacy)
+- **Files:** `KanbanCard.jsx:64-78`, `TaskDrawer.jsx:505-531`
 
 ## 🔧 Patterns
 
