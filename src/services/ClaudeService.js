@@ -466,6 +466,150 @@ You have access to the family's Knowledge Graph via Neo4j, which provides real-t
     this.initialized = false;
     return false;
   }
+
+  /**
+   * Generate personalized family story narrative for meetings
+   * Uses Claude AI to transform data into emotional, engaging storytelling
+   * @param {Object} familyData - Complete family meeting data
+   * @returns {Promise<string>} Story narrative
+   */
+  async generateFamilyStoryNarrative(familyData) {
+    const {
+      familyMembers = [],
+      balanceScoreChange = 0,
+      taskCompletions = {},
+      habitsCompleted = {},
+      kgInsights = {},
+      previousGoals = [],
+      wins = [],
+      challenges = [],
+      kidResponses = {},
+      eventRoles = [],
+      currentWeek = 1
+    } = familyData;
+
+    // Build narrative prompt
+    const systemPrompt = `You are Allie, an AI family assistant with a gift for storytelling. You transform family data into compelling narratives that help families see themselves as protagonists in their own story of growth and balance.
+
+Your storytelling style:
+- Use "Hero's Journey" narrative structure when appropriate
+- Make data feel emotionally resonant and meaningful
+- Celebrate small wins as turning points in the larger story
+- Frame challenges as plot obstacles to overcome together
+- Include specific names, numbers, and details to make it personal
+- Write in present tense for immediacy ("This week, Sarah discovers...")
+- Keep paragraphs short (2-3 sentences) for readability
+- End with foreshadowing or a call to action for next week
+
+Tone: Warm, encouraging, observant, occasionally poetic, always specific.`;
+
+    const userPrompt = `Generate a personalized story narrative for this family's Week ${currentWeek} meeting:
+
+FAMILY MEMBERS:
+${familyMembers.map(m => `- ${m.name} (${m.role}${m.age ? `, age ${m.age}` : ''})`).join('\n')}
+
+BALANCE SCORE CHANGE:
+From ${balanceScoreChange > 0 ? 'previous score' : 'current score'} to current: ${balanceScoreChange > 0 ? '+' : ''}${Math.round(balanceScoreChange)} points
+
+TASK COMPLETIONS:
+${Object.entries(taskCompletions).map(([name, count]) => `${name}: ${count} tasks completed`).join('\n')}
+
+HABITS COMPLETED:
+${Object.entries(habitsCompleted).map(([habit, status]) => `${habit}: ${status.completed}/${status.total}`).join('\n')}
+
+KNOWLEDGE GRAPH INSIGHTS:
+${kgInsights.invisibleLabor ? `Invisible Labor: ${kgInsights.invisibleLabor[0]?.leader} anticipates ${kgInsights.invisibleLabor[0]?.anticipation} tasks (${kgInsights.invisibleLabor[0]?.percentageDifference}% of family load)` : 'No invisible labor data'}
+
+EVENT ROLES:
+${eventRoles.length > 0 ? `${eventRoles.length} events tracked with role assignments` : 'No event role tracking'}
+
+PREVIOUS GOALS:
+${previousGoals.map(g => `- ${g.goal} (${g.status})`).join('\n') || 'No previous goals'}
+
+WINS THIS WEEK:
+${wins.map(w => `- ${w}`).join('\n') || 'No specific wins recorded'}
+
+CHALLENGES THIS WEEK:
+${challenges.map(c => `- ${c}`).join('\n') || 'No specific challenges recorded'}
+
+KIDS' RESPONSES:
+${Object.entries(kidResponses).map(([question, answer]) => `${question}: "${answer}"`).join('\n') || 'No kids responses recorded'}
+
+Generate a 3-5 paragraph story that:
+1. Opens with this week's theme or defining moment
+2. Highlights the journey (what changed, who grew, what was overcome)
+3. Celebrates specific wins with data
+4. Acknowledges challenges with empathy
+5. Ends with momentum toward next week
+
+Make it feel like a chapter in their family's story, not just a data summary.`;
+
+    try {
+      const response = await this.generateResponse(
+        [{ role: 'user', content: userPrompt }],
+        {
+          model: 'claude-opus-4-1-20250805', // Use Opus for best storytelling
+          system: systemPrompt,
+          max_tokens: 1500,
+          temperature: 0.8 // Higher temperature for more creative storytelling
+        }
+      );
+
+      // Clean response
+      let narrative = this._cleanResponse(response);
+
+      // Remove any meta-commentary
+      narrative = narrative.replace(/\[.*?\]/g, '').trim();
+
+      return narrative;
+    } catch (error) {
+      console.error('Failed to generate family story narrative:', error);
+
+      // Fallback to simple summary
+      return this._generateFallbackNarrative(familyData);
+    }
+  }
+
+  /**
+   * Fallback narrative generation (no AI)
+   * @private
+   */
+  _generateFallbackNarrative(familyData) {
+    const {
+      familyMembers = [],
+      balanceScoreChange = 0,
+      wins = [],
+      challenges = [],
+      currentWeek = 1
+    } = familyData;
+
+    const parentNames = familyMembers
+      .filter(m => m.role === 'parent' || m.isParent)
+      .map(m => m.name)
+      .join(' and ');
+
+    let narrative = `Week ${currentWeek} for the ${familyMembers[0]?.name || ''} family.\n\n`;
+
+    if (balanceScoreChange > 10) {
+      narrative += `This was a breakthrough week. Balance improved by ${Math.round(balanceScoreChange)} points - a significant shift toward equity.\n\n`;
+    } else if (balanceScoreChange > 0) {
+      narrative += `Steady progress this week, with balance improving by ${Math.round(balanceScoreChange)} points.\n\n`;
+    } else if (balanceScoreChange < 0) {
+      narrative += `This week presented challenges, with balance dipping ${Math.abs(Math.round(balanceScoreChange))} points.\n\n`;
+    }
+
+    if (wins.length > 0) {
+      narrative += `Key wins: ${wins.join(', ')}.\n\n`;
+    }
+
+    if (challenges.length > 0) {
+      narrative += `Challenges faced: ${challenges.join(', ')}.\n\n`;
+    }
+
+    narrative += `${parentNames}, you're on a journey toward better balance. Every week brings new insights and growth.`;
+
+    return narrative;
+  }
 }
 
 export default new ClaudeService();

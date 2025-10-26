@@ -1013,4 +1013,296 @@ router.post('/invisible-event-labor', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/knowledge-graph/predictive-insights
+ * Get predictive insights for family meetings
+ * Includes burnout risks, load forecasts, habit streaks, imbalance trends
+ */
+router.post('/predictive-insights', async (req, res) => {
+  try {
+    const { familyId, familyMembers = [] } = req.body;
+
+    if (!familyId) {
+      return res.status(400).json({
+        success: false,
+        error: 'familyId is required'
+      });
+    }
+
+    console.log(`📊 Generating predictive insights for family: ${familyId}`);
+
+    const predictions = {
+      burnoutRisks: [],
+      upcomingLoad: null,
+      habitStreaks: [],
+      imbalanceTrends: null
+    };
+
+    // Query for cognitive load trends (last 4 weeks of tasks)
+    const cognitiveLoadQuery = `
+      MATCH (p:Person {familyId: $familyId})-[r:CREATED]->(t:Task)
+      WHERE t.createdAt IS NOT NULL
+      WITH p, t,
+           duration.between(datetime(t.createdAt), datetime()).days as daysAgo
+      WHERE daysAgo <= 28
+      WITH p,
+           (daysAgo / 7) as weekAgo,
+           count(t) as taskCount
+      WHERE weekAgo >= 0 AND weekAgo < 4
+      RETURN p.userId as userId,
+             p.name as name,
+             collect({week: weekAgo, count: taskCount}) as weeklyTasks
+      ORDER BY p.name
+    `;
+
+    const cognitiveLoadResult = await neo4jService.runQuery(cognitiveLoadQuery, { familyId });
+
+    // Calculate burnout risks from cognitive load trends
+    if (cognitiveLoadResult.records && cognitiveLoadResult.records.length > 0) {
+      cognitiveLoadResult.records.forEach(record => {
+        const userId = record.get('userId');
+        const name = record.get('name');
+        const weeklyTasks = record.get('weeklyTasks');
+
+        // Calculate trend (simple slope)
+        if (weeklyTasks && weeklyTasks.length >= 3) {
+          const sorted = weeklyTasks.sort((a, b) => b.week - a.week);
+          const recentLoad = sorted[0]?.count || 0;
+          const oldLoad = sorted[sorted.length - 1]?.count || 0;
+          const slope = (recentLoad - oldLoad) / sorted.length;
+
+          // Determine burnout risk
+          let burnoutRisk = 'low';
+          let recommendation = null;
+
+          if (slope > 3 && recentLoad > 20) {
+            burnoutRisk = 'high';
+            recommendation = `${name}'s task creation has increased ${Math.round(slope)} tasks/week for 4 weeks. Current load: ${recentLoad} tasks/week. Redistribute ${Math.ceil(slope / 2)} Fair Play cards this week.`;
+          } else if (slope > 2 || recentLoad > 25) {
+            burnoutRisk = 'medium';
+            recommendation = `${name}'s cognitive load is trending upward. Monitor closely and consider preventive rebalancing.`;
+          }
+
+          if (burnoutRisk !== 'low') {
+            predictions.burnoutRisks.push({
+              person: name,
+              userId,
+              burnoutRisk,
+              currentLoad: recentLoad,
+              trend: slope,
+              recommendation
+            });
+          }
+        }
+      });
+    }
+
+    // Query for upcoming events (next 7 days)
+    const upcomingEventsQuery = `
+      MATCH (e:Event {familyId: $familyId})
+      WHERE e.startTime IS NOT NULL
+        AND datetime(e.startTime) > datetime()
+        AND datetime(e.startTime) < datetime() + duration({days: 7})
+      RETURN count(e) as eventCount,
+             collect(e.title) as eventTitles
+    `;
+
+    const upcomingEventsResult = await neo4jService.runQuery(upcomingEventsQuery, { familyId });
+
+    if (upcomingEventsResult.records && upcomingEventsResult.records.length > 0) {
+      const eventCount = upcomingEventsResult.records[0].get('eventCount')?.toNumber() || 0;
+
+      // Simple load forecast based on event count
+      let forecast = 'typical';
+      let capacity = 100;
+      let recommendation = '';
+
+      if (eventCount === 0) {
+        forecast = 'light';
+        recommendation = 'Next week looks light. Great time for planning or self-care!';
+      } else if (eventCount <= 3) {
+        forecast = 'typical';
+        recommendation = `Next week looks typical (${eventCount} events). Maintain your current balance strategies.`;
+      } else if (eventCount <= 6) {
+        forecast = 'busy';
+        capacity = 75;
+        recommendation = `Next week is slightly busier than usual (${eventCount} events). Capacity: ${capacity}%. Plan ahead and communicate regularly.`;
+      } else {
+        forecast = 'heavy';
+        capacity = Math.max(50, 100 - (eventCount * 5));
+        recommendation = `Next week is significantly busier (${eventCount} events). Capacity: ${capacity}%. Consider delegating event roles and preparing in advance.`;
+      }
+
+      predictions.upcomingLoad = {
+        forecast,
+        capacity,
+        eventCount,
+        recommendation
+      };
+    }
+
+    // Query for habit streaks (recent completions)
+    const habitStreaksQuery = `
+      MATCH (p:Person {familyId: $familyId})-[:COMPLETED]->(h:Habit)
+      WHERE h.completedAt IS NOT NULL
+        AND datetime(h.completedAt) > datetime() - duration({days: 30})
+      WITH p, h,
+           duration.between(datetime(h.completedAt), datetime()).days as daysAgo
+      WHERE daysAgo <= 30
+      WITH p, h.habitText as habitName,
+           collect(daysAgo) as completionDays
+      WHERE size(completionDays) >= 7
+      RETURN p.name as personName,
+             habitName,
+             size(completionDays) as completionCount,
+             completionDays
+      ORDER BY completionCount DESC
+      LIMIT 5
+    `;
+
+    const habitStreaksResult = await neo4jService.runQuery(habitStreaksQuery, { familyId });
+
+    if (habitStreaksResult.records && habitStreaksResult.records.length > 0) {
+      habitStreaksResult.records.forEach(record => {
+        const personName = record.get('personName');
+        const habitName = record.get('habitName');
+        const completionCount = record.get('completionCount')?.toNumber() || 0;
+
+        // Celebrate milestones
+        if (completionCount >= 30) {
+          predictions.habitStreaks.push({
+            type: 'celebration',
+            severity: 'positive',
+            person: personName,
+            habit: habitName,
+            streak: completionCount,
+            message: `🌟 ${personName} has maintained "${habitName}" for a full month! This is now a solid routine.`,
+            recommendation: `Reflect on how this habit has improved family balance and set a new ambitious goal.`
+          });
+        } else if (completionCount >= 14) {
+          predictions.habitStreaks.push({
+            type: 'celebration',
+            severity: 'positive',
+            person: personName,
+            habit: habitName,
+            streak: completionCount,
+            message: `🏆 ${personName} has a 2-week streak on "${habitName}"! Major milestone!`,
+            recommendation: `Consider this habit "established" and add a new growth challenge.`
+          });
+        } else if (completionCount >= 7) {
+          predictions.habitStreaks.push({
+            type: 'celebration',
+            severity: 'positive',
+            person: personName,
+            habit: habitName,
+            streak: completionCount,
+            message: `🎉 ${personName} has completed "${habitName}" for 7 days straight! Celebrate this win.`,
+            recommendation: `Acknowledge ${personName}'s consistency and ask what helped them succeed.`
+          });
+        }
+      });
+    }
+
+    // Query for task distribution imbalance trends
+    const imbalanceTrendsQuery = `
+      MATCH (p:Person {familyId: $familyId})-[r:CREATED]->(t:Task)
+      WHERE t.createdAt IS NOT NULL
+        AND duration.between(datetime(t.createdAt), datetime()).days <= 28
+      WITH p,
+           (duration.between(datetime(t.createdAt), datetime()).days / 7) as weekAgo,
+           count(t) as taskCount
+      WHERE weekAgo >= 0 AND weekAgo < 4
+      RETURN p.userId as userId,
+             p.name as name,
+             collect({week: weekAgo, count: taskCount}) as weeklyTasks
+    `;
+
+    const imbalanceTrendsResult = await neo4jService.runQuery(imbalanceTrendsQuery, { familyId });
+
+    if (imbalanceTrendsResult.records && imbalanceTrendsResult.records.length >= 2) {
+      // Calculate ratio trends between parents
+      const parent1 = imbalanceTrendsResult.records[0];
+      const parent2 = imbalanceTrendsResult.records[1];
+
+      const p1Name = parent1.get('name');
+      const p2Name = parent2.get('name');
+      const p1Weekly = parent1.get('weeklyTasks');
+      const p2Weekly = parent2.get('weeklyTasks');
+
+      // Calculate current and initial ratios
+      if (p1Weekly && p2Weekly && p1Weekly.length > 0 && p2Weekly.length > 0) {
+        const p1Recent = p1Weekly[0]?.count || 0;
+        const p2Recent = p2Weekly[0]?.count || 0;
+        const p1Old = p1Weekly[p1Weekly.length - 1]?.count || 0;
+        const p2Old = p2Weekly[p2Weekly.length - 1]?.count || 0;
+
+        const recentTotal = p1Recent + p2Recent;
+        const oldTotal = p1Old + p2Old;
+
+        if (recentTotal > 0 && oldTotal > 0) {
+          const currentRatio = (p1Recent / recentTotal) * 100;
+          const oldRatio = (p1Old / oldTotal) * 100;
+          const imbalance = Math.abs(50 - currentRatio);
+          const shift = Math.abs(currentRatio - oldRatio);
+
+          let concern = null;
+
+          if (shift > 10) {
+            const divergingParent = currentRatio > oldRatio ? p1Name : p2Name;
+            concern = {
+              severity: imbalance > 25 ? 'high' : 'medium',
+              message: `Task creation ratio has shifted from ${Math.round(oldRatio)}/${Math.round(100 - oldRatio)} to ${Math.round(currentRatio)}/${Math.round(100 - currentRatio)} over 4 weeks.`,
+              recommendation: `${divergingParent} is creating increasingly more tasks. This suggests growing cognitive load. Discuss why this is happening and identify 2-3 Fair Play cards to redistribute.`
+            };
+          } else if (imbalance > 20) {
+            const overloadedParent = currentRatio > 50 ? p1Name : p2Name;
+            const underloadedParent = currentRatio > 50 ? p2Name : p1Name;
+            concern = {
+              severity: 'medium',
+              message: `Task distribution has been consistently imbalanced: ${Math.round(currentRatio)}/${Math.round(100 - currentRatio)} over 4 weeks.`,
+              recommendation: `${overloadedParent} is carrying ${Math.round(imbalance)}% more mental load. ${underloadedParent} should take ownership of ${Math.ceil(imbalance / 10)} Fair Play cards to rebalance.`
+            };
+          }
+
+          if (concern) {
+            predictions.imbalanceTrends = {
+              trend: shift > 10 ? (currentRatio > oldRatio ? 'diverging_parent1' : 'diverging_parent2') : 'stable',
+              weeklyRatios: [
+                { week: 0, ratio: currentRatio, parent1Name: p1Name, parent2Name: p2Name },
+                { week: 3, ratio: oldRatio, parent1Name: p1Name, parent2Name: p2Name }
+              ],
+              avgRatio: currentRatio,
+              imbalance,
+              concern
+            };
+          }
+        }
+      }
+    }
+
+    console.log(`✅ Generated predictions:`, {
+      burnoutRisks: predictions.burnoutRisks.length,
+      upcomingLoad: predictions.upcomingLoad ? 'yes' : 'no',
+      habitStreaks: predictions.habitStreaks.length,
+      imbalanceTrends: predictions.imbalanceTrends ? 'yes' : 'no'
+    });
+
+    res.json({
+      success: true,
+      data: predictions,
+      metadata: {
+        familyId,
+        generatedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error generating predictive insights:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

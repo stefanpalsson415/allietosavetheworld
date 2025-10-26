@@ -246,6 +246,51 @@ class KnowledgeGraphService {
     }
   }
 
+  /**
+   * Get predictive insights for family meetings
+   * Includes burnout risk, upcoming load forecast, habit streaks, and imbalance trends
+   */
+  async getPredictiveInsights(familyId, familyMembers = []) {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/knowledge-graph/predictive-insights`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          familyId,
+          familyMembers: familyMembers.map(m => ({
+            userId: m.userId,
+            name: m.name,
+            role: m.role
+          }))
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        predictions: data.data || {}
+      };
+    } catch (error) {
+      console.error('Failed to get predictive insights:', error);
+      return {
+        success: false,
+        error: error.message,
+        predictions: {
+          burnoutRisks: [],
+          upcomingLoad: null,
+          habitStreaks: [],
+          imbalanceTrends: null
+        }
+      };
+    }
+  }
+
   // Cache helpers
   _getFromCache(key) {
     const cached = this.cache.get(key);
