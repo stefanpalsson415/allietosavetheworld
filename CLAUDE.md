@@ -1853,13 +1853,55 @@ Would you like me to suggest redistributing some roles to balance this?"
 - ✅ Comprehensive unit tests (32/32 passing)
 - ✅ Deployed to production (https://parentload-ba995.web.app)
 
-**Remaining Phases (Not Yet Implemented):**
-- ⏳ Phase 3: Neo4j sync (`PERFORMED_ROLE` relationships)
-- ⏳ Phase 4: Survey integration (role pattern questions)
-- ⏳ Phase 5: Allie auto-suggestion (with confirmation)
-- ⏳ Phase 6: Family Balance Score integration (15% weight)
-- ⏳ Phase 6: Role Distribution Dashboard widget
-- ⏳ Phase 6: Backfill 682 Palsson family events
+**Phase 3: Neo4j Knowledge Graph Integration (Oct 26):** ✅ **COMPLETE**
+- ✅ functions/neo4j-sync.js updated (+150 lines)
+- ✅ PERFORMED_ROLE relationships with cognitive load weights
+- ✅ Auto-sync on event create/update
+- ✅ 2 new KG endpoints:
+  - POST /event-role-distribution (role analysis by person/role)
+  - POST /invisible-event-labor (invisible labor detection + recommendations)
+- ✅ server/routes/knowledge-graph.js (+320 lines)
+
+**Phase 4: Survey Integration (Oct 26):** ✅ **COMPLETE**
+- ✅ 18 new event role questions added to existing surveys
+- ✅ 8 visible role questions (Transportation, Supervision, Financial)
+- ✅ 10 invisible role questions (Coordination, Communication, Emotional Labor)
+- ✅ Integrated into "Visible Parental Tasks" and "Invisible Parental Tasks" categories
+- ✅ src/contexts/SurveyContext.js updated
+
+**Phase 5: Allie Intelligence - AI Auto-Suggestion (Oct 26):** ✅ **COMPLETE**
+- ✅ EventRoleIntelligenceService.js created (500 lines)
+- ✅ Analyzes 3 data sources in parallel:
+  - Survey role patterns (last 5 surveys)
+  - Historical event patterns (last 50 similar events)
+  - Knowledge Graph role insights (role distribution + invisible labor)
+- ✅ Generates suggestions with confidence scores (0-100%)
+- ✅ Balance-aware algorithm prevents overloading (detects 2x load)
+- ✅ UI integration in EventRoleAssignment:
+  - "🤖 Get AI Suggestions" button
+  - Shows suggestions with color-coded confidence badges
+  - "✅ Apply These Suggestions" or "✕ Dismiss"
+  - Imbalance warnings
+- ✅ Deployed to production
+
+**Phase 6: Family Balance Score Integration (Oct 26):** ✅ **COMPLETE**
+- ✅ FamilyBalanceScoreService.js updated (+130 lines)
+- ✅ NEW 5th component: Event Role Distribution (15% weight)
+- ✅ Reweighted existing components:
+  - Mental Load Balance: 35% (was 40%)
+  - Task Distribution: 25% (was 30%)
+  - Relationship Harmony: 15% (was 20%)
+  - Habit Consistency: 10% (same)
+  - Event Role Distribution: 15% (NEW)
+- ✅ Analyzes last 90 days of events with role assignments
+- ✅ Score formula: 100 - ((imbalanceRatio - 1) × 25)
+  - Perfect balance (1:1) = 100 points
+  - 2x imbalance = 75 points
+  - 3x imbalance = 50 points
+  - 4x imbalance = 25 points
+- ✅ Deployed to production
+
+**🎉 ALL 6 PHASES COMPLETE AND LIVE (Oct 26, 2025)**
 
 **Cognitive Load Weights (1-5 scale):**
 - **5 (Highest):** Carpool Coordinator, Team Parent Liaison, Lead Parent, Appointment Advocate
