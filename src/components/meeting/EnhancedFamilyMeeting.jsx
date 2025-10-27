@@ -435,10 +435,7 @@ const EnhancedFamilyMeeting = ({ onClose, embedded = false }) => {
             choreCompletions: choreSnapshot.size,
             activeTasks: choreSnapshot.docs.filter(doc => doc.data().status === 'active').length
           },
-          fairPlayCards: familyMembers.reduce((acc, member) => {
-            acc[member.id] = member.fairPlayCards || [];
-            return acc;
-          }, {}),
+          fairPlayCards: familyMembers.flatMap(member => member.fairPlayCards || []),
           habitCompletions: habitsSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
