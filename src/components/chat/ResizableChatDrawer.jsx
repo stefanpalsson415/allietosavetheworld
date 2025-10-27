@@ -317,7 +317,7 @@ const ResizableChatDrawer = () => {
         {/* Drawer content */}
         <div className="flex-1 min-h-0 bg-white flex flex-col">
           {mode === 'family-meeting' ? (
-            <EnhancedFamilyMeeting />
+            <EnhancedFamilyMeeting embedded />
           ) : mode === 'interview' && interviewConfig && interviewSessionId ? (
             <InterviewChat
               interviewData={interviewConfig.interviewData}

@@ -1,5 +1,17 @@
 // src/components/meeting/EnhancedMeetingWrapper.jsx
-// Progressive enhancement wrapper for Family Meeting with all 10 new features
+// **DEPRECATED** - October 26, 2025
+// This wrapper is no longer needed. All enhancements are now built directly into
+// EnhancedFamilyMeeting.jsx. Using this wrapper causes duplicate API calls.
+// Use EnhancedFamilyMeeting directly instead.
+//
+// Deprecated because:
+// 1. Base component now has all data loading (lines 224-287)
+// 2. Base component now has voice controls (lines 528-563)
+// 3. Base component now has floating predictions panel (lines 1226-1251)
+// 4. This wrapper caused duplicate KG/prediction API calls
+//
+// Migration: Replace `<EnhancedMeetingWrapper />` with `<EnhancedFamilyMeeting embedded />`
+
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, Download, User, Sparkles } from 'lucide-react';
 import EnhancedFamilyMeeting from './EnhancedFamilyMeeting';
